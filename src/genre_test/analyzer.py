@@ -3,7 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from .aggregate import aggregate_predictions
-from .analysis_policy import ANALYSIS_MODES, duration_window_target, needs_more_auto_windows, spread_indices
+from .analysis_policy import (
+    ANALYSIS_MODES,
+    duration_window_target,
+    needs_more_auto_windows,
+    spread_indices,
+)
 from .audio import load_audio, select_windows
 from .features import extract_audio_features
 from .maest import DEFAULT_MODEL, MaestClassifier
