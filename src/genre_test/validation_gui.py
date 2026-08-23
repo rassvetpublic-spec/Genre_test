@@ -11,6 +11,14 @@ from tkinter import filedialog, messagebox, ttk
 from .cancellation import AnalysisCancelled
 from .history import HistoryDB
 from .logging_utils import append_log
+from .performance import (
+    append_perf,
+    average_seconds,
+    clock,
+    elapsed_seconds,
+    milliseconds,
+    tracks_per_minute,
+)
 from .runtime_meta import default_history_path, default_log_path, default_results_dir
 from .validation import ValidationEngine, format_validation_session, format_version_comparison
 
@@ -339,6 +347,7 @@ class ValidationTab(ttk.Frame):
         filter_mode: str,
         include_service_dirs: bool,
     ) -> None:
+        session_started = clock()
         try:
             engine = ValidationEngine(
                 history_path=Path(self.history_var.get()),
@@ -358,16 +367,58 @@ class ValidationTab(ttk.Frame):
                 progress=progress,
                 cancel_check=self._cancel_event.is_set,
             )
+            elapsed_s = elapsed_seconds(session_started)
+            avg_s = average_seconds(result.analyzed_tracks, elapsed_s)
+            rate = tracks_per_minute(result.analyzed_tracks, elapsed_s)
+            perf_text = (
+                "\n\nPerformance:\n"
+                f"Elapsed: {elapsed_s:.2f} s\n"
+                f"Average: {avg_s:.3f} s/analyzed track\n"
+                f"Throughput: {rate:.3f} analyzed tracks/min"
+            )
+            append_perf(
+                "validation_session",
+                status="stopped" if result.cancelled else "complete",
+                mode=mode,
+                compare_all=compare_all,
+                filter=filter_mode,
+                scanned=result.scanned_tracks,
+                analyzed=result.analyzed_tracks,
+                skipped=result.skipped_tracks,
+                errors=len(result.errors),
+                remaining=result.remaining_tracks,
+                elapsed_ms=milliseconds(elapsed_s),
+                avg_seconds_per_track=avg_s,
+                tracks_per_minute=rate,
+            )
             kind = "cancelled" if result.cancelled else "done"
-            self._queue.put((kind, format_validation_session(result)))
+            self._queue.put((kind, format_validation_session(result) + perf_text))
             self._queue.put(("refresh_versions", None))
         except AnalysisCancelled:
+            elapsed_s = elapsed_seconds(session_started)
             message = "Остановлено пользователем до начала analysis session. История не повреждена."
             append_log(message)
+            append_perf(
+                "validation_session",
+                status="stopped_before_session",
+                mode=mode,
+                compare_all=compare_all,
+                filter=filter_mode,
+                elapsed_ms=milliseconds(elapsed_s),
+            )
             self._queue.put(("cancelled", message))
         except Exception:
+            elapsed_s = elapsed_seconds(session_started)
             detail = traceback.format_exc()
-            append_log(f"Validation fatal error:\n{detail}")
+            append_log(f"Validation fatal error after {elapsed_s:.3f}s:\n{detail}")
+            append_perf(
+                "validation_session",
+                status="fatal_error",
+                mode=mode,
+                compare_all=compare_all,
+                filter=filter_mode,
+                elapsed_ms=milliseconds(elapsed_s),
+            )
             self._queue.put(("error", detail))
 
     def _import_json_files(self) -> None:
