@@ -20,6 +20,13 @@ AUDIO_FILETYPES = [
     ("All files", "*.*"),
 ]
 
+MODE_LABELS = {
+    "Авто": "auto",
+    "Быстрый": "fast",
+    "Точный": "accurate",
+    "Экспертный": "expert",
+}
+
 
 class GenreTestWindow(tk.Tk):
     def __init__(self) -> None:
@@ -31,6 +38,7 @@ class GenreTestWindow(tk.Tk):
         self.input_var = tk.StringVar()
         self.out_var = tk.StringVar(value=str((Path.cwd() / "results").resolve()))
         self.device_var = tk.StringVar(value="auto")
+        self.mode_var = tk.StringVar(value="Авто")
         self.windows_var = tk.IntVar(value=5)
         self.top_k_var = tk.IntVar(value=15)
         self.status_var = tk.StringVar(value="Готов")
@@ -70,6 +78,7 @@ class GenreTestWindow(tk.Tk):
 
         settings = ttk.Frame(root)
         settings.grid(row=2, column=0, columnspan=4, sticky="ew", pady=(8, 4))
+
         ttk.Label(settings, text="Device").pack(side="left")
         ttk.Combobox(
             settings,
@@ -78,14 +87,35 @@ class GenreTestWindow(tk.Tk):
             state="readonly",
             width=8,
         ).pack(side="left", padx=(6, 18))
-        ttk.Label(settings, text="Окон по треку").pack(side="left")
-        ttk.Spinbox(settings, from_=1, to=12, textvariable=self.windows_var, width=5).pack(
-            side="left", padx=(6, 18)
+
+        ttk.Label(settings, text="Режим анализа").pack(side="left")
+        mode_combo = ttk.Combobox(
+            settings,
+            textvariable=self.mode_var,
+            values=tuple(MODE_LABELS),
+            state="readonly",
+            width=13,
         )
-        ttk.Label(settings, text="Top-K").pack(side="left")
-        ttk.Spinbox(settings, from_=3, to=50, textvariable=self.top_k_var, width=5).pack(
-            side="left", padx=(6, 18)
-        )
+        mode_combo.pack(side="left", padx=(6, 18))
+        mode_combo.bind("<<ComboboxSelected>>", self._sync_mode_ui)
+
+        self.advanced_frame = ttk.Frame(settings)
+        ttk.Label(self.advanced_frame, text="Окон").pack(side="left")
+        ttk.Spinbox(
+            self.advanced_frame,
+            from_=1,
+            to=12,
+            textvariable=self.windows_var,
+            width=5,
+        ).pack(side="left", padx=(6, 12))
+        ttk.Label(self.advanced_frame, text="Top-K").pack(side="left")
+        ttk.Spinbox(
+            self.advanced_frame,
+            from_=3,
+            to=50,
+            textvariable=self.top_k_var,
+            width=5,
+        ).pack(side="left", padx=(6, 0))
 
         actions = ttk.Frame(root)
         actions.grid(row=3, column=0, columnspan=4, sticky="ew", pady=(8, 6))
@@ -103,6 +133,15 @@ class GenreTestWindow(tk.Tk):
         xscroll = ttk.Scrollbar(root, orient="horizontal", command=self.output.xview)
         xscroll.grid(row=6, column=0, columnspan=4, sticky="ew")
         self.output.configure(yscrollcommand=yscroll.set, xscrollcommand=xscroll.set)
+
+        self._sync_mode_ui()
+
+    def _sync_mode_ui(self, _event=None) -> None:
+        if MODE_LABELS.get(self.mode_var.get()) == "expert":
+            if not self.advanced_frame.winfo_manager():
+                self.advanced_frame.pack(side="left")
+        elif self.advanced_frame.winfo_manager():
+            self.advanced_frame.pack_forget()
 
     def _choose_file(self) -> None:
         selected = filedialog.askopenfilename(title="Выберите аудиофайл", filetypes=AUDIO_FILETYPES)
@@ -132,6 +171,7 @@ class GenreTestWindow(tk.Tk):
             messagebox.showerror("Genre_test", "Выберите существующий аудиофайл или папку.")
             return
         out = Path(self.out_var.get().strip().strip('"')).expanduser()
+        mode = MODE_LABELS.get(self.mode_var.get(), "auto")
         self.output.delete("1.0", "end")
         self._busy = True
         self.run_button.configure(state="disabled")
@@ -140,16 +180,32 @@ class GenreTestWindow(tk.Tk):
 
         thread = threading.Thread(
             target=self._worker,
-            args=(source, out, self.device_var.get(), self.windows_var.get(), self.top_k_var.get()),
+            args=(
+                source,
+                out,
+                self.device_var.get(),
+                mode,
+                self.windows_var.get(),
+                self.top_k_var.get(),
+            ),
             daemon=True,
         )
         thread.start()
 
-    def _worker(self, source: Path, out: Path, device: str, windows: int, top_k: int) -> None:
+    def _worker(
+        self,
+        source: Path,
+        out: Path,
+        device: str,
+        mode: str,
+        windows: int,
+        top_k: int,
+    ) -> None:
         try:
             analyzer = GenreAnalyzer(
                 model_id=DEFAULT_MODEL,
                 device=device,
+                analysis_mode=mode,
                 window_count=windows,
                 top_k=top_k,
             )
