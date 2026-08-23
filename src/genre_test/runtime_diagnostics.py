@@ -1,0 +1,51 @@
+from __future__ import annotations
+
+import os
+import shutil
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class RuntimeDiagnostics:
+    ffmpeg_path: str | None
+    hf_token_available: bool
+    hf_auth_source: str
+
+    @property
+    def ffmpeg_available(self) -> bool:
+        return self.ffmpeg_path is not None
+
+    @property
+    def decoder_warning(self) -> str | None:
+        if self.ffmpeg_available:
+            return None
+        return "FFmpeg НЕ НАЙДЕН — AAC/M4A и расширенный decode fallback недоступны"
+
+    @property
+    def hf_auth_label(self) -> str:
+        if self.hf_token_available:
+            return f"token available ({self.hf_auth_source}; not network-validated)"
+        return "anonymous (no token found)"
+
+
+def _hf_token_status() -> tuple[bool, str]:
+    if os.environ.get("HF_TOKEN"):
+        return True, "HF_TOKEN"
+    if os.environ.get("HUGGING_FACE_HUB_TOKEN"):
+        return True, "HUGGING_FACE_HUB_TOKEN"
+    try:
+        from huggingface_hub import get_token
+
+        token = get_token()
+    except Exception:  # pragma: no cover - optional dependency/runtime cache edge cases
+        return False, "unavailable"
+    return (True, "huggingface_hub cache") if token else (False, "none")
+
+
+def collect_runtime_diagnostics() -> RuntimeDiagnostics:
+    token_available, token_source = _hf_token_status()
+    return RuntimeDiagnostics(
+        ffmpeg_path=shutil.which("ffmpeg"),
+        hf_token_available=token_available,
+        hf_auth_source=token_source,
+    )
