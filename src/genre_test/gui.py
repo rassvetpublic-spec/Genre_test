@@ -13,10 +13,11 @@ from .analyzer import GenreAnalyzer
 from .audio import iter_audio_files
 from .cancellation import AnalysisCancelled
 from .history import HistoryDB
+from .logging_utils import append_log
 from .maest import DEFAULT_MODEL
 from .presentation import format_result_text
 from .report import write_json, write_summary_csv
-from .runtime_meta import default_history_path
+from .runtime_meta import default_history_path, default_log_path, default_results_dir
 from .validation_gui import ValidationTab
 
 AUDIO_FILETYPES = [
@@ -40,7 +41,7 @@ class GenreTestWindow(tk.Tk):
         self.minsize(820, 620)
 
         self.input_var = tk.StringVar()
-        self.out_var = tk.StringVar(value=str((Path.cwd() / "results").resolve()))
+        self.out_var = tk.StringVar(value=str(default_results_dir()))
         self.device_var = tk.StringVar(value="auto")
         self.mode_var = tk.StringVar(value="Авто")
         self.windows_var = tk.IntVar(value=5)
@@ -51,6 +52,7 @@ class GenreTestWindow(tk.Tk):
         self._busy = False
 
         self._build_ui()
+        append_log(f"GUI started: Genre_test {__version__}")
         self.after(120, self._poll_queue)
 
     def _build_ui(self) -> None:
@@ -151,6 +153,18 @@ class GenreTestWindow(tk.Tk):
         xscroll = ttk.Scrollbar(root, orient="horizontal", command=self.output.xview)
         xscroll.grid(row=6, column=0, columnspan=4, sticky="ew")
         self.output.configure(yscrollcommand=yscroll.set, xscrollcommand=xscroll.set)
+
+        footer = ttk.Frame(root)
+        footer.grid(row=7, column=0, columnspan=4, sticky="ew", pady=(6, 0))
+        ttk.Button(
+            footer,
+            text="СКОПИРОВАТЬ СОДЕРЖИМОЕ",
+            command=self._copy_output,
+        ).pack(side="left")
+        ttk.Button(footer, text="Открыть лог", command=self._open_log).pack(
+            side="left", padx=(8, 0)
+        )
+        ttk.Label(footer, text=f"Лог: {default_log_path()}").pack(side="left", padx=(12, 0))
         self._sync_mode_ui()
 
     def _sync_mode_ui(self, _event=None) -> None:
@@ -183,6 +197,19 @@ class GenreTestWindow(tk.Tk):
         out.mkdir(parents=True, exist_ok=True)
         os.startfile(out)  # type: ignore[attr-defined]
 
+    def _open_log(self) -> None:
+        path = default_log_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch(exist_ok=True)
+        os.startfile(path)  # type: ignore[attr-defined]
+
+    def _copy_output(self) -> None:
+        text = self.output.get("1.0", "end-1c")
+        self.clipboard_clear()
+        self.clipboard_append(text)
+        self.update()
+        self.status_var.set("Содержимое скопировано в буфер")
+
     def _start(self) -> None:
         if self._busy:
             return
@@ -202,6 +229,7 @@ class GenreTestWindow(tk.Tk):
         self.stop_button.configure(state="normal")
         self.progress.start(10)
         self.status_var.set("Загрузка модели / анализ…")
+        append_log(f"Analysis started: source={source}; mode={mode}; output={out}")
         threading.Thread(
             target=self._worker,
             args=(
@@ -221,6 +249,7 @@ class GenreTestWindow(tk.Tk):
         self._cancel_event.set()
         self.stop_button.configure(state="disabled")
         self.status_var.set("Остановка после текущего безопасного шага…")
+        append_log("Safe stop requested by user")
 
     def _worker(
         self,
@@ -233,6 +262,7 @@ class GenreTestWindow(tk.Tk):
     ) -> None:
         results = []
         blocks = []
+        file_errors: list[str] = []
         try:
             analyzer = GenreAnalyzer(
                 model_id=DEFAULT_MODEL,
@@ -250,7 +280,9 @@ class GenreTestWindow(tk.Tk):
                     format_result_text(result)
                     + f"\n\nJSON snapshot: {target}"
                     + f"\nHistory DB: {history.path}"
+                    + f"\nLog: {default_log_path()}"
                 )
+                append_log(f"Analysis complete: {source}")
                 self._queue.put(("done", text))
                 return
 
@@ -263,13 +295,34 @@ class GenreTestWindow(tk.Tk):
                 if self._cancel_event.is_set():
                     raise AnalysisCancelled("Operation cancelled by user")
                 self._queue.put(("status", f"[{idx}/{len(files)}] {path.name}"))
-                result = analyzer.analyze(path, cancel_check=self._cancel_event.is_set)
+                try:
+                    result = analyzer.analyze(path, cancel_check=self._cancel_event.is_set)
+                except AnalysisCancelled:
+                    raise
+                except Exception as exc:  # noqa: BLE001
+                    detail = traceback.format_exc()
+                    summary = f"[ERROR] {path}: {type(exc).__name__}: {exc}"
+                    file_errors.append(summary)
+                    blocks.append(summary)
+                    append_log(f"Batch file failed: {path}\n{detail}")
+                    continue
                 results.append(result)
                 target = write_json(result, out)
                 history.record_result(result)
                 blocks.append(format_result_text(result, top_n=5) + f"\nJSON: {target}")
-            csv_path = write_summary_csv(results, out)
-            blocks.append(f"Summary CSV: {csv_path}\nHistory DB: {history.path}")
+
+            if results:
+                csv_path = write_summary_csv(results, out)
+                blocks.append(f"Summary CSV: {csv_path}")
+            blocks.append(
+                f"Completed: {len(results)} / {len(files)}\n"
+                f"File errors skipped: {len(file_errors)}\n"
+                f"History DB: {history.path}\nLog: {default_log_path()}"
+            )
+            append_log(
+                f"Batch complete: source={source}; completed={len(results)}; "
+                f"errors={len(file_errors)}"
+            )
             self._queue.put(
                 (
                     "done",
@@ -283,13 +336,19 @@ class GenreTestWindow(tk.Tk):
             message = (
                 "Остановлено пользователем безопасно.\n"
                 f"Полностью завершённых треков сохранено: {len(results)}.\n"
+                f"Ошибочных файлов пропущено: {len(file_errors)}.\n"
                 "Текущий незавершённый трек в историю не записан."
             )
             if blocks:
                 message += "\n\n" + ("\n\n" + "=" * 72 + "\n\n").join(blocks)
+            append_log(
+                f"Analysis stopped safely: completed={len(results)}; errors={len(file_errors)}"
+            )
             self._queue.put(("cancelled", message))
         except Exception:
-            self._queue.put(("error", traceback.format_exc()))
+            detail = traceback.format_exc()
+            append_log(f"Analysis fatal error:\n{detail}")
+            self._queue.put(("error", detail))
 
     def _poll_queue(self) -> None:
         try:
@@ -310,7 +369,7 @@ class GenreTestWindow(tk.Tk):
                     self._finish("Ошибка")
                     messagebox.showerror(
                         "Genre_test",
-                        "Анализ завершился ошибкой. Подробности в окне.",
+                        "Анализ завершился ошибкой. Подробности в окне и журнале.",
                     )
         except queue.Empty:
             pass
