@@ -48,7 +48,7 @@ def test_clear_family_but_close_fine_styles_reduce_confidence():
     assert r.style_margin == pytest.approx(0.141531, abs=1e-6)
 
 
-def test_stronger_style_in_secondary_family_is_exposed_as_conflict():
+def test_stronger_style_in_secondary_family_becomes_hybrid_winner():
     styles = [
         StyleScore("Pop---Schlager", 0.1263),
         StyleScore("Rock---Power Metal", 0.1029),
@@ -56,11 +56,30 @@ def test_stronger_style_in_secondary_family_is_exposed_as_conflict():
     ]
     broad = [StyleScore("Rock", 0.5027), StyleScore("Pop", 0.3781)]
     r = resolve_genre(styles, broad)
-    assert r.classification == "primary"
-    assert r.resolved_genre == "Power Metal"
-    assert r.secondary_style == "Schlager"
+    assert r.classification == "hybrid"
+    assert r.resolved_genre == "Schlager"
+    assert r.secondary_style == "Power Metal"
     assert r.confidence == "low-medium"
-    assert r.style_margin is not None and r.style_margin < 0
+    assert r.style_margin is not None and r.style_margin > 0
+
+
+def test_za_hutorom_cross_family_fine_style_prefers_pop_rock():
+    styles = [
+        StyleScore("Rock---Pop Rock", 0.1984955541),
+        StyleScore("Pop---Ballad", 0.1293920023),
+        StyleScore("Pop---Europop", 0.1076216176),
+    ]
+    broad = [
+        StyleScore("Pop", 0.4020252038),
+        StyleScore("Rock", 0.3114438745),
+        StyleScore("Electronic", 0.1815229568),
+    ]
+    r = resolve_genre(styles, broad)
+    assert r.classification == "hybrid"
+    assert r.resolved_genre == "Pop Rock"
+    assert r.secondary_style == "Pop Ballad"
+    assert r.confidence == "low-medium"
+    assert r.style_margin == pytest.approx(0.348137, abs=1e-5)
 
 
 def test_generic_vocal_label_gets_family_context():
