@@ -67,6 +67,13 @@ def _ffmpeg_candidates() -> list[Path]:
     return candidates
 
 
+def _prepend_to_process_path(directory: Path) -> None:
+    directory_text = str(directory)
+    entries = [entry for entry in os.environ.get("PATH", "").split(os.pathsep) if entry]
+    if directory_text not in entries:
+        os.environ["PATH"] = os.pathsep.join([directory_text, *entries])
+
+
 def find_ffmpeg() -> str | None:
     path = shutil.which("ffmpeg")
     if path:
@@ -74,7 +81,9 @@ def find_ffmpeg() -> str | None:
 
     for candidate in _ffmpeg_candidates():
         if candidate.is_file():
-            return str(candidate.resolve())
+            resolved = candidate.resolve()
+            _prepend_to_process_path(resolved.parent)
+            return str(resolved)
     return None
 
 
