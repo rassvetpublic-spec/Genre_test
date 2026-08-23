@@ -8,6 +8,7 @@ import traceback
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
+from .cancellation import AnalysisCancelled
 from .history import HistoryDB
 from .runtime_meta import default_history_path
 from .validation import ValidationEngine, format_validation_session, format_version_comparison
@@ -49,6 +50,7 @@ class ValidationTab(ttk.Frame):
         self.version_b_var = tk.StringVar()
         self.version_mode_var = tk.StringVar(value="Любой последний")
         self._queue: queue.Queue[tuple[str, object]] = queue.Queue()
+        self._cancel_event = threading.Event()
         self._busy = False
         self._build_ui()
         self.after(120, self._poll_queue)
@@ -132,6 +134,13 @@ class ValidationTab(ttk.Frame):
             command=self._start_validation,
         )
         self.run_button.pack(side="left")
+        self.stop_button = ttk.Button(
+            actions,
+            text="ОСТАНОВИТЬ",
+            command=self._request_stop,
+            state="disabled",
+        )
+        self.stop_button.pack(side="left", padx=(8, 0))
         ttk.Button(
             actions,
             text="Импорт JSON файлов",
@@ -243,14 +252,22 @@ class ValidationTab(ttk.Frame):
         out.mkdir(parents=True, exist_ok=True)
         os.startfile(out)  # type: ignore[attr-defined]
 
-    def _set_busy(self, busy: bool, status: str) -> None:
+    def _set_busy(self, busy: bool, status: str, stoppable: bool = False) -> None:
         self._busy = busy
         self.run_button.configure(state="disabled" if busy else "normal")
+        self.stop_button.configure(state="normal" if busy and stoppable else "disabled")
         if busy:
             self.progress.start(10)
         else:
             self.progress.stop()
         self.status_var.set(status)
+
+    def _request_stop(self) -> None:
+        if not self._busy or self._cancel_event.is_set():
+            return
+        self._cancel_event.set()
+        self.stop_button.configure(state="disabled")
+        self.status_var.set("Остановка после текущего безопасного шага…")
 
     def _start_validation(self) -> None:
         if self._busy:
@@ -265,7 +282,8 @@ class ValidationTab(ttk.Frame):
         mode, compare_all = VALIDATION_MODE_LABELS[self.mode_var.get()]
         filter_mode = FILTER_LABELS[self.filter_var.get()]
         self.output.delete("1.0", "end")
-        self._set_busy(True, "Подготовка validation…")
+        self._cancel_event.clear()
+        self._set_busy(True, "Подготовка validation…", stoppable=True)
         threading.Thread(
             target=self._validation_worker,
             args=(sources, mode, compare_all, filter_mode),
@@ -295,9 +313,18 @@ class ValidationTab(ttk.Frame):
                 compare_all_modes=compare_all,
                 filter_mode=filter_mode,
                 progress=progress,
+                cancel_check=self._cancel_event.is_set,
             )
-            self._queue.put(("done", format_validation_session(result)))
+            kind = "cancelled" if result.cancelled else "done"
+            self._queue.put((kind, format_validation_session(result)))
             self._queue.put(("refresh_versions", None))
+        except AnalysisCancelled:
+            self._queue.put(
+                (
+                    "cancelled",
+                    "Остановлено пользователем до начала analysis session. История не повреждена.",
+                )
+            )
         except Exception:
             self._queue.put(("error", traceback.format_exc()))
 
@@ -317,7 +344,8 @@ class ValidationTab(ttk.Frame):
     def _start_import(self, sources: list[Path]) -> None:
         if self._busy:
             return
-        self._set_busy(True, "Импорт истории…")
+        self._cancel_event.clear()
+        self._set_busy(True, "Импорт истории…", stoppable=False)
         threading.Thread(
             target=self._import_worker,
             args=(sources,),
@@ -365,7 +393,8 @@ class ValidationTab(ttk.Frame):
             )
             return
         self.output.delete("1.0", "end")
-        self._set_busy(True, "Сравнение версий…")
+        self._cancel_event.clear()
+        self._set_busy(True, "Сравнение версий…", stoppable=False)
         threading.Thread(
             target=self._version_compare_worker,
             args=(
@@ -402,6 +431,10 @@ class ValidationTab(ttk.Frame):
                     self.output.insert("end", str(payload).lstrip() + "\n")
                     self.output.see("1.0")
                     self._set_busy(False, "Готово")
+                elif kind == "cancelled":
+                    self.output.insert("end", str(payload).lstrip() + "\n")
+                    self.output.see("1.0")
+                    self._set_busy(False, "Остановлено")
                 elif kind == "refresh_versions":
                     self._refresh_versions()
                 elif kind == "error":
