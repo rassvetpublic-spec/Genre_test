@@ -1,16 +1,17 @@
 # Genre_test
 
-**Current version: 0.2.0**
+**Current version: 0.2.1**
 
 Локальный анализатор музыкального жанра для Windows/Linux.
 
 ## Что делает MVP
 
-- анализирует WAV/FLAC/MP3/OGG/M4A/AAC (форматы зависят от backend `soundfile`/`audioread`);
-- режет длинный трек на репрезентативные 30-секундные окна;
+- анализирует WAV/FLAC/MP3/OGG/M4A/AAC;
 - запускает MTG **MAEST Discogs 519** через Hugging Face Transformers;
+- автоматически выбирает репрезентативные 30-секундные окна по длительности и уверенности результата;
 - агрегирует Top-N стилей между окнами;
 - строит более широкий `primary_genre` по иерархии `Genre---Style`;
+- рассчитывает человекочитаемый `resolved_genre` и evidence-aware confidence;
 - оценивает BPM, примерный key/mode, RMS, spectral centroid, rolloff, zero-crossing rate;
 - пишет JSON и CSV;
 - умеет анализировать один файл или каталог пакетно.
@@ -19,7 +20,7 @@
 
 ## Windows GUI
 
-После установки можно запускать без ручного ввода путей:
+После установки:
 
 ```powershell
 .\scripts\gui.ps1
@@ -31,29 +32,58 @@
 scripts\Genre_test_GUI.cmd
 ```
 
-GUI позволяет:
+Обычный GUI показывает только действительно нужные настройки:
 
-- выбрать аудиофайл стандартным Windows-окном;
-- выбрать целую папку для batch-анализа;
-- выбрать папку результатов;
-- переключить `auto / cuda / cpu`;
-- задать число окон и Top-K;
-- видеть итоговый `resolved genre`, confidence, hybrid/primary, BPM/key и Top styles;
-- открыть папку результатов одной кнопкой.
+- входной файл/папка;
+- папка результатов;
+- `Device`: `auto / cuda / cpu`;
+- `Режим анализа`: `Авто / Быстрый / Точный / Экспертный`.
 
-CLI остаётся полностью доступным.
+`Окон` и `Top-K` скрыты и появляются только в режиме `Экспертный`.
 
-## Genre resolver v0.2
+### Режимы анализа
 
-Помимо сырого `primary_genre`, JSON теперь содержит:
+**Авто** — режим по умолчанию. Максимальное число окон выбирается по длительности:
 
-- `resolved_genre` — человекочитаемый основной стиль;
+| Длительность | Максимум окон |
+|---:|---:|
+| < 60 с | 1 |
+| 60–120 с | 3 |
+| 120–210 с | 5 |
+| 210–300 с | 7 |
+| 300–420 с | 9 |
+| > 420 с | 11 |
+
+Для длинного трека Auto сначала анализирует 5 равномерно распределённых окон. Если результат уже `primary + high confidence`, анализ останавливается. Если результат hybrid/ambiguous, модель автоматически дозаполняет окна до duration-based target.
+
+**Быстрый** — максимум 3 окна.
+
+**Точный** — всегда использует полный duration-based target без ранней остановки.
+
+**Экспертный** — ручное число окон и Top-K.
+
+Внутренне classifier получает минимум Top-25 кандидатов даже при стандартном отчёте Top-15, чтобы resolver видел конкурирующие стили.
+
+## Genre resolver v0.2.1
+
+Resolver сохраняет сырые MAEST probabilities и добавляет отдельный человекочитаемый слой.
+
+Основные поля:
+
+- `resolved_genre` — основной fine-style;
 - `classification` — `primary` или `hybrid`;
-- `confidence`;
-- `family_margin`;
-- `secondary_genre`.
+- `confidence` — учитывает и broad-family evidence, и конкуренцию fine styles;
+- `family_margin` — абсолютная разница между двумя ведущими broad families;
+- `family_ratio` — отношение score второй broad family к первой;
+- `style_margin` — относительный отрыв resolved style от сильнейшего конкурирующего style;
+- `secondary_genre` — вторая broad family;
+- `secondary_style` — сильнейший альтернативный fine-style;
+- `analysis_mode` — использованный режим;
+- `windows_analyzed` — фактически проанализированное число окон.
 
-Raw `top_styles` и `broad_genres` сохраняются без потери.
+Hybrid определяется не только абсолютным family margin, но и относительной близостью broad families. Generic labels вроде `Pop---Ballad` и `Pop---Vocal` получают контекст (`Pop Ballad`, `Vocal Pop`).
+
+Raw `top_styles` и `broad_genres` сохраняются без потери и остаются источником истины для повторной калибровки resolver.
 
 ## Модель
 
@@ -72,10 +102,22 @@ cd C:\GIT\Genre_test
 
 Скрипт автоматически выбирает CUDA 12.8 wheel PyTorch при обнаружении NVIDIA GPU. Для CPU-only: `./scripts/setup.ps1 -Cpu`.
 
-После установки:
+Стандартный Auto-анализ:
 
 ```powershell
 .\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --out ".\results"
+```
+
+Точный режим:
+
+```powershell
+.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --mode accurate
+```
+
+Экспертный режим:
+
+```powershell
+.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --mode expert --windows 9 --top-k 20
 ```
 
 Папка целиком:
@@ -109,23 +151,30 @@ CUDA:
 - `classification`
 - `confidence`
 - `family_margin`
+- `family_ratio`
+- `style_margin`
 - `secondary_genre`
+- `secondary_style`
+- `analysis_mode`
+- `windows_analyzed`
 - `audio_features`
-- технической информацией о модели и окнах
+- технической информацией о модели
 
 В `batch` дополнительно создаётся `summary.csv`.
 
 ## Репозиторий / безопасность
 
-Вес модели не хранится в Git. `trust_remote_code=True` требуется MAEST-модели Transformers; используйте только зафиксированный доверенный `model_id`. Для строгой воспроизводимости можно указать `--revision <commit>`.
+Вес модели не хранится в Git. `trust_remote_code=True` требуется MAEST-модели Transformers; используйте только доверенный `model_id`. Для строгой воспроизводимости можно указать `--revision <commit>`.
+
+Аудио/видео и generated `results/` не должны храниться в репозитории.
 
 ## Лицензирование модели
 
-Код этого проекта — MIT. Лицензия ML-модели задаётся её авторами отдельно и не меняется лицензией репозитория. Перед коммерческим развёртыванием проверяйте model card/условия MTG для конкретной версии MAEST.
+Код этого проекта — MIT. Лицензия ML-модели задаётся её авторами отдельно и не меняется лицензией репозитория.
 
 ## Состояние
 
-См. `docs/ACTIVE_CURRENT.md` и `docs/ROADMAP.md`.
+См. `docs/ACTIVE_CURRENT.md`, `docs/ROADMAP.md` и `docs/VALIDATION_BASELINE.md`.
 
 ## Python prerequisite
 
@@ -136,5 +185,3 @@ If Python is not installed, run:
 ```powershell
 .\scripts\setup.ps1 -InstallPython
 ```
-
-The setup script can install Python 3.12 through `winget`, recovers from an incomplete `.venv`, and then installs the project dependencies.
