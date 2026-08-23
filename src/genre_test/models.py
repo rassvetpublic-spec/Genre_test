@@ -24,7 +24,7 @@ class AudioFeatures:
     zero_crossing_rate: float
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "AudioFeatures":
+    def from_dict(cls, data: dict[str, Any]) -> AudioFeatures:
         return cls(
             duration_s=float(data.get("duration_s", 0.0)),
             sample_rate=int(data.get("sample_rate", 16000)),
@@ -74,7 +74,7 @@ class AnalysisResult:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "AnalysisResult":
+    def from_dict(cls, data: dict[str, Any]) -> AnalysisResult:
         top_styles = [
             item
             if isinstance(item, StyleScore)
