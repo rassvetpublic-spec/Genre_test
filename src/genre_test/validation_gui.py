@@ -9,6 +9,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from .cancellation import AnalysisCancelled
+from .gui_text import bind_copy_shortcuts
 from .history import HistoryDB
 from .logging_utils import append_log
 from .performance import (
@@ -19,6 +20,7 @@ from .performance import (
     milliseconds,
     tracks_per_minute,
 )
+from .presentation import format_validation_run_metadata
 from .runtime_meta import default_history_path, default_log_path, default_results_dir
 from .validation import ValidationEngine, format_validation_session, format_version_comparison
 
@@ -42,6 +44,8 @@ VERSION_MODE_LABELS = {
     "Expert": "expert",
     "Любой последний (диагностика)": "any",
 }
+
+SEPARATOR = "=" * 88
 
 
 class ValidationTab(ttk.Frame):
@@ -217,12 +221,15 @@ class ValidationTab(ttk.Frame):
         ttk.Separator(self).grid(row=6, column=0, sticky="ew", pady=4)
         self.output = tk.Text(self, wrap="none", font=("Consolas", 10), undo=False)
         self.output.grid(row=7, column=0, sticky="nsew")
+        bind_copy_shortcuts(self.output)
         yscroll = ttk.Scrollbar(self, orient="vertical", command=self.output.yview)
         yscroll.grid(row=7, column=1, sticky="ns")
-        self.output.configure(yscrollcommand=yscroll.set)
+        xscroll = ttk.Scrollbar(self, orient="horizontal", command=self.output.xview)
+        xscroll.grid(row=8, column=0, sticky="ew")
+        self.output.configure(yscrollcommand=yscroll.set, xscrollcommand=xscroll.set)
 
         footer = ttk.Frame(self)
-        footer.grid(row=8, column=0, sticky="ew", pady=(6, 0))
+        footer.grid(row=9, column=0, sticky="ew", pady=(6, 0))
         ttk.Button(
             footer,
             text="СКОПИРОВАТЬ СОДЕРЖИМОЕ",
@@ -291,6 +298,15 @@ class ValidationTab(ttk.Frame):
         self.update()
         self.status_var.set("Содержимое скопировано в буфер")
 
+    def _append_output(self, text: str, *, separator: bool = False) -> None:
+        if not text:
+            return
+        if separator and self.output.index("end-1c") != "1.0":
+            self.output.insert("end", f"\n{SEPARATOR}\n")
+        self.output.insert("end", text.rstrip() + "\n")
+        self.output.see("end")
+        self.output.update_idletasks()
+
     def _set_busy(self, busy: bool, status: str, stoppable: bool = False) -> None:
         self._busy = busy
         self.run_button.configure(state="disabled" if busy else "normal")
@@ -323,6 +339,10 @@ class ValidationTab(ttk.Frame):
         filter_mode = FILTER_LABELS[self.filter_var.get()]
         include_service_dirs = not self.ignore_service_var.get()
         self.output.delete("1.0", "end")
+        self._append_output(
+            f"Validation started\nMode: {self.mode_var.get()}\nFilter: {self.filter_var.get()}\n"
+            f"Sources: {len(sources)}"
+        )
         self._cancel_event.clear()
         self._set_busy(True, "Подготовка validation…", stoppable=True)
         append_log(
@@ -354,7 +374,9 @@ class ValidationTab(ttk.Frame):
             )
 
             def progress(current: int, total: int, message: str) -> None:
-                self._queue.put(("status", f"[{current}/{total}] {message}"))
+                line = f"[{current}/{total}] {message}"
+                self._queue.put(("status", line))
+                self._queue.put(("progress", line))
 
             result = engine.recheck(
                 sources,
@@ -388,8 +410,14 @@ class ValidationTab(ttk.Frame):
                 avg_seconds_per_track=avg_s,
                 tracks_per_minute=rate,
             )
+            report = (
+                format_validation_session(result)
+                + perf_text
+                + "\n\n"
+                + format_validation_run_metadata(result)
+            )
             kind = "cancelled" if result.cancelled else "done"
-            self._queue.put((kind, format_validation_session(result) + perf_text))
+            self._queue.put((kind, report))
             self._queue.put(("refresh_versions", None))
         except AnalysisCancelled:
             elapsed_s = elapsed_seconds(session_started)
@@ -483,6 +511,10 @@ class ValidationTab(ttk.Frame):
             )
             return
         self.output.delete("1.0", "end")
+        self._append_output(
+            f"Version comparison started: {version_a} -> {version_b} "
+            f"({self.version_mode_var.get()})"
+        )
         self._cancel_event.clear()
         self._set_busy(True, "Сравнение версий…", stoppable=False)
         threading.Thread(
@@ -519,18 +551,18 @@ class ValidationTab(ttk.Frame):
                 kind, payload = self._queue.get_nowait()
                 if kind == "status":
                     self.status_var.set(str(payload))
+                elif kind == "progress":
+                    self._append_output(str(payload))
                 elif kind == "done":
-                    self.output.insert("end", str(payload).lstrip() + "\n")
-                    self.output.see("1.0")
+                    self._append_output(str(payload), separator=True)
                     self._set_busy(False, "Готово")
                 elif kind == "cancelled":
-                    self.output.insert("end", str(payload).lstrip() + "\n")
-                    self.output.see("1.0")
+                    self._append_output(str(payload), separator=True)
                     self._set_busy(False, "Остановлено")
                 elif kind == "refresh_versions":
                     self._refresh_versions()
                 elif kind == "error":
-                    self.output.insert("end", str(payload))
+                    self._append_output(str(payload), separator=True)
                     self._set_busy(False, "Ошибка")
                     messagebox.showerror(
                         "Genre_test",
