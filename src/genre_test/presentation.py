@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .models import AnalysisResult
+
+if TYPE_CHECKING:
+    from .validation import ValidationSessionResult
 
 
 def tempo_candidates(bpm: float | None) -> str:
@@ -106,4 +110,55 @@ def format_result_text(
             lines.append(f"Relative style margin: {result.style_margin:.3f}")
 
     lines.extend(["", "Scores:", *_score_table(result, top_n=top_n)])
+    return "\n".join(lines)
+
+
+def _score_list(items, limit: int) -> str:
+    selected = list(items[:limit])
+    if not selected:
+        return "n/a"
+    return "; ".join(f"{item.label}={item.score:.4f}" for item in selected)
+
+
+def format_validation_run_metadata(result: ValidationSessionResult) -> str:
+    """Full per-run internals for the Validation / Перепроверка tab only."""
+    lines = ["Detailed run metadata:"]
+    for outcome in result.outcomes:
+        lines.extend(
+            [
+                "",
+                f"[{outcome.severity}] {Path(outcome.path).name}",
+                f"track_id: {outcome.track_id}",
+                f"status: {outcome.status}",
+            ]
+        )
+        for mode, item in outcome.results.items():
+            family_score = (
+                f"{item.primary_genre_score:.4f}"
+                if item.primary_genre_score is not None
+                else "n/a"
+            )
+            lines.extend(
+                [
+                    f"  [{mode}]",
+                    f"    genre={item.resolved_genre or 'n/a'} | family={item.primary_genre or 'n/a'} "
+                    f"({family_score}) | classification={item.classification} | "
+                    f"confidence={item.confidence}",
+                    f"    quality={item.input_quality} | windows={item.windows_analyzed} | "
+                    f"device={item.device}",
+                    f"    analyzer={item.analyzer_version} | schema={item.schema_version}",
+                    f"    run_id={item.run_id or 'n/a'}",
+                    f"    track_id={item.track_id or outcome.track_id}",
+                    f"    MAEST={item.model_id} @ {item.model_revision or 'un-pinned'}",
+                    f"    top_styles: {_score_list(item.top_styles, 5)}",
+                    f"    broad_families: {_score_list(item.broad_genres, 6)}",
+                ]
+            )
+            if item.secondary_style or item.secondary_genre:
+                lines.append(
+                    f"    alternative: style={item.secondary_style or 'n/a'} | "
+                    f"family={item.secondary_genre or 'n/a'}"
+                )
+            if item.quality_notes:
+                lines.append("    QC: " + "; ".join(item.quality_notes))
     return "\n".join(lines)
