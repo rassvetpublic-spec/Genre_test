@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Iterable
 
 from .runtime_meta import default_hf_home
@@ -27,6 +27,7 @@ class MaestClassifier:
     model_id: str = DEFAULT_MODEL
     revision: str | None = None
     device: str = "auto"
+    last_batch_size: int = field(init=False, default=1)
 
     def __post_init__(self) -> None:
         if self.revision is None and self.model_id == DEFAULT_MODEL:
@@ -71,6 +72,7 @@ class MaestClassifier:
         ]
 
     def predict(self, audio_16k: np.ndarray, top_k: int = 25) -> Prediction:
+        self.last_batch_size = 1
         result = self._pipe(audio_16k, top_k=top_k)
         return self._normalize_prediction(result)
 
@@ -88,6 +90,7 @@ class MaestClassifier:
 
         effective_batch_size = batch_size or self.default_batch_size(len(windows))
         effective_batch_size = max(1, min(effective_batch_size, len(windows)))
+        self.last_batch_size = effective_batch_size
         try:
             result = self._pipe(
                 windows,
