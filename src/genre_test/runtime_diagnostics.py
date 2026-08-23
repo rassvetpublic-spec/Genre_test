@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import shutil
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -44,10 +45,43 @@ def _hf_token_status() -> tuple[bool, str]:
     return (True, "huggingface_hub cache") if token else (False, "none")
 
 
+def _ffmpeg_candidates() -> list[Path]:
+    candidates: list[Path] = []
+
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        candidates.append(Path(local_app_data) / "Microsoft" / "WinGet" / "Links" / "ffmpeg.exe")
+
+    user_profile = os.environ.get("USERPROFILE")
+    if user_profile:
+        candidates.append(Path(user_profile) / "scoop" / "shims" / "ffmpeg.exe")
+
+    program_data = os.environ.get("ProgramData")
+    if program_data:
+        candidates.append(Path(program_data) / "chocolatey" / "bin" / "ffmpeg.exe")
+
+    program_files = os.environ.get("ProgramFiles")
+    if program_files:
+        candidates.append(Path(program_files) / "ffmpeg" / "bin" / "ffmpeg.exe")
+
+    return candidates
+
+
+def find_ffmpeg() -> str | None:
+    path = shutil.which("ffmpeg")
+    if path:
+        return path
+
+    for candidate in _ffmpeg_candidates():
+        if candidate.is_file():
+            return str(candidate.resolve())
+    return None
+
+
 def collect_runtime_diagnostics() -> RuntimeDiagnostics:
     token_available, token_source = _hf_token_status()
     return RuntimeDiagnostics(
-        ffmpeg_path=shutil.which("ffmpeg"),
+        ffmpeg_path=find_ffmpeg(),
         hf_token_available=token_available,
         hf_auth_source=token_source,
     )
