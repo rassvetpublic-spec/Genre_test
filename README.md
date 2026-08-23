@@ -1,6 +1,6 @@
 # Genre_test
 
-**Current version: 0.3.3**
+**Current version: 0.3.4**
 
 Локальный анализатор музыкального жанра для Windows/Linux с **MAEST Discogs 519**, адаптивным Auto-анализом и Validation Lab для проверки сходимости, истории и регрессий между версиями.
 
@@ -425,6 +425,33 @@ Pinned default revision:
 
 HF token status проверяется локально. `token available` означает, что token найден в environment/cache; это не сетевое подтверждение его валидности.
 
+## FFmpeg bootstrap — v0.3.4
+
+На Windows `setup.ps1` и `upgrade.ps1` теперь автоматически обеспечивают наличие FFmpeg.
+
+Порядок:
+
+1. поиск `ffmpeg` в текущем PATH;
+2. поиск WinGet Links, Scoop, Chocolatey и стандартного `Program Files\ffmpeg\bin`;
+3. если FFmpeg не найден — автоматическая установка `Gyan.FFmpeg` через WinGet;
+4. каталог найденного `ffmpeg.exe` сразу добавляется в PATH текущего процесса;
+5. `doctor` повторно показывает фактический путь и статус AAC/extended decode fallback.
+
+Отдельный helper:
+
+```powershell
+.\scripts\ensure_ffmpeg.ps1
+```
+
+Явный отказ от автоматического bootstrap:
+
+```powershell
+.\scripts\setup.ps1 -SkipFFmpeg
+.\scripts\upgrade.ps1 -SkipFFmpeg
+```
+
+Если `ffmpeg.exe` установлен через WinGet/Scoop/Chocolatey, но новая PowerShell-сессия получила устаревший PATH, Genre_test дополнительно обнаруживает известный путь и добавляет его в PATH текущего Python-процесса перед `librosa.load()`.
+
 ## Перепроверка треков из разных каталогов
 
 Validation может одновременно принимать каталоги и отдельные файлы с разных дисков.
@@ -519,11 +546,15 @@ cd C:\GIT\Genre_test
 .\scripts\setup.ps1
 ```
 
+На Windows `setup.ps1` автоматически проверяет и при необходимости устанавливает FFmpeg через WinGet.
+
 Обновление после `git pull`:
 
 ```powershell
 .\scripts\upgrade.ps1
 ```
+
+`upgrade.ps1` выполняет ту же проверку FFmpeg, поэтому существующая установка Genre_test автоматически дооснащается decoder dependency после обновления.
 
 Проверка:
 
