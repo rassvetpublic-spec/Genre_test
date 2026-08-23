@@ -21,6 +21,7 @@ def format_result_text(result: AnalysisResult, top_n: int = 10) -> str:
         f"Broad family: {result.primary_genre or 'n/a'}",
         f"Classification: {result.classification}",
         f"Confidence: {result.confidence}",
+        f"Analysis: {result.analysis_mode} | Windows analyzed: {result.windows_analyzed}",
     ]
     if result.secondary_genre:
         lines.append(f"Secondary family: {result.secondary_genre}")
