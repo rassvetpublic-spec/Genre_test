@@ -22,7 +22,12 @@ def format_result_text(result: AnalysisResult, top_n: int = 10) -> str:
         f"Classification: {result.classification}",
         f"Confidence: {result.confidence}",
         f"Analysis: {result.analysis_mode} | Windows analyzed: {result.windows_analyzed}",
+        f"Analyzer version: {result.analyzer_version} | Schema: {result.schema_version}",
     ]
+    if result.run_id:
+        lines.append(f"Run ID: {result.run_id}")
+    if result.track_id:
+        lines.append(f"Track ID: {result.track_id}")
     if result.secondary_genre:
         lines.append(f"Secondary family: {result.secondary_genre}")
     if result.secondary_style:

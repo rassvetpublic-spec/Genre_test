@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
 from pathlib import Path
 
+from . import __version__
 from .aggregate import aggregate_predictions
 from .analysis_policy import (
     ANALYSIS_MODES,
@@ -12,8 +14,10 @@ from .analysis_policy import (
 from .audio import load_audio, select_windows
 from .features import extract_audio_features
 from .maest import DEFAULT_MODEL, MaestClassifier
-from .models import AnalysisResult, StyleScore
+from .models import AnalysisResult, AudioFeatures, StyleScore
 from .resolver import GenreResolution, resolve_genre
+from .runtime_meta import RESULT_SCHEMA_VERSION, current_git_commit, new_run_id, utc_now_iso
+from .track_identity import identify_track
 
 
 class GenreAnalyzer:
@@ -40,12 +44,13 @@ class GenreAnalyzer:
         self.window_seconds = window_seconds
         self.window_count = window_count
         self.top_k = top_k
+        self.internal_top_k = max(25, top_k)
         self.analysis_mode = mode
+        self.git_commit = current_git_commit()
         self.classifier = MaestClassifier(model_id=model_id, revision=revision, device=device)
 
     def _predict(self, window) -> list[dict[str, float | str]]:
-        # Keep more internal candidates than the report needs so the resolver can see competitors.
-        return self.classifier.predict(window, top_k=max(25, self.top_k))
+        return self.classifier.predict(window, top_k=self.internal_top_k)
 
     def _resolve_predictions(
         self, predictions: list[list[dict[str, float | str]]]
@@ -53,51 +58,17 @@ class GenreAnalyzer:
         styles, genres = aggregate_predictions(predictions, top_k=self.top_k)
         return styles, genres, resolve_genre(styles, genres)
 
-    def _run_windows(
+    def _build_result(
         self,
-        audio,
-        sr: int,
-        duration_s: float,
-    ) -> tuple[list[list[dict[str, float | str]]], int]:
-        target = duration_window_target(duration_s)
-
-        if self.analysis_mode == "expert":
-            windows = select_windows(audio, sr, self.window_seconds, self.window_count)
-            return [self._predict(window) for window in windows], len(windows)
-
-        if self.analysis_mode == "fast":
-            windows = select_windows(audio, sr, self.window_seconds, min(target, 3))
-            return [self._predict(window) for window in windows], len(windows)
-
-        windows = select_windows(audio, sr, self.window_seconds, target)
-
-        if self.analysis_mode == "accurate" or len(windows) <= 5:
-            return [self._predict(window) for window in windows], len(windows)
-
-        # Auto starts with five windows spread across the same final grid. Stable high-confidence
-        # primary results stop there; ambiguous/hybrid results expand to the duration-based target.
-        initial_indices = spread_indices(len(windows), 5)
-        prediction_by_index = {index: self._predict(windows[index]) for index in initial_indices}
-        initial_predictions = [prediction_by_index[index] for index in initial_indices]
-        _, _, resolution = self._resolve_predictions(initial_predictions)
-
-        if not needs_more_auto_windows(resolution.classification, resolution.confidence):
-            return initial_predictions, len(initial_predictions)
-
-        for index, window in enumerate(windows):
-            if index not in prediction_by_index:
-                prediction_by_index[index] = self._predict(window)
-
-        predictions = [prediction_by_index[index] for index in range(len(windows))]
-        return predictions, len(predictions)
-
-    def analyze(self, path: Path) -> AnalysisResult:
-        audio, sr = load_audio(path, self.sample_rate)
-        features = extract_audio_features(audio, sr)
-        predictions, windows_analyzed = self._run_windows(audio, sr, features.duration_s)
+        path: Path,
+        features: AudioFeatures,
+        predictions: list[list[dict[str, float | str]]],
+        mode: str,
+        track_id: str,
+        source_file_size: int,
+    ) -> AnalysisResult:
         styles, genres, resolution = self._resolve_predictions(predictions)
         primary = genres[0] if genres else None
-
         return AnalysisResult(
             path=str(path.resolve()),
             primary_genre=primary.label if primary else None,
@@ -115,7 +86,140 @@ class GenreAnalyzer:
             audio_features=features,
             model_id=self.classifier.model_id,
             model_revision=self.classifier.revision,
-            windows_analyzed=windows_analyzed,
+            windows_analyzed=len(predictions),
             device=self.classifier.resolved_device,
-            analysis_mode=self.analysis_mode,
+            analysis_mode=mode,
+            schema_version=RESULT_SCHEMA_VERSION,
+            analyzer_version=__version__,
+            run_id=new_run_id(),
+            analyzed_at=utc_now_iso(),
+            track_id=track_id,
+            window_seconds=self.window_seconds,
+            internal_top_k=self.internal_top_k,
+            report_top_k=self.top_k,
+            git_commit=self.git_commit,
+            source_file_size=source_file_size,
         )
+
+    def _prediction_cache(
+        self, windows
+    ) -> tuple[
+        dict[int, list[dict[str, float | str]]],
+        Callable[[int], list[dict[str, float | str]]],
+    ]:
+        cache: dict[int, list[dict[str, float | str]]] = {}
+
+        def get(index: int) -> list[dict[str, float | str]]:
+            if index not in cache:
+                cache[index] = self._predict(windows[index])
+            return cache[index]
+
+        return cache, get
+
+    def analyze(
+        self,
+        path: Path,
+        analysis_mode: str | None = None,
+        track_id: str | None = None,
+    ) -> AnalysisResult:
+        mode = (analysis_mode or self.analysis_mode).lower().strip()
+        if mode not in ANALYSIS_MODES:
+            raise ValueError(f"Unknown analysis mode: {mode}")
+
+        resolved_path = path.resolve()
+        audio, sr = load_audio(resolved_path, self.sample_rate)
+        features = extract_audio_features(audio, sr)
+        identity = identify_track(resolved_path) if track_id is None else None
+        resolved_track_id = track_id or identity.track_id
+        source_file_size = identity.size_bytes if identity else resolved_path.stat().st_size
+        target = duration_window_target(features.duration_s)
+
+        if mode == "expert":
+            windows = select_windows(audio, sr, self.window_seconds, self.window_count)
+            predictions = [self._predict(window) for window in windows]
+        else:
+            windows = select_windows(audio, sr, self.window_seconds, target)
+            if mode == "fast":
+                indices = spread_indices(len(windows), min(len(windows), 3))
+                predictions = [self._predict(windows[index]) for index in indices]
+            elif mode == "accurate" or len(windows) <= 5:
+                predictions = [self._predict(window) for window in windows]
+            else:
+                initial_indices = spread_indices(len(windows), 5)
+                cache, get = self._prediction_cache(windows)
+                initial_predictions = [get(index) for index in initial_indices]
+                _, _, resolution = self._resolve_predictions(initial_predictions)
+                if needs_more_auto_windows(resolution.classification, resolution.confidence):
+                    predictions = [get(index) for index in range(len(windows))]
+                else:
+                    predictions = initial_predictions
+                del cache
+
+        return self._build_result(
+            resolved_path,
+            features,
+            predictions,
+            mode,
+            resolved_track_id,
+            source_file_size,
+        )
+
+    def analyze_modes(
+        self,
+        path: Path,
+        modes: Iterable[str] = ("fast", "auto", "accurate"),
+        track_id: str | None = None,
+    ) -> dict[str, AnalysisResult]:
+        requested = list(dict.fromkeys(mode.lower().strip() for mode in modes))
+        if not requested:
+            raise ValueError("At least one analysis mode is required")
+        if any(mode not in ANALYSIS_MODES for mode in requested):
+            invalid = [mode for mode in requested if mode not in ANALYSIS_MODES]
+            raise ValueError(f"Unknown analysis modes: {invalid}")
+        if "expert" in requested:
+            raise ValueError("analyze_modes does not combine expert mode with automatic modes")
+
+        resolved_path = path.resolve()
+        audio, sr = load_audio(resolved_path, self.sample_rate)
+        features = extract_audio_features(audio, sr)
+        identity = identify_track(resolved_path) if track_id is None else None
+        resolved_track_id = track_id or identity.track_id
+        source_file_size = identity.size_bytes if identity else resolved_path.stat().st_size
+        target = duration_window_target(features.duration_s)
+        windows = select_windows(audio, sr, self.window_seconds, target)
+        cache, get = self._prediction_cache(windows)
+        result_predictions: dict[str, list[list[dict[str, float | str]]]] = {}
+
+        if "fast" in requested:
+            fast_indices = spread_indices(len(windows), min(len(windows), 3))
+            result_predictions["fast"] = [get(index) for index in fast_indices]
+
+        if "auto" in requested:
+            if len(windows) <= 5:
+                auto_indices = list(range(len(windows)))
+                result_predictions["auto"] = [get(index) for index in auto_indices]
+            else:
+                initial_indices = spread_indices(len(windows), 5)
+                initial_predictions = [get(index) for index in initial_indices]
+                _, _, resolution = self._resolve_predictions(initial_predictions)
+                if needs_more_auto_windows(resolution.classification, resolution.confidence):
+                    result_predictions["auto"] = [get(index) for index in range(len(windows))]
+                else:
+                    result_predictions["auto"] = initial_predictions
+
+        if "accurate" in requested:
+            result_predictions["accurate"] = [get(index) for index in range(len(windows))]
+
+        results = {
+            mode: self._build_result(
+                resolved_path,
+                features,
+                result_predictions[mode],
+                mode,
+                resolved_track_id,
+                source_file_size,
+            )
+            for mode in requested
+        }
+        del cache
+        return results

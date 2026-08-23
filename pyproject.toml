@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "genre-test"
-version = "0.2.1"
-description = "Local music genre analyzer for Rassvetmsk: MAEST/Discogs classification plus audio features and reports."
+version = "0.3.0"
+description = "Local music genre analyzer with MAEST classification, versioned history and validation lab."
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 license = {text = "MIT"}
@@ -48,3 +48,4 @@ target-version = "py311"
 [tool.ruff.lint.per-file-ignores]
 "src/genre_test/cli.py" = ["B008"]
 "src/genre_test/gui.py" = ["BLE001"]
+"src/genre_test/validation_gui.py" = ["BLE001"]

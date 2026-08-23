@@ -11,9 +11,12 @@ from tkinter import filedialog, messagebox, ttk
 from . import __version__
 from .analyzer import GenreAnalyzer
 from .audio import iter_audio_files
+from .history import HistoryDB
 from .maest import DEFAULT_MODEL
 from .presentation import format_result_text
 from .report import write_json, write_summary_csv
+from .runtime_meta import default_history_path
+from .validation_gui import ValidationTab
 
 AUDIO_FILETYPES = [
     ("Audio files", "*.wav *.flac *.mp3 *.ogg *.m4a *.aac"),
@@ -32,8 +35,8 @@ class GenreTestWindow(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title(f"Genre_test v{__version__} — Music Genre Analyzer")
-        self.geometry("920x680")
-        self.minsize(760, 560)
+        self.geometry("1040x760")
+        self.minsize(820, 620)
 
         self.input_var = tk.StringVar()
         self.out_var = tk.StringVar(value=str((Path.cwd() / "results").resolve()))
@@ -49,8 +52,15 @@ class GenreTestWindow(tk.Tk):
         self.after(120, self._poll_queue)
 
     def _build_ui(self) -> None:
-        root = ttk.Frame(self, padding=12)
-        root.pack(fill="both", expand=True)
+        notebook = ttk.Notebook(self)
+        notebook.pack(fill="both", expand=True)
+
+        analysis_tab = ttk.Frame(notebook, padding=12)
+        validation_tab = ValidationTab(notebook)
+        notebook.add(analysis_tab, text="Анализ")
+        notebook.add(validation_tab, text="Validation / Перепроверка")
+
+        root = analysis_tab
         root.columnconfigure(1, weight=1)
         root.rowconfigure(5, weight=1)
 
@@ -78,7 +88,6 @@ class GenreTestWindow(tk.Tk):
 
         settings = ttk.Frame(root)
         settings.grid(row=2, column=0, columnspan=4, sticky="ew", pady=(8, 4))
-
         ttk.Label(settings, text="Device").pack(side="left")
         ttk.Combobox(
             settings,
@@ -87,7 +96,6 @@ class GenreTestWindow(tk.Tk):
             state="readonly",
             width=8,
         ).pack(side="left", padx=(6, 18))
-
         ttk.Label(settings, text="Режим анализа").pack(side="left")
         mode_combo = ttk.Combobox(
             settings,
@@ -124,6 +132,7 @@ class GenreTestWindow(tk.Tk):
         self.progress = ttk.Progressbar(actions, mode="indeterminate", length=220)
         self.progress.pack(side="left", padx=14)
         ttk.Label(actions, textvariable=self.status_var).pack(side="left")
+        ttk.Label(actions, text=f"History: {default_history_path()}").pack(side="right")
 
         ttk.Separator(root).grid(row=4, column=0, columnspan=4, sticky="ew", pady=6)
         self.output = tk.Text(root, wrap="none", font=("Consolas", 10), undo=False)
@@ -133,7 +142,6 @@ class GenreTestWindow(tk.Tk):
         xscroll = ttk.Scrollbar(root, orient="horizontal", command=self.output.xview)
         xscroll.grid(row=6, column=0, columnspan=4, sticky="ew")
         self.output.configure(yscrollcommand=yscroll.set, xscrollcommand=xscroll.set)
-
         self._sync_mode_ui()
 
     def _sync_mode_ui(self, _event=None) -> None:
@@ -144,7 +152,10 @@ class GenreTestWindow(tk.Tk):
             self.advanced_frame.pack_forget()
 
     def _choose_file(self) -> None:
-        selected = filedialog.askopenfilename(title="Выберите аудиофайл", filetypes=AUDIO_FILETYPES)
+        selected = filedialog.askopenfilename(
+            title="Выберите аудиофайл",
+            filetypes=AUDIO_FILETYPES,
+        )
         if selected:
             self.input_var.set(selected)
 
@@ -168,7 +179,10 @@ class GenreTestWindow(tk.Tk):
             return
         source = Path(self.input_var.get().strip().strip('"')).expanduser()
         if not source.exists():
-            messagebox.showerror("Genre_test", "Выберите существующий аудиофайл или папку.")
+            messagebox.showerror(
+                "Genre_test",
+                "Выберите существующий аудиофайл или папку.",
+            )
             return
         out = Path(self.out_var.get().strip().strip('"')).expanduser()
         mode = MODE_LABELS.get(self.mode_var.get(), "auto")
@@ -177,8 +191,7 @@ class GenreTestWindow(tk.Tk):
         self.run_button.configure(state="disabled")
         self.progress.start(10)
         self.status_var.set("Загрузка модели / анализ…")
-
-        thread = threading.Thread(
+        threading.Thread(
             target=self._worker,
             args=(
                 source,
@@ -189,8 +202,7 @@ class GenreTestWindow(tk.Tk):
                 self.top_k_var.get(),
             ),
             daemon=True,
-        )
-        thread.start()
+        ).start()
 
     def _worker(
         self,
@@ -209,27 +221,44 @@ class GenreTestWindow(tk.Tk):
                 window_count=windows,
                 top_k=top_k,
             )
+            history = HistoryDB()
             if source.is_file():
                 result = analyzer.analyze(source)
                 target = write_json(result, out)
-                text = format_result_text(result) + f"\n\nJSON: {target}"
+                history.record_result(result)
+                text = (
+                    format_result_text(result)
+                    + f"\n\nJSON snapshot: {target}"
+                    + f"\nHistory DB: {history.path}"
+                )
                 self._queue.put(("done", text))
                 return
 
             files = iter_audio_files(source)
             if not files:
-                raise RuntimeError("В выбранной папке не найдено поддерживаемых аудиофайлов.")
+                raise RuntimeError(
+                    "В выбранной папке не найдено поддерживаемых аудиофайлов."
+                )
             results = []
             blocks = []
             for idx, path in enumerate(files, 1):
                 self._queue.put(("status", f"[{idx}/{len(files)}] {path.name}"))
                 result = analyzer.analyze(path)
                 results.append(result)
-                write_json(result, out)
-                blocks.append(format_result_text(result, top_n=5))
+                target = write_json(result, out)
+                history.record_result(result)
+                blocks.append(
+                    format_result_text(result, top_n=5) + f"\nJSON: {target}"
+                )
             csv_path = write_summary_csv(results, out)
-            blocks.append(f"Summary CSV: {csv_path}")
-            self._queue.put(("done", "\n\n" + ("\n\n" + "=" * 72 + "\n\n").join(blocks)))
+            blocks.append(f"Summary CSV: {csv_path}\nHistory DB: {history.path}")
+            self._queue.put(
+                (
+                    "done",
+                    "\n\n"
+                    + ("\n\n" + "=" * 72 + "\n\n").join(blocks),
+                )
+            )
         except Exception:
             self._queue.put(("error", traceback.format_exc()))
 
@@ -246,7 +275,10 @@ class GenreTestWindow(tk.Tk):
                 elif kind == "error":
                     self.output.insert("end", str(payload))
                     self._finish("Ошибка")
-                    messagebox.showerror("Genre_test", "Анализ завершился ошибкой. Подробности в окне.")
+                    messagebox.showerror(
+                        "Genre_test",
+                        "Анализ завершился ошибкой. Подробности в окне.",
+                    )
         except queue.Empty:
             pass
         self.after(120, self._poll_queue)
