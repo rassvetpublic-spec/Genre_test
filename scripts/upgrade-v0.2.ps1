@@ -9,5 +9,6 @@ if (-not (Test-Path $python)) {
 & $python -m pip install -e '.[dev]'
 if ($LASTEXITCODE -ne 0) { throw 'Upgrade install failed.' }
 & (Join-Path $repoRoot '.venv\Scripts\genre-test.exe') doctor
-Write-Host "`nUpgrade to Genre_test 0.2.0 complete."
+$version = & $python -c "import importlib.metadata; print(importlib.metadata.version('genre-test'))"
+Write-Host "`nUpgrade to Genre_test $version complete."
 Write-Host "GUI: .\scripts\gui.ps1"
