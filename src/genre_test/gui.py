@@ -12,6 +12,7 @@ from . import __version__
 from .analyzer import GenreAnalyzer
 from .audio import iter_audio_files
 from .cancellation import AnalysisCancelled
+from .gui_text import bind_copy_shortcuts
 from .history import HistoryDB
 from .logging_utils import append_log
 from .maest import DEFAULT_MODEL, DEFAULT_MODEL_REVISION
@@ -40,6 +41,8 @@ MODE_LABELS = {
     "Точный": "accurate",
     "Экспертный": "expert",
 }
+
+SEPARATOR = "=" * 88
 
 
 class GenreTestWindow(tk.Tk):
@@ -178,6 +181,7 @@ class GenreTestWindow(tk.Tk):
         ttk.Separator(root).grid(row=4, column=0, columnspan=4, sticky="ew", pady=6)
         self.output = tk.Text(root, wrap="none", font=("Consolas", 10), undo=False)
         self.output.grid(row=5, column=0, columnspan=4, sticky="nsew")
+        bind_copy_shortcuts(self.output)
         yscroll = ttk.Scrollbar(root, orient="vertical", command=self.output.yview)
         yscroll.grid(row=5, column=4, sticky="ns")
         xscroll = ttk.Scrollbar(root, orient="horizontal", command=self.output.xview)
@@ -240,6 +244,15 @@ class GenreTestWindow(tk.Tk):
         self.update()
         self.status_var.set("Содержимое скопировано в буфер")
 
+    def _append_output(self, text: str, *, separator: bool = False) -> None:
+        if not text:
+            return
+        if separator and self.output.index("end-1c") != "1.0":
+            self.output.insert("end", f"\n\n{SEPARATOR}\n\n")
+        self.output.insert("end", text.rstrip() + "\n")
+        self.output.see("end")
+        self.output.update_idletasks()
+
     def _start(self) -> None:
         if self._busy:
             return
@@ -253,6 +266,7 @@ class GenreTestWindow(tk.Tk):
         out = Path(self.out_var.get().strip().strip('"')).expanduser()
         mode = MODE_LABELS.get(self.mode_var.get(), "auto")
         self.output.delete("1.0", "end")
+        self._append_output(f"Источник: {source}\nРежим: {mode}\nПодготовка анализа…")
         self._cancel_event.clear()
         self._busy = True
         self.run_button.configure(state="disabled")
@@ -292,7 +306,6 @@ class GenreTestWindow(tk.Tk):
     ) -> None:
         session_started = clock()
         results: list = []
-        blocks: list[str] = []
         file_errors: list[str] = []
         processing_started: float | None = None
         try:
@@ -308,7 +321,7 @@ class GenreTestWindow(tk.Tk):
             if source.is_file():
                 item_started = clock()
                 result = analyzer.analyze(source, cancel_check=self._cancel_event.is_set)
-                target = write_json(result, out)
+                write_json(result, out)
                 history.record_result(result)
                 item_s = elapsed_seconds(item_started)
                 total_s = elapsed_seconds(session_started)
@@ -331,13 +344,7 @@ class GenreTestWindow(tk.Tk):
                     avg_seconds_per_track=average_seconds(1, item_s),
                     tracks_per_minute=tracks_per_minute(1, item_s),
                 )
-                text = (
-                    format_result_text(result)
-                    + f"\n\nJSON snapshot: {target}"
-                    + f"\nHistory DB: {history.path}"
-                    + f"\nLog: {default_log_path()}"
-                    + f"\nElapsed: {item_s:.2f} s"
-                )
+                text = format_result_text(result) + f"\n\nElapsed: {item_s:.2f} s"
                 append_log(f"Analysis complete: {source}; elapsed={item_s:.3f}s")
                 self._queue.put(("done", text))
                 return
@@ -347,6 +354,7 @@ class GenreTestWindow(tk.Tk):
                 raise RuntimeError(
                     "В выбранной папке не найдено поддерживаемых аудиофайлов."
                 )
+            self._queue.put(("append", f"Найдено аудиофайлов: {len(files)}"))
             for idx, path in enumerate(files, 1):
                 if self._cancel_event.is_set():
                     raise AnalysisCancelled("Operation cancelled by user")
@@ -359,9 +367,8 @@ class GenreTestWindow(tk.Tk):
                 except Exception as exc:
                     item_s = elapsed_seconds(item_started)
                     detail = traceback.format_exc()
-                    summary = f"[ERROR] {path}: {type(exc).__name__}: {exc}"
+                    summary = f"[ERROR] {path.name}: {type(exc).__name__}: {exc}"
                     file_errors.append(summary)
-                    blocks.append(summary)
                     append_log(f"Batch file failed: {path}\n{detail}")
                     append_perf(
                         "analysis_item",
@@ -371,9 +378,10 @@ class GenreTestWindow(tk.Tk):
                         elapsed_ms=milliseconds(item_s),
                         error_type=type(exc).__name__,
                     )
+                    self._queue.put(("append_block", summary))
                     continue
                 results.append(result)
-                target = write_json(result, out)
+                write_json(result, out)
                 history.record_result(result)
                 item_s = elapsed_seconds(item_started)
                 append_perf(
@@ -384,26 +392,26 @@ class GenreTestWindow(tk.Tk):
                     elapsed_ms=milliseconds(item_s),
                     includes_persistence=True,
                 )
-                blocks.append(format_result_text(result, top_n=5) + f"\nJSON: {target}")
+                block = format_result_text(result, top_n=5) + f"\nElapsed: {item_s:.2f} s"
+                self._queue.put(("append_block", block))
 
-            if results:
-                csv_path = write_summary_csv(results, out)
-                blocks.append(f"Summary CSV: {csv_path}")
+            summary_csv = write_summary_csv(results, out) if results else None
             total_s = elapsed_seconds(session_started)
             processing_s = (
                 elapsed_seconds(processing_started) if processing_started is not None else total_s
             )
             avg_s = average_seconds(len(results), processing_s)
             rate = tracks_per_minute(len(results), processing_s)
-            blocks.append(
+            summary = (
                 f"Completed: {len(results)} / {len(files)}\n"
                 f"File errors skipped: {len(file_errors)}\n"
                 f"Elapsed: {total_s:.2f} s\n"
                 f"Processing: {processing_s:.2f} s\n"
                 f"Average: {avg_s:.3f} s/track\n"
-                f"Throughput: {rate:.3f} tracks/min\n"
-                f"History DB: {history.path}\nLog: {default_log_path()}"
+                f"Throughput: {rate:.3f} tracks/min"
             )
+            if summary_csv:
+                summary += f"\nSummary CSV: {summary_csv}"
             append_log(
                 f"Batch complete: source={source}; completed={len(results)}; "
                 f"errors={len(file_errors)}; elapsed={total_s:.3f}s; "
@@ -421,16 +429,10 @@ class GenreTestWindow(tk.Tk):
                 avg_seconds_per_track=avg_s,
                 tracks_per_minute=rate,
             )
-            self._queue.put(
-                (
-                    "done",
-                    "\n\n" + ("\n\n" + "=" * 72 + "\n\n").join(blocks),
-                )
-            )
+            self._queue.put(("done", summary))
         except AnalysisCancelled:
             if results:
-                csv_path = write_summary_csv(results, out)
-                blocks.append(f"Partial summary CSV: {csv_path}")
+                write_summary_csv(results, out)
             total_s = elapsed_seconds(session_started)
             processing_s = (
                 elapsed_seconds(processing_started) if processing_started is not None else total_s
@@ -445,8 +447,6 @@ class GenreTestWindow(tk.Tk):
                 f"Среднее: {avg_s:.3f} s/track; {rate:.3f} tracks/min.\n"
                 "Текущий незавершённый трек в историю не записан."
             )
-            if blocks:
-                message += "\n\n" + ("\n\n" + "=" * 72 + "\n\n").join(blocks)
             append_log(
                 f"Analysis stopped safely: completed={len(results)}; errors={len(file_errors)}; "
                 f"elapsed={total_s:.3f}s"
@@ -483,16 +483,18 @@ class GenreTestWindow(tk.Tk):
                 kind, payload = self._queue.get_nowait()
                 if kind == "status":
                     self.status_var.set(str(payload))
+                elif kind == "append":
+                    self._append_output(str(payload))
+                elif kind == "append_block":
+                    self._append_output(str(payload), separator=True)
                 elif kind == "done":
-                    self.output.insert("end", str(payload).lstrip())
-                    self.output.see("1.0")
+                    self._append_output(str(payload), separator=True)
                     self._finish("Готово")
                 elif kind == "cancelled":
-                    self.output.insert("end", str(payload).lstrip())
-                    self.output.see("1.0")
+                    self._append_output(str(payload), separator=True)
                     self._finish("Остановлено")
                 elif kind == "error":
-                    self.output.insert("end", str(payload))
+                    self._append_output(str(payload), separator=True)
                     self._finish("Ошибка")
                     messagebox.showerror(
                         "Genre_test",
