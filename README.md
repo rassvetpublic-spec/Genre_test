@@ -1,26 +1,27 @@
 # Genre_test
 
-**Current version: 0.2.1**
+**Current version: 0.3.0**
 
-Локальный анализатор музыкального жанра для Windows/Linux.
+Локальный анализатор музыкального жанра для Windows/Linux с MAEST Discogs 519, адаптивным Auto-анализом и системой Validation Lab для проверки сходимости и регрессий между версиями.
 
-## Что делает MVP
+## Основной анализ
+
+Genre_test:
 
 - анализирует WAV/FLAC/MP3/OGG/M4A/AAC;
 - запускает MTG **MAEST Discogs 519** через Hugging Face Transformers;
-- автоматически выбирает репрезентативные 30-секундные окна по длительности и уверенности результата;
-- агрегирует Top-N стилей между окнами;
-- строит более широкий `primary_genre` по иерархии `Genre---Style`;
-- рассчитывает человекочитаемый `resolved_genre` и evidence-aware confidence;
-- оценивает BPM, примерный key/mode, RMS, spectral centroid, rolloff, zero-crossing rate;
-- пишет JSON и CSV;
-- умеет анализировать один файл или каталог пакетно.
+- автоматически выбирает репрезентативные 30-секундные окна;
+- поддерживает `Auto / Fast / Accurate / Expert`;
+- агрегирует детальные Discogs styles и broad families;
+- рассчитывает `resolved_genre`, hybrid/primary и evidence-aware confidence;
+- оценивает BPM, key/mode, RMS и базовые spectral features;
+- сохраняет raw MAEST probabilities для повторной калибровки.
 
-> Жанровая классификация вероятностная. Итог — подсказка для редактора/дистрибьютора, а не абсолютная истина.
+> Жанровая классификация вероятностная. Validation измеряет устойчивость результатов, но не заменяет ручной ground truth.
 
 ## Windows GUI
 
-После установки:
+Запуск:
 
 ```powershell
 .\scripts\gui.ps1
@@ -32,18 +33,34 @@
 scripts\Genre_test_GUI.cmd
 ```
 
-Обычный GUI показывает только действительно нужные настройки:
+В v0.3 GUI имеет две вкладки:
 
-- входной файл/папка;
-- папка результатов;
+```text
+Анализ
+Validation / Перепроверка
+```
+
+### Вкладка «Анализ»
+
+Обычный интерфейс показывает:
+
+- входной файл/папку;
+- папку результатов;
 - `Device`: `auto / cuda / cpu`;
 - `Режим анализа`: `Авто / Быстрый / Точный / Экспертный`.
 
-`Окон` и `Top-K` скрыты и появляются только в режиме `Экспертный`.
+`Окон` и `Top-K` показываются только в `Экспертный`.
 
-### Режимы анализа
+### Режимы
 
-**Авто** — режим по умолчанию. Максимальное число окон выбирается по длительности:
+| Режим | Поведение |
+|---|---|
+| Auto | стартует с минимально достаточного набора и расширяется при неоднозначности |
+| Fast | максимум 3 окна |
+| Accurate | полный duration-based target |
+| Expert | ручные окна и Top-K |
+
+Duration target:
 
 | Длительность | Максимум окон |
 |---:|---:|
@@ -54,134 +71,282 @@ scripts\Genre_test_GUI.cmd
 | 300–420 с | 9 |
 | > 420 с | 11 |
 
-Для длинного трека Auto сначала анализирует 5 равномерно распределённых окон. Если результат уже `primary + high confidence`, анализ останавливается. Если результат hybrid/ambiguous, модель автоматически дозаполняет окна до duration-based target.
+Для длинного трека Auto сначала анализирует 5 распределённых окон. Если получен стабильный `primary + high confidence`, он останавливается. Иначе анализ расширяется до полного target.
 
-**Быстрый** — максимум 3 окна.
+## Validation Lab v0.3
 
-**Точный** — всегда использует полный duration-based target без ранней остановки.
+Validation Lab нужен для систематической отладки анализатора.
 
-**Экспертный** — ручное число окон и Top-K.
+Он отвечает на три вопроса:
 
-Внутренне classifier получает минимум Top-25 кандидатов даже при стандартном отчёте Top-15, чтобы resolver видел конкурирующие стили.
+1. сходятся ли Fast / Auto / Accurate на одном треке;
+2. изменился ли результат после обновления Genre_test;
+3. какие треки требуют ручной проверки.
 
-## Genre resolver v0.2.1
+### Track ID
 
-Resolver сохраняет сырые MAEST probabilities и добавляет отдельный человекочитаемый слой.
+Каждый трек получает content-based identity:
 
-Основные поля:
+```text
+track_id = sha256:<hash>
+```
 
-- `resolved_genre` — основной fine-style;
-- `classification` — `primary` или `hybrid`;
-- `confidence` — учитывает и broad-family evidence, и конкуренцию fine styles;
-- `family_margin` — абсолютная разница между двумя ведущими broad families;
-- `family_ratio` — отношение score второй broad family к первой;
-- `style_margin` — относительный отрыв resolved style от сильнейшего конкурирующего style;
-- `secondary_genre` — вторая broad family;
-- `secondary_style` — сильнейший альтернативный fine-style;
-- `analysis_mode` — использованный режим;
-- `windows_analyzed` — фактически проанализированное число окон.
+Поэтому один и тот же файл после переноса/переименования остаётся тем же треком. Идентичные копии в разных каталогах дедуплицируются.
 
-Hybrid определяется не только абсолютным family margin, но и относительной близостью broad families. Generic labels вроде `Pop---Ballad` и `Pop---Vocal` получают контекст (`Pop Ballad`, `Vocal Pop`).
+### Центральная история
 
-Raw `top_styles` и `broad_genres` сохраняются без потери и остаются источником истины для повторной калибровки resolver.
+По умолчанию на Windows:
 
-## Модель
+```text
+%LOCALAPPDATA%\Genre_test\history.sqlite3
+```
 
-По умолчанию:
+SQLite хранит:
 
-`mtg-upf/discogs-maest-30s-pw-129e-519l`
+- logical tracks;
+- известные пути файлов;
+- все analysis runs;
+- raw detailed style scores;
+- broad-family scores;
+- validation sessions;
+- pairwise comparisons.
 
-Модель загружается при первом запуске с Hugging Face и затем используется из локального кеша.
+История локальная и не попадает в Git.
 
-## Быстрый старт — Windows PowerShell 7
+### Версионирование каждого запуска
+
+Новый JSON содержит:
+
+- `schema_version`
+- `analyzer_version`
+- `run_id`
+- `analyzed_at`
+- `track_id`
+- `analysis_mode`
+- `windows_analyzed`
+- `window_seconds`
+- `internal_top_k`
+- `report_top_k`
+- `model_id`
+- `model_revision`
+- `device`
+- `git_commit` если Git доступен
+
+JSON snapshots больше не перезаписывают друг друга. Имя содержит версию, режим и prefix run-id, например:
+
+```text
+track.genre.0.3.0.auto.a1b2c3d4.json
+```
+
+## Fast / Auto / Accurate convergence
+
+Validation-режим `Fast + Auto + Accurate` декодирует трек один раз и использует общий prediction cache. Поэтому одинаковые окна не прогоняются через MAEST повторно для каждого режима.
+
+Сравниваются:
+
+- Fast vs Auto
+- Fast vs Accurate
+- Auto vs Accurate
+
+Convergence:
+
+```text
+HIGH
+MEDIUM
+LOW
+FAIL
+```
+
+## Автоматический анализ расхождений
+
+Comparator учитывает:
+
+- broad family;
+- resolved fine style;
+- primary/hybrid;
+- Jensen-Shannon divergence broad probabilities;
+- cosine similarity broad probabilities;
+- weighted Top-N overlap detailed styles;
+- BPM;
+- key/mode.
+
+BPM `x`, `x/2` и `x*2` считаются эквивалентными трактовками темпа. Например, `81.5` и `163` отмечаются как `half-double`, а не как критическое расхождение.
+
+Severity:
+
+```text
+STABLE
+MINOR
+SIGNIFICANT
+CRITICAL
+```
+
+## Перепроверка треков из разных каталогов
+
+Во вкладку Validation можно одновременно добавить, например:
+
+```text
+D:\Документы\! SUNO
+E:\Music Archive
+F:\Old Releases
+D:\single_track.mp3
+```
+
+Доступны фильтры:
+
+- `Все треки`
+- `Только результаты старых версий`
+- `Только нестабильные`
+
+И режимы:
+
+- Auto
+- Fast
+- Accurate
+- Fast + Auto + Accurate
+
+## Сравнение версий анализатора
+
+Validation Lab умеет сравнить две сохранённые версии, например:
+
+```text
+0.2.1 -> 0.3.0
+```
+
+Отчёт показывает:
+
+- число common tracks;
+- STABLE / MINOR / SIGNIFICANT / CRITICAL;
+- resolved genre match %;
+- broad family match %;
+- tempo equivalent %;
+- key/mode match %;
+- per-track причины и drift metrics.
+
+## Legacy JSON import
+
+Старые `*.genre*.json` можно загрузить в SQLite history через GUI или CLI.
+
+Если старый JSON не содержит `track_id`, исходный audio path из поля `path` должен ещё существовать: тогда Genre_test вычислит SHA-256 и сопоставит старый результат с текущим треком.
+
+Старые JSON без metadata получают `analyzer_version = legacy-unknown`.
+
+## CLI — основной анализ
+
+Auto:
+
+```powershell
+.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --out ".\results"
+```
+
+Accurate:
+
+```powershell
+.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --mode accurate
+```
+
+Expert:
+
+```powershell
+.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --mode expert --windows 9 --top-k 20
+```
+
+Batch:
+
+```powershell
+.\.venv\Scripts\genre-test.exe batch "D:\Music\Album" --out ".\results"
+```
+
+## CLI — Validation
+
+Несколько каталогов с полной проверкой сходимости:
+
+```powershell
+.\.venv\Scripts\genre-test.exe validate "D:\Music" "E:\Archive" --compare-modes
+```
+
+Только старые версии:
+
+```powershell
+.\.venv\Scripts\genre-test.exe validate "D:\Music" --filter old_versions
+```
+
+Только нестабильные:
+
+```powershell
+.\.venv\Scripts\genre-test.exe validate "D:\Music" --filter unstable
+```
+
+Импорт истории JSON:
+
+```powershell
+.\.venv\Scripts\genre-test.exe history-import ".\results" "D:\OldResults"
+```
+
+Сравнение версий:
+
+```powershell
+.\.venv\Scripts\genre-test.exe compare-versions 0.2.1 0.3.0 --mode any
+```
+
+Auto-to-Auto:
+
+```powershell
+.\.venv\Scripts\genre-test.exe compare-versions 0.3.0 0.3.1 --mode auto
+```
+
+## Установка / обновление
+
+Первичная установка:
 
 ```powershell
 cd C:\GIT\Genre_test
 .\scripts\setup.ps1
 ```
 
-Скрипт автоматически выбирает CUDA 12.8 wheel PyTorch при обнаружении NVIDIA GPU. Для CPU-only: `./scripts/setup.ps1 -Cpu`.
-
-Стандартный Auto-анализ:
+Обновление существующей `.venv` после `git pull`:
 
 ```powershell
-.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --out ".\results"
+.\scripts\upgrade.ps1
 ```
 
-Точный режим:
-
-```powershell
-.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --mode accurate
-```
-
-Экспертный режим:
-
-```powershell
-.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --mode expert --windows 9 --top-k 20
-```
-
-Папка целиком:
-
-```powershell
-.\.venv\Scripts\genre-test.exe batch "D:\Music\Album" --out ".\results"
-```
-
-Принудительно CPU:
-
-```powershell
-.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --device cpu
-```
-
-CUDA:
+Проверка:
 
 ```powershell
 .\.venv\Scripts\genre-test.exe doctor
-.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --device cuda
 ```
 
-## Выход
+## Модель
 
-Для каждого файла создаётся JSON с:
+По умолчанию:
 
-- `primary_genre`
-- `primary_genre_score`
-- `top_styles`
-- `broad_genres`
-- `resolved_genre`
-- `classification`
-- `confidence`
-- `family_margin`
-- `family_ratio`
-- `style_margin`
-- `secondary_genre`
-- `secondary_style`
-- `analysis_mode`
-- `windows_analyzed`
-- `audio_features`
-- технической информацией о модели
+```text
+mtg-upf/discogs-maest-30s-pw-129e-519l
+```
 
-В `batch` дополнительно создаётся `summary.csv`.
+Для строгой воспроизводимости поддерживается `--revision <commit>`. Pin default revision остаётся отдельным P1 gate.
 
 ## Репозиторий / безопасность
 
-Вес модели не хранится в Git. `trust_remote_code=True` требуется MAEST-модели Transformers; используйте только доверенный `model_id`. Для строгой воспроизводимости можно указать `--revision <commit>`.
+Не хранятся в Git:
 
-Аудио/видео и generated `results/` не должны храниться в репозитории.
+- model weights;
+- WAV/FLAC/MP3/M4A/AAC/OGG;
+- MP4/MOV/WEBM;
+- `results/`;
+- SQLite DB и WAL/SHM;
+- локальная Validation history.
 
-## Лицензирование модели
+Код проекта — MIT. Лицензия ML-модели определяется авторами модели отдельно.
 
-Код этого проекта — MIT. Лицензия ML-модели задаётся её авторами отдельно и не меняется лицензией репозитория.
+## Документация
 
-## Состояние
+- `docs/ACTIVE_CURRENT.md`
+- `docs/ARCHITECTURE.md`
+- `docs/VALIDATION_LAB.md`
+- `docs/VALIDATION_BASELINE.md`
+- `docs/ROADMAP.md`
 
-См. `docs/ACTIVE_CURRENT.md`, `docs/ROADMAP.md` и `docs/VALIDATION_BASELINE.md`.
+## Python
 
-## Python prerequisite
-
-Genre_test requires **Python 3.11 or 3.12 x64**. On Windows the recommended version is Python 3.12.
-
-If Python is not installed, run:
-
-```powershell
-.\scripts\setup.ps1 -InstallPython
-```
+Поддерживается Python **3.11 / 3.12 x64**. На Windows рекомендуется Python 3.12.
