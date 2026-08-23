@@ -5,7 +5,6 @@ from tkinter import ttk
 
 from . import __version__
 from .logging_utils import append_log
-from .model_config import DEFAULT_MODEL_REVISION
 from .runtime_health import RuntimeHealth, collect_runtime_health
 
 STATUS_COLORS = {
@@ -55,10 +54,10 @@ def _build_health_tree(parent: tk.Misc) -> ttk.Treeview:
     tree.heading("value", text="Версия / значение")
     tree.heading("details", text="Подробности")
     tree.column("category", width=95, stretch=False)
-    tree.column("component", width=145, stretch=False)
+    tree.column("component", width=155, stretch=False)
     tree.column("status", width=70, stretch=False, anchor="center")
-    tree.column("value", width=245, stretch=True)
-    tree.column("details", width=330, stretch=True)
+    tree.column("value", width=280, stretch=True)
+    tree.column("details", width=360, stretch=True)
     _configure_tree_tags(tree)
     return tree
 
@@ -66,8 +65,8 @@ def _build_health_tree(parent: tk.Misc) -> ttk.Treeview:
 def _show_blocking_failure(health: RuntimeHealth) -> None:
     root = tk.Tk()
     root.title(f"Genre_test v{__version__} — Runtime dependency error")
-    root.geometry("940x560")
-    root.minsize(760, 440)
+    root.geometry("960x580")
+    root.minsize(780, 440)
 
     header = tk.Label(
         root,
@@ -137,7 +136,7 @@ def main() -> None:
 
             ttk.Label(
                 self._health_bar,
-                text=f"Genre_test {__version__} | MAEST revision: {DEFAULT_MODEL_REVISION}",
+                text=f"Genre_test {__version__} | Models: MAEST Discogs519 + AudioSet AST",
             ).pack(side="left")
 
             ttk.Button(
@@ -172,8 +171,8 @@ def main() -> None:
         def _show_runtime_health(self) -> None:
             dialog = tk.Toplevel(self)
             dialog.title(f"Genre_test v{__version__} — Runtime / Dependencies")
-            dialog.geometry("980x600")
-            dialog.minsize(800, 460)
+            dialog.geometry("1020x620")
+            dialog.minsize(820, 460)
             dialog.transient(self)
 
             header = ttk.Frame(dialog, padding=(10, 10, 10, 6))
