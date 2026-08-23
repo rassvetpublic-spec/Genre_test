@@ -3,9 +3,9 @@ from __future__ import annotations
 import os
 import queue
 import threading
+import tkinter as tk
 import traceback
 from pathlib import Path
-import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 from .analyzer import GenreAnalyzer
