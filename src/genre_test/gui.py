@@ -14,7 +14,7 @@ from .audio import iter_audio_files
 from .cancellation import AnalysisCancelled
 from .history import HistoryDB
 from .logging_utils import append_log
-from .maest import DEFAULT_MODEL
+from .maest import DEFAULT_MODEL, DEFAULT_MODEL_REVISION
 from .performance import (
     append_perf,
     average_seconds,
@@ -25,6 +25,7 @@ from .performance import (
 )
 from .presentation import format_result_text
 from .report import write_json, write_summary_csv
+from .runtime_diagnostics import collect_runtime_diagnostics
 from .runtime_meta import default_history_path, default_log_path, default_results_dir
 from .validation_gui import ValidationTab
 
@@ -45,8 +46,8 @@ class GenreTestWindow(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title(f"Genre_test v{__version__} — Music Genre Analyzer")
-        self.geometry("1040x760")
-        self.minsize(820, 620)
+        self.geometry("1040x800")
+        self.minsize(820, 650)
 
         self.input_var = tk.StringVar()
         self.out_var = tk.StringVar(value=str(default_results_dir()))
@@ -58,12 +59,33 @@ class GenreTestWindow(tk.Tk):
         self._queue: queue.Queue[tuple[str, object]] = queue.Queue()
         self._cancel_event = threading.Event()
         self._busy = False
+        self.runtime_diagnostics = collect_runtime_diagnostics()
 
         self._build_ui()
-        append_log(f"GUI started: Genre_test {__version__}")
+        append_log(
+            f"GUI started: Genre_test {__version__}; MAEST revision={DEFAULT_MODEL_REVISION}; "
+            f"FFmpeg={self.runtime_diagnostics.ffmpeg_path or 'MISSING'}"
+        )
         self.after(120, self._poll_queue)
 
     def _build_ui(self) -> None:
+        runtime_bar = ttk.Frame(self, padding=(10, 6))
+        runtime_bar.pack(fill="x")
+        ttk.Label(
+            runtime_bar,
+            text=f"Genre_test {__version__} | MAEST revision: {DEFAULT_MODEL_REVISION}",
+        ).pack(side="left")
+        warning = self.runtime_diagnostics.decoder_warning
+        if warning:
+            tk.Label(
+                runtime_bar,
+                text=warning,
+                fg="#b00020",
+                font=("Segoe UI", 9, "bold"),
+            ).pack(side="right", padx=(12, 0))
+        else:
+            ttk.Label(runtime_bar, text="FFmpeg: OK").pack(side="right", padx=(12, 0))
+
         notebook = ttk.Notebook(self)
         notebook.pack(fill="both", expand=True)
 
@@ -269,8 +291,8 @@ class GenreTestWindow(tk.Tk):
         top_k: int,
     ) -> None:
         session_started = clock()
-        results = []
-        blocks = []
+        results: list = []
+        blocks: list[str] = []
         file_errors: list[str] = []
         processing_started: float | None = None
         try:
