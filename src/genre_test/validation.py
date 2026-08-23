@@ -7,6 +7,7 @@ from pathlib import Path
 from . import __version__
 from .analyzer import GenreAnalyzer
 from .audio import iter_audio_files
+from .cancellation import AnalysisCancelled, CancelCheck, check_cancel
 from .comparison import SEVERITY_ORDER, ComparisonResult, compare_results
 from .convergence import ModeConvergence, compare_modes
 from .history import HistoryDB
@@ -66,6 +67,8 @@ class ValidationSessionResult:
     duplicate_paths: int
     severity_counts: dict[str, int]
     outcomes: list[ValidationOutcome]
+    cancelled: bool = False
+    remaining_tracks: int = 0
     json_report: str | None = None
     csv_report: str | None = None
 
@@ -73,9 +76,12 @@ class ValidationSessionResult:
         return {
             "session_id": self.session_id,
             "analyzer_version": __version__,
+            "status": "stopped" if self.cancelled else "complete",
+            "cancelled": self.cancelled,
             "scanned_tracks": self.scanned_tracks,
             "analyzed_tracks": self.analyzed_tracks,
             "skipped_tracks": self.skipped_tracks,
+            "remaining_tracks": self.remaining_tracks,
             "duplicate_paths": self.duplicate_paths,
             "severity_counts": self.severity_counts,
         }
@@ -119,12 +125,17 @@ class ValidationEngine:
         return self._analyzer
 
     def scan_sources(
-        self, sources: Iterable[Path], progress: ProgressCallback | None = None
+        self,
+        sources: Iterable[Path],
+        progress: ProgressCallback | None = None,
+        cancel_check: CancelCheck | None = None,
     ) -> list[ScannedTrack]:
         paths: list[Path] = []
         seen_paths: set[str] = set()
         for source in sources:
+            check_cancel(cancel_check)
             for path in iter_audio_files(source.expanduser()):
+                check_cancel(cancel_check)
                 resolved = path.resolve()
                 key = str(resolved).casefold()
                 if key not in seen_paths:
@@ -134,9 +145,11 @@ class ValidationEngine:
         grouped: dict[str, list[Path]] = {}
         total = len(paths)
         for index, path in enumerate(paths, 1):
+            check_cancel(cancel_check)
             if progress:
                 progress(index, total, f"Идентификация: {path.name}")
             track_id = self.history.resolve_track_id(path)
+            check_cancel(cancel_check)
             grouped.setdefault(track_id, []).append(path)
 
         return [
@@ -153,19 +166,26 @@ class ValidationEngine:
         compare_all_modes: bool = False,
         filter_mode: str = "all",
         progress: ProgressCallback | None = None,
+        cancel_check: CancelCheck | None = None,
     ) -> ValidationSessionResult:
         sources = [Path(source) for source in sources]
         if filter_mode not in RECHECK_FILTERS:
             raise ValueError(f"Unknown filter mode: {filter_mode}")
         modes = ["fast", "auto", "accurate"] if compare_all_modes else [mode]
-        tracks = self.scan_sources(sources, progress)
+        tracks = self.scan_sources(sources, progress, cancel_check)
+        check_cancel(cancel_check)
         session_id = self.history.create_session(__version__, sources, modes, filter_mode)
         analyzer = self._get_analyzer()
         outcomes: list[ValidationOutcome] = []
         skipped = 0
+        cancelled = False
         duplicate_paths = sum(len(track.duplicate_paths) for track in tracks)
 
         for index, track in enumerate(tracks, 1):
+            if cancel_check is not None and cancel_check():
+                cancelled = True
+                break
+
             reference_mode = "auto" if compare_all_modes else mode
             latest_info = self.history.latest_run_info(track.track_id, reference_mode)
             latest_severity = self.history.latest_severity(track.track_id)
@@ -187,14 +207,28 @@ class ValidationEngine:
                 run_mode: self.history.latest_run(track.track_id, mode=run_mode)
                 for run_mode in modes
             }
-            if compare_all_modes:
-                results = analyzer.analyze_modes(track.path, modes=modes, track_id=track.track_id)
-            else:
-                result = analyzer.analyze(
-                    track.path, analysis_mode=mode, track_id=track.track_id
-                )
-                results = {mode: result}
+            try:
+                if compare_all_modes:
+                    results = analyzer.analyze_modes(
+                        track.path,
+                        modes=modes,
+                        track_id=track.track_id,
+                        cancel_check=cancel_check,
+                    )
+                else:
+                    result = analyzer.analyze(
+                        track.path,
+                        analysis_mode=mode,
+                        track_id=track.track_id,
+                        cancel_check=cancel_check,
+                    )
+                    results = {mode: result}
+            except AnalysisCancelled:
+                cancelled = True
+                break
 
+            # Commit a track only after all requested modes for that track completed.
+            # Completed earlier tracks remain durable if cancellation is requested later.
             for result in results.values():
                 write_json(result, self.out_dir / "runs")
                 self.history.record_result(result, session_id=session_id)
@@ -256,6 +290,7 @@ class ValidationEngine:
         for outcome in outcomes:
             severity_counts[outcome.severity] += 1
 
+        remaining = max(0, len(tracks) - len(outcomes) - skipped)
         provisional = ValidationSessionResult(
             session_id=session_id,
             scanned_tracks=len(tracks),
@@ -264,6 +299,8 @@ class ValidationEngine:
             duplicate_paths=duplicate_paths,
             severity_counts=severity_counts,
             outcomes=outcomes,
+            cancelled=cancelled,
+            remaining_tracks=remaining,
         )
         summary = provisional.summary_dict()
         rows = [outcome.report_row() for outcome in outcomes]
@@ -280,6 +317,8 @@ class ValidationEngine:
             duplicate_paths=duplicate_paths,
             severity_counts=severity_counts,
             outcomes=outcomes,
+            cancelled=cancelled,
+            remaining_tracks=remaining,
             json_report=str(json_report),
             csv_report=str(csv_report),
         )
@@ -379,9 +418,11 @@ def format_validation_session(result: ValidationSessionResult) -> str:
     counts = result.severity_counts
     lines = [
         f"Session: {result.session_id}",
+        f"Status: {'STOPPED BY USER' if result.cancelled else 'COMPLETE'}",
         f"Scanned: {result.scanned_tracks}",
         f"Analyzed: {result.analyzed_tracks}",
         f"Skipped: {result.skipped_tracks}",
+        f"Remaining: {result.remaining_tracks}",
         f"Duplicate paths: {result.duplicate_paths}",
         "",
         "Drift / convergence:",
