@@ -8,7 +8,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from .analyzer import GenreAnalyzer
+from .analyzer import ANALYSIS_MODES, GenreAnalyzer
 from .audio import iter_audio_files
 from .maest import DEFAULT_MODEL
 from .models import AnalysisResult
@@ -24,6 +24,7 @@ def _print_result(result: AnalysisResult) -> None:
         f"Resolved: [bold cyan]{result.resolved_genre or result.primary_genre}[/bold cyan] | "
         f"Family: {result.primary_genre} ({(result.primary_genre_score or 0.0):.3f}) | "
         f"{result.classification}, confidence={result.confidence} | "
+        f"mode={result.analysis_mode}, windows={result.windows_analyzed} | "
         f"BPM: {result.audio_features.bpm} | "
         f"Key: {result.audio_features.key} {result.audio_features.mode or ''}"
     )
@@ -37,13 +38,18 @@ def _make_analyzer(
     model: str,
     revision: str | None,
     device: str,
+    mode: str,
     windows: int,
     top_k: int,
 ) -> GenreAnalyzer:
+    normalized_mode = mode.lower().strip()
+    if normalized_mode not in ANALYSIS_MODES:
+        raise typer.BadParameter(f"mode must be one of: {', '.join(sorted(ANALYSIS_MODES))}")
     return GenreAnalyzer(
         model_id=model,
         revision=revision,
         device=device,
+        analysis_mode=normalized_mode,
         window_count=windows,
         top_k=top_k,
     )
@@ -68,11 +74,12 @@ def analyze(
     model: str = typer.Option(DEFAULT_MODEL, help="Hugging Face model id"),
     revision: str | None = typer.Option(None, help="Optional fixed model revision/commit"),
     device: str = typer.Option("auto", help="auto|cpu|cuda"),
-    windows: int = typer.Option(5, min=1, max=12),
-    top_k: int = typer.Option(15, min=3, max=50),
+    mode: str = typer.Option("auto", help="auto|fast|accurate|expert"),
+    windows: int = typer.Option(5, min=1, max=12, help="Expert mode only"),
+    top_k: int = typer.Option(15, min=3, max=50, help="Reported detailed styles"),
 ) -> None:
     """Analyze one audio file."""
-    analyzer = _make_analyzer(model, revision, device, windows, top_k)
+    analyzer = _make_analyzer(model, revision, device, mode, windows, top_k)
     result = analyzer.analyze(audio)
     target = write_json(result, out)
     _print_result(result)
@@ -86,15 +93,16 @@ def batch(
     model: str = typer.Option(DEFAULT_MODEL, help="Hugging Face model id"),
     revision: str | None = typer.Option(None, help="Optional fixed model revision/commit"),
     device: str = typer.Option("auto", help="auto|cpu|cuda"),
-    windows: int = typer.Option(5, min=1, max=12),
-    top_k: int = typer.Option(15, min=3, max=50),
+    mode: str = typer.Option("auto", help="auto|fast|accurate|expert"),
+    windows: int = typer.Option(5, min=1, max=12, help="Expert mode only"),
+    top_k: int = typer.Option(15, min=3, max=50, help="Reported detailed styles"),
 ) -> None:
     """Analyze all supported audio files in a directory recursively."""
     files = iter_audio_files(source)
     if not files:
         raise typer.BadParameter("No supported audio files found")
 
-    analyzer = _make_analyzer(model, revision, device, windows, top_k)
+    analyzer = _make_analyzer(model, revision, device, mode, windows, top_k)
     results: list[AnalysisResult] = []
     for idx, path in enumerate(files, 1):
         console.rule(f"[{idx}/{len(files)}] {path.name}")
