@@ -11,7 +11,7 @@
 - [x] raw MAEST data retained
 - [x] Windows CUDA P0 run
 
-## v0.2.1 — resolver calibration
+## v0.2.1 — resolver calibration and Auto analysis
 
 - [x] collect 11 real-track diagnostic outputs
 - [x] add secondary/primary family ratio
@@ -21,13 +21,19 @@
 - [x] ratio-based hybrid detection
 - [x] contextualize generic labels such as `Ballad` and `Vocal`
 - [x] add regression tests for observed failure patterns
-- [ ] rerun all 11 tracks under v0.2.1
+- [x] add duration-aware automatic window target
+- [x] add adaptive early stop for stable high-confidence results
+- [x] add `Fast`, `Accurate`, `Expert` modes
+- [x] hide manual windows/Top-K outside Expert GUI mode
+- [x] record `analysis_mode` and `windows_analyzed`
+- [ ] rerun diagnostic tracks under v0.2.1 Auto
 - [ ] attach manually reviewed expected genre labels
 
 ## P1 — validation
 
 - [ ] expand benchmark to 20+ known tracks across intentionally different genres
 - [ ] tune resolver thresholds against manually reviewed expected labels
+- [ ] compare Auto vs Accurate labels and runtime on the benchmark
 - [ ] pin the MAEST Hugging Face revision for reproducibility
 - [ ] improve key/BPM validation
 - [ ] add HF authentication status to `doctor`
