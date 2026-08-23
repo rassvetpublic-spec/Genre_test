@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from pathlib import Path
 
 from . import __version__
@@ -15,7 +15,7 @@ from .analysis_policy import (
 from .audio import load_audio, select_windows
 from .cancellation import CancelCheck, check_cancel
 from .features import extract_audio_features
-from .maest import DEFAULT_MODEL, MaestClassifier
+from .maest import DEFAULT_MODEL, MaestClassifier, Prediction
 from .models import AnalysisResult, AudioFeatures, StyleScore
 from .performance import (
     append_perf,
@@ -41,6 +41,7 @@ class GenreAnalyzer:
         window_count: int = 5,
         top_k: int = 15,
         analysis_mode: str = "auto",
+        inference_batch_size: int | None = None,
     ) -> None:
         mode = analysis_mode.lower().strip()
         if mode not in ANALYSIS_MODES:
@@ -49,6 +50,8 @@ class GenreAnalyzer:
             raise ValueError("window_count must be >= 1")
         if top_k < 3:
             raise ValueError("top_k must be >= 3")
+        if inference_batch_size is not None and inference_batch_size < 1:
+            raise ValueError("inference_batch_size must be >= 1")
 
         self.sample_rate = sample_rate
         self.window_seconds = window_seconds
@@ -56,6 +59,7 @@ class GenreAnalyzer:
         self.top_k = top_k
         self.internal_top_k = max(25, top_k)
         self.analysis_mode = mode
+        self.inference_batch_size = inference_batch_size
         self.git_commit = current_git_commit()
         init_started = clock()
         self.classifier = MaestClassifier(model_id=model_id, revision=revision, device=device)
@@ -66,53 +70,12 @@ class GenreAnalyzer:
             model_revision=self.classifier.revision,
             requested_device=device,
             resolved_device=self.classifier.resolved_device,
+            inference_batch_size=inference_batch_size or "auto",
             elapsed_ms=milliseconds(elapsed_seconds(init_started)),
         )
 
-    def _predict(
-        self,
-        window,
-        cancel_check: CancelCheck | None = None,
-        *,
-        perf_samples: list[float] | None = None,
-        perf_context: str | None = None,
-        window_index: int | None = None,
-    ) -> list[dict[str, float | str]]:
-        # Never interrupt the model call itself. Observe cancellation immediately before and
-        # immediately after one inference window so CUDA/PyTorch can leave the step cleanly.
-        check_cancel(cancel_check)
-        started = clock()
-        try:
-            prediction = self.classifier.predict(window, top_k=self.internal_top_k)
-        except Exception:
-            duration = elapsed_seconds(started)
-            if perf_samples is not None:
-                perf_samples.append(duration)
-            append_perf(
-                "maest_window",
-                context=perf_context or "unknown",
-                window_index=window_index,
-                status="error",
-                elapsed_ms=milliseconds(duration),
-                device=self.classifier.resolved_device,
-            )
-            raise
-        duration = elapsed_seconds(started)
-        if perf_samples is not None:
-            perf_samples.append(duration)
-        append_perf(
-            "maest_window",
-            context=perf_context or "unknown",
-            window_index=window_index,
-            status="ok",
-            elapsed_ms=milliseconds(duration),
-            device=self.classifier.resolved_device,
-        )
-        check_cancel(cancel_check)
-        return prediction
-
     def _resolve_predictions(
-        self, predictions: list[list[dict[str, float | str]]]
+        self, predictions: list[Prediction]
     ) -> tuple[list[StyleScore], list[StyleScore], GenreResolution]:
         styles, genres = aggregate_predictions(predictions, top_k=self.top_k)
         return styles, genres, resolve_genre(styles, genres)
@@ -121,7 +84,7 @@ class GenreAnalyzer:
         self,
         path: Path,
         features: AudioFeatures,
-        predictions: list[list[dict[str, float | str]]],
+        predictions: list[Prediction],
         mode: str,
         track_id: str,
         source_file_size: int,
@@ -184,55 +147,87 @@ class GenreAnalyzer:
             quality_notes=quality_notes,
         )
 
-    def _prediction_cache(
+    def _predict_batch_indices(
         self,
         windows,
+        indices: Iterable[int],
         cancel_check: CancelCheck | None = None,
         *,
         perf_samples: list[float] | None = None,
         perf_context: str | None = None,
-    ) -> tuple[
-        dict[int, list[dict[str, float | str]]],
-        Callable[[int], list[dict[str, float | str]]],
-    ]:
-        cache: dict[int, list[dict[str, float | str]]] = {}
-
-        def get(index: int) -> list[dict[str, float | str]]:
-            check_cancel(cancel_check)
-            if index not in cache:
-                cache[index] = self._predict(
-                    windows[index],
-                    cancel_check,
-                    perf_samples=perf_samples,
-                    perf_context=perf_context,
-                    window_index=index,
-                )
-            check_cancel(cancel_check)
-            return cache[index]
-
-        return cache, get
-
-    def _predict_windows(
-        self,
-        windows,
-        cancel_check: CancelCheck | None = None,
-        *,
-        perf_samples: list[float] | None = None,
-        perf_context: str | None = None,
-    ) -> list[list[dict[str, float | str]]]:
-        predictions: list[list[dict[str, float | str]]] = []
-        for index, window in enumerate(windows):
-            check_cancel(cancel_check)
-            predictions.append(
-                self._predict(
-                    window,
-                    cancel_check,
-                    perf_samples=perf_samples,
-                    perf_context=perf_context,
-                    window_index=index,
-                )
+    ) -> dict[int, Prediction]:
+        unique_indices = list(dict.fromkeys(indices))
+        if not unique_indices:
+            return {}
+        check_cancel(cancel_check)
+        batch_windows = [windows[index] for index in unique_indices]
+        started = clock()
+        try:
+            predictions = self.classifier.predict_batch(
+                batch_windows,
+                top_k=self.internal_top_k,
+                batch_size=self.inference_batch_size,
             )
-        return predictions
+        except Exception:
+            duration = elapsed_seconds(started)
+            if perf_samples is not None:
+                perf_samples.append(duration)
+            append_perf(
+                "maest_batch",
+                context=perf_context or "unknown",
+                window_indices=unique_indices,
+                window_count=len(unique_indices),
+                status="error",
+                elapsed_ms=milliseconds(duration),
+                avg_window_ms=milliseconds(duration / len(unique_indices)),
+                device=self.classifier.resolved_device,
+                batch_size=getattr(self.classifier, "last_batch_size", None),
+            )
+            raise
+        duration = elapsed_seconds(started)
+        if perf_samples is not None:
+            perf_samples.append(duration)
+        append_perf(
+            "maest_batch",
+            context=perf_context or "unknown",
+            window_indices=unique_indices,
+            window_count=len(unique_indices),
+            status="ok",
+            elapsed_ms=milliseconds(duration),
+            avg_window_ms=milliseconds(duration / len(unique_indices)),
+            device=self.classifier.resolved_device,
+            batch_size=getattr(self.classifier, "last_batch_size", None),
+        )
+        check_cancel(cancel_check)
+        return dict(zip(unique_indices, predictions, strict=True))
+
+    def _ensure_indices(
+        self,
+        cache: dict[int, Prediction],
+        windows,
+        indices: Iterable[int],
+        cancel_check: CancelCheck | None = None,
+        *,
+        perf_samples: list[float] | None = None,
+        perf_context: str | None = None,
+    ) -> None:
+        requested = list(dict.fromkeys(indices))
+        missing = [index for index in requested if index not in cache]
+        if not missing:
+            return
+        cache.update(
+            self._predict_batch_indices(
+                windows,
+                missing,
+                cancel_check,
+                perf_samples=perf_samples,
+                perf_context=perf_context,
+            )
+        )
+
+    @staticmethod
+    def _collect(cache: dict[int, Prediction], indices: Iterable[int]) -> list[Prediction]:
+        return [cache[index] for index in indices]
 
     def _log_track_performance(
         self,
@@ -250,12 +245,14 @@ class GenreAnalyzer:
         auto_expanded: bool = False,
     ) -> None:
         inference_total_s = sum(inference_samples)
+        inference_calls = len(inference_samples)
         append_perf(
             "track",
             path=path,
             mode=mode,
             input_quality=input_quality,
             device=self.classifier.resolved_device,
+            model_revision=self.classifier.revision,
             audio_duration_s=round(audio_duration_s, 3),
             total_ms=milliseconds(total_s),
             load_ms=milliseconds(stages.get("load", 0.0)),
@@ -265,14 +262,20 @@ class GenreAnalyzer:
             auto_decision_ms=milliseconds(stages.get("auto_decision", 0.0)),
             build_result_ms=milliseconds(stages.get("build_result", 0.0)),
             inference_total_ms=milliseconds(inference_total_s),
-            inference_avg_ms=milliseconds(
-                inference_total_s / len(inference_samples) if inference_samples else 0.0
+            inference_batch_calls=inference_calls,
+            inference_avg_batch_ms=milliseconds(
+                inference_total_s / inference_calls if inference_calls else 0.0
             ),
-            inference_max_ms=milliseconds(max(inference_samples) if inference_samples else 0.0),
+            inference_max_batch_ms=milliseconds(max(inference_samples) if inference_samples else 0.0),
+            inference_avg_window_ms=milliseconds(
+                inference_total_s / unique_inference_windows if unique_inference_windows else 0.0
+            ),
             windows_analyzed=windows_analyzed,
             unique_inference_windows=unique_inference_windows,
             logical_window_uses=logical_window_uses,
             cache_reused_window_uses=max(0, logical_window_uses - unique_inference_windows),
+            batched_inference=unique_inference_windows > inference_calls,
+            batch_size_config=self.inference_batch_size or "auto",
             auto_expanded=auto_expanded,
             realtime_factor=realtime_factor(total_s, audio_duration_s),
             realtime_speed_x=realtime_speed(total_s, audio_duration_s),
@@ -351,51 +354,69 @@ class GenreAnalyzer:
         stages["select_windows"] = elapsed_seconds(started)
 
         context = f"single:{mode}:{resolved_path.name}"
+        cache: dict[int, Prediction] = {}
         if mode == "expert":
-            predictions = self._predict_windows(
+            indices = list(range(len(windows)))
+            self._ensure_indices(
+                cache,
                 windows,
+                indices,
                 cancel_check,
                 perf_samples=inference_samples,
                 perf_context=context,
             )
+            predictions = self._collect(cache, indices)
         elif mode == "fast":
             indices = spread_indices(len(windows), min(len(windows), 3))
-            predictions = [
-                self._predict(
-                    windows[index],
-                    cancel_check,
-                    perf_samples=inference_samples,
-                    perf_context=context,
-                    window_index=index,
-                )
-                for index in indices
-            ]
-        elif mode == "accurate" or len(windows) <= 5:
-            predictions = self._predict_windows(
+            self._ensure_indices(
+                cache,
                 windows,
+                indices,
                 cancel_check,
                 perf_samples=inference_samples,
                 perf_context=context,
             )
+            predictions = self._collect(cache, indices)
+        elif mode == "accurate" or len(windows) <= 5:
+            indices = list(range(len(windows)))
+            self._ensure_indices(
+                cache,
+                windows,
+                indices,
+                cancel_check,
+                perf_samples=inference_samples,
+                perf_context=context,
+            )
+            predictions = self._collect(cache, indices)
         else:
             initial_indices = spread_indices(len(windows), 5)
-            cache, get = self._prediction_cache(
+            self._ensure_indices(
+                cache,
                 windows,
+                initial_indices,
                 cancel_check,
                 perf_samples=inference_samples,
                 perf_context=context,
             )
-            initial_predictions = [get(index) for index in initial_indices]
+            initial_predictions = self._collect(cache, initial_indices)
             started = clock()
             _, _, resolution = self._resolve_predictions(initial_predictions)
             stages["auto_decision"] = elapsed_seconds(started)
             check_cancel(cancel_check)
             if needs_more_auto_windows(resolution.classification, resolution.confidence):
                 auto_expanded = True
-                predictions = [get(index) for index in range(len(windows))]
+                all_indices = list(range(len(windows)))
+                self._ensure_indices(
+                    cache,
+                    windows,
+                    all_indices,
+                    cancel_check,
+                    perf_samples=inference_samples,
+                    perf_context=context,
+                )
+                predictions = self._collect(cache, all_indices)
             else:
                 predictions = initial_predictions
-            del cache
 
         check_cancel(cancel_check)
         started = clock()
@@ -419,7 +440,7 @@ class GenreAnalyzer:
             stages=stages,
             inference_samples=inference_samples,
             windows_analyzed=len(predictions),
-            unique_inference_windows=len(inference_samples),
+            unique_inference_windows=len(cache),
             logical_window_uses=len(predictions),
             input_quality=input_quality,
             auto_expanded=auto_expanded,
@@ -503,40 +524,65 @@ class GenreAnalyzer:
         started = clock()
         windows = select_windows(audio, sr, self.window_seconds, target)
         stages["select_windows"] = elapsed_seconds(started)
-        cache, get = self._prediction_cache(
+        context = f"multi:{mode_label}:{resolved_path.name}"
+        cache: dict[int, Prediction] = {}
+        all_indices = list(range(len(windows)))
+        fast_indices = (
+            spread_indices(len(windows), min(len(windows), 3)) if "fast" in requested else []
+        )
+        if "auto" in requested:
+            auto_seed_indices = (
+                all_indices if len(windows) <= 5 else spread_indices(len(windows), 5)
+            )
+        else:
+            auto_seed_indices = []
+
+        # Accurate ultimately needs every window. In a multi-mode diagnostic run, infer the
+        # complete unique target in one GPU batch and let Fast/Auto reuse the shared cache.
+        if "accurate" in requested:
+            seed_indices = all_indices
+        else:
+            seed_indices = list(dict.fromkeys([*fast_indices, *auto_seed_indices]))
+        self._ensure_indices(
+            cache,
             windows,
+            seed_indices,
             cancel_check,
             perf_samples=inference_samples,
-            perf_context=f"multi:{mode_label}:{resolved_path.name}",
+            perf_context=context,
         )
-        result_predictions: dict[str, list[list[dict[str, float | str]]]] = {}
 
+        result_predictions: dict[str, list[Prediction]] = {}
         if "fast" in requested:
-            fast_indices = spread_indices(len(windows), min(len(windows), 3))
-            result_predictions["fast"] = [get(index) for index in fast_indices]
+            result_predictions["fast"] = self._collect(cache, fast_indices)
 
         if "auto" in requested:
             if len(windows) <= 5:
-                auto_indices = list(range(len(windows)))
-                result_predictions["auto"] = [get(index) for index in auto_indices]
+                result_predictions["auto"] = self._collect(cache, all_indices)
             else:
-                initial_indices = spread_indices(len(windows), 5)
-                initial_predictions = [get(index) for index in initial_indices]
+                initial_predictions = self._collect(cache, auto_seed_indices)
                 started = clock()
                 _, _, resolution = self._resolve_predictions(initial_predictions)
                 stages["auto_decision"] = elapsed_seconds(started)
                 check_cancel(cancel_check)
                 if needs_more_auto_windows(resolution.classification, resolution.confidence):
                     auto_expanded = True
-                    result_predictions["auto"] = [get(index) for index in range(len(windows))]
+                    self._ensure_indices(
+                        cache,
+                        windows,
+                        all_indices,
+                        cancel_check,
+                        perf_samples=inference_samples,
+                        perf_context=context,
+                    )
+                    result_predictions["auto"] = self._collect(cache, all_indices)
                 else:
                     result_predictions["auto"] = initial_predictions
 
         if "accurate" in requested:
-            result_predictions["accurate"] = [get(index) for index in range(len(windows))]
+            result_predictions["accurate"] = self._collect(cache, all_indices)
 
         check_cancel(cancel_check)
-        unique_inference_windows = len(cache)
         logical_window_uses = sum(len(predictions) for predictions in result_predictions.values())
         started = clock()
         results = {
@@ -553,7 +599,6 @@ class GenreAnalyzer:
             for mode in requested
         }
         stages["build_result"] = elapsed_seconds(started)
-        del cache
         check_cancel(cancel_check)
         total_s = elapsed_seconds(total_started)
         self._log_track_performance(
@@ -564,7 +609,7 @@ class GenreAnalyzer:
             stages=stages,
             inference_samples=inference_samples,
             windows_analyzed=logical_window_uses,
-            unique_inference_windows=unique_inference_windows,
+            unique_inference_windows=len(cache),
             logical_window_uses=logical_window_uses,
             input_quality=input_quality,
             auto_expanded=auto_expanded,
