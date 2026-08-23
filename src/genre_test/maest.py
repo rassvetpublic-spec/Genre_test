@@ -1,10 +1,18 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 
-import numpy as np
-import torch
-from transformers import pipeline
+from .runtime_meta import default_hf_home
+
+# Keep model/cache data inside the project checkout unless the user explicitly overrides HF_HOME.
+_hf_home = default_hf_home()
+_hf_home.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("HF_HOME", str(_hf_home))
+
+import numpy as np  # noqa: E402
+import torch  # noqa: E402
+from transformers import pipeline  # noqa: E402
 
 DEFAULT_MODEL = "mtg-upf/discogs-maest-30s-pw-129e-519l"
 
