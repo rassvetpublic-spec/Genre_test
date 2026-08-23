@@ -55,11 +55,16 @@ def _json_value(value: Any) -> Any:
     return value
 
 
-def append_perf(event: str, *, path: Path | None = None, **fields: Any) -> Path:
+def append_perf(
+    event: str,
+    *,
+    log_path: Path | None = None,
+    **fields: Any,
+) -> Path:
     """Append one machine-readable performance event to the normal Genre_test log."""
     payload = {"event": event}
     payload.update({key: _json_value(value) for key, value in fields.items()})
     return append_log(
         "PERF " + json.dumps(payload, ensure_ascii=False, sort_keys=True),
-        path=path,
+        path=log_path,
     )
