@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from itertools import pairwise
 from pathlib import Path
 
 import librosa
@@ -59,7 +60,7 @@ def _is_service_path(path: Path, root: Path) -> bool:
         return True
     return any(
         left == "resources" and right == "audioalg"
-        for left, right in zip(parts, parts[1:])
+        for left, right in pairwise(parts)
     )
 
 
