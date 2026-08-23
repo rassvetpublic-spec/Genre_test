@@ -8,6 +8,7 @@ import traceback
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
+from . import __version__
 from .analyzer import GenreAnalyzer
 from .audio import iter_audio_files
 from .maest import DEFAULT_MODEL
@@ -23,7 +24,7 @@ AUDIO_FILETYPES = [
 class GenreTestWindow(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
-        self.title("Genre_test v0.2 — Music Genre Analyzer")
+        self.title(f"Genre_test v{__version__} — Music Genre Analyzer")
         self.geometry("920x680")
         self.minsize(760, 560)
 
