@@ -30,6 +30,55 @@ def _estimate_key(chroma: np.ndarray) -> tuple[str | None, str | None]:
     return key, mode
 
 
+def extract_lightweight_audio_features(audio: np.ndarray, sr: int) -> AudioFeatures:
+    """Extract warning-free basic features when audio is too short for genre inference."""
+    duration = float(audio.size / sr) if sr else 0.0
+    if audio.size == 0:
+        return AudioFeatures(
+            duration_s=round(duration, 3),
+            sample_rate=sr,
+            bpm=None,
+            key=None,
+            mode=None,
+            rms=0.0,
+            spectral_centroid_hz=0.0,
+            spectral_rolloff_hz=0.0,
+            zero_crossing_rate=0.0,
+        )
+
+    samples = np.asarray(audio, dtype=np.float64)
+    rms = float(np.sqrt(np.mean(np.square(samples))))
+    if samples.size > 1:
+        zcr = float(np.mean(np.signbit(samples[1:]) != np.signbit(samples[:-1])))
+    else:
+        zcr = 0.0
+
+    magnitude = np.abs(np.fft.rfft(samples))
+    total = float(np.sum(magnitude))
+    if total > 0.0:
+        frequencies = np.fft.rfftfreq(samples.size, d=1.0 / sr)
+        centroid = float(np.sum(frequencies * magnitude) / total)
+        cumulative = np.cumsum(magnitude)
+        index = int(np.searchsorted(cumulative, total * 0.85, side="left"))
+        index = min(index, frequencies.size - 1)
+        rolloff = float(frequencies[index])
+    else:
+        centroid = 0.0
+        rolloff = 0.0
+
+    return AudioFeatures(
+        duration_s=round(duration, 3),
+        sample_rate=sr,
+        bpm=None,
+        key=None,
+        mode=None,
+        rms=round(rms, 6),
+        spectral_centroid_hz=round(centroid, 2),
+        spectral_rolloff_hz=round(rolloff, 2),
+        zero_crossing_rate=round(zcr, 6),
+    )
+
+
 def extract_audio_features(audio: np.ndarray, sr: int) -> AudioFeatures:
     duration = float(audio.size / sr)
 
