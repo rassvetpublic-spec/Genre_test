@@ -24,7 +24,8 @@ def format_result_text(result: AnalysisResult, top_n: int = 10) -> str:
         f"Confidence: {result.confidence}",
         f"Analysis: {result.analysis_mode} | Windows analyzed: {result.windows_analyzed}",
         f"Analyzer version: {result.analyzer_version} | Schema: {result.schema_version}",
-        f"Model revision: {result.model_revision or 'un-pinned'}",
+        f"MAEST model: {result.model_id}",
+        f"MAEST revision: {result.model_revision or 'un-pinned'}",
     ]
     if result.quality_notes:
         lines.append("QC: " + "; ".join(result.quality_notes))
