@@ -2,7 +2,8 @@
 [CmdletBinding()]
 param(
     [switch]$Cpu,
-    [switch]$InstallPython
+    [switch]$InstallPython,
+    [switch]$SkipFFmpeg
 )
 
 $ErrorActionPreference = 'Stop'
@@ -140,6 +141,20 @@ else {
 }
 
 & $venvPython -m pip install -e '.[dev]'
+
+if (-not $SkipFFmpeg) {
+    Write-Host "`nChecking FFmpeg..."
+    $ensureFFmpeg = Join-Path $PSScriptRoot 'ensure_ffmpeg.ps1'
+    if ($IsWindows) {
+        & $ensureFFmpeg -Required
+    }
+    else {
+        & $ensureFFmpeg
+    }
+}
+else {
+    Write-Warning 'FFmpeg bootstrap skipped by -SkipFFmpeg.'
+}
 
 Write-Host "`nInstalled. Checking runtime..."
 $genreExe = Join-Path $repoRoot '.venv\Scripts\genre-test.exe'
