@@ -30,9 +30,11 @@ def test_zero_denominators_are_safe() -> None:
 
 def test_append_perf_writes_parseable_json(tmp_path: Path) -> None:
     log_path = tmp_path / "genre_test.log"
+    audio_path = tmp_path / "song.wav"
     append_perf(
         "track",
-        path=log_path,
+        log_path=log_path,
+        path=audio_path,
         elapsed_ms=123.45,
         windows=5,
     )
@@ -41,4 +43,4 @@ def test_append_perf_writes_parseable_json(tmp_path: Path) -> None:
     assert payload["event"] == "track"
     assert payload["elapsed_ms"] == 123.45
     assert payload["windows"] == 5
-    assert payload["path"] == str(log_path)
+    assert payload["path"] == str(audio_path)
