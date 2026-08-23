@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "genre-test"
-version = "0.3.6"
-description = "Local music genre analyzer with MAEST classification, versioned history and validation lab."
+version = "0.4.0"
+description = "Local ensemble music analyzer with MAEST genre classification, AudioSet semantic profiling, history and validation lab."
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 license = {text = "MIT"}
