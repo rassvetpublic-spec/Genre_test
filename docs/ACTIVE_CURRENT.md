@@ -1,80 +1,117 @@
 # ACTIVE / CURRENT
 
-Version: **0.2.1**
+Version: **0.3.0**
 
 ## Current implementation
 
 - Windows-first local genre analyzer
 - MAEST Discogs 519 via Transformers/PyTorch
-- CUDA auto-detection; validated on Windows/NVIDIA
-- 30-second representative windows
-- default `Auto` analysis mode with duration-aware adaptive window count
-- `Fast`, `Accurate`, and `Expert` analysis modes
-- broad family aggregation plus human-readable genre resolver
-- hybrid detection from absolute family margin and secondary/primary family ratio
-- confidence derived from both broad-family and fine-style evidence
-- alternative fine-style exposed as `secondary_style`
-- raw MAEST probabilities preserved for recalibration
+- CUDA auto-detection
+- `Auto`, `Fast`, `Accurate`, `Expert` analysis modes
+- duration-aware adaptive 30-second windows
+- resolver with broad/fine-style evidence, hybrid detection and confidence
 - BPM/key/basic spectral features
-- JSON per track, CSV for batch
-- CLI and Windows GUI
+- CLI + Windows GUI
+- **Validation Lab** with multi-root scanning and version history
 
-## Automatic analysis policy
+## v0.3 Validation Lab
 
-Duration target:
+### Identity / history
 
-- <60 s: 1 window
-- 60–120 s: 3 windows
-- 120–210 s: 5 windows
-- 210–300 s: 7 windows
-- 300–420 s: 9 windows
-- >420 s: 11 windows
+- SHA-256 `track_id` independent of filename/path
+- duplicate-content detection across different directories/disks
+- path/size/mtime cache to avoid unnecessary rehashing
+- local SQLite database outside the repo by default
+- immutable versioned run JSON snapshots
+- legacy `*.genre*.json` import when original audio can be resolved
 
-For long tracks, `Auto` first evaluates five windows spread across the same final grid. A stable `primary + high confidence` result stops after those five. Hybrid or lower-confidence results expand to the full duration-based target.
+Every v0.3 run records:
 
-`Fast` uses at most three windows. `Accurate` always uses the full duration target. `Expert` exposes manual window count and Top-K.
-
-## Resolver calibration v0.2.1
-
-The first 11-track diagnostic set exposed a distinction that v0.2 did not model: a broad family can be very clear while the exact fine style remains ambiguous.
-
-v0.2.1 records:
-
-- `family_margin`
-- `family_ratio`
-- `style_margin`
-- `secondary_genre`
-- `secondary_style`
+- `schema_version`
+- `analyzer_version`
+- `run_id`
+- `analyzed_at`
+- `track_id`
 - `analysis_mode`
 - `windows_analyzed`
+- `window_seconds`
+- `internal_top_k`
+- `report_top_k`
+- model/revision/device
+- Git commit when available
 
-`confidence` now reflects the resolved fine-style label, not only the winning broad family.
+### Convergence / drift
 
-## Windows GUI
+Validation can run Fast + Auto + Accurate from one shared prediction cache and automatically compare:
 
-Launch with `scripts\gui.ps1` or double-click `scripts\Genre_test_GUI.cmd` after setup.
+- broad family
+- resolved genre
+- primary/hybrid classification
+- Jensen-Shannon divergence
+- cosine similarity
+- weighted Top-N style overlap
+- BPM including half/double-time equivalence
+- key/mode
 
-Default GUI exposes file/folder selection, output directory, device and analysis mode. Manual `Окон` and `Top-K` controls are hidden unless `Экспертный` is selected.
+Severity:
 
-## Validated runtime
+```text
+STABLE
+MINOR
+SIGNIFICANT
+CRITICAL
+```
 
-- Python 3.12.10
-- PyTorch 2.11.0+cu128
-- CUDA runtime 12.8
-- NVIDIA GeForce RTX 5070 Ti
+Mode convergence:
 
-## Current validation status
+```text
+HIGH / MEDIUM / LOW / FAIL
+```
 
-- 11 real-track outputs collected under the previous fixed five-window workflow
-- resolver failure modes identified from those outputs
-- regression tests added for close fine styles, cross-family style conflict, generic labels and ratio-based hybrid detection
-- automatic sampling policy has pure unit tests
-- this set is diagnostic evidence, not a ground-truth accuracy benchmark
+### Recheck filters
 
-## Next validation gate
+- all tracks
+- only results from older analyzer versions
+- only unstable tracks
 
-1. rerun the diagnostic tracks under v0.2.1 Auto;
-2. record `analysis_mode` and `windows_analyzed`;
-3. add manually reviewed expected labels;
-4. expand to 20+ intentionally diverse tracks;
-5. only then tune thresholds again or add a second independent model.
+### Version comparison
+
+Stored analyzer versions can be compared globally with per-track rows and aggregate metrics:
+
+- resolved genre match %
+- broad family match %
+- tempo-equivalent %
+- key/mode match %
+- severity counts
+
+## GUI
+
+Tabs:
+
+```text
+Анализ
+Validation / Перепроверка
+```
+
+Validation tab supports multiple folders/files, history DB selection, recheck filters, Fast/Auto/Accurate convergence, legacy JSON import and analyzer-version comparison.
+
+## History location
+
+Default Windows location:
+
+```text
+%LOCALAPPDATA%\Genre_test\history.sqlite3
+```
+
+SQLite/history data is local and gitignored.
+
+## Validation status
+
+- previous 11-track diagnostic set remains useful as legacy evidence
+- new pure tests cover content identity, history, drift severity, tempo equivalence, convergence and recheck policy
+- old JSON can be imported into v0.3 history
+- next real-data gate is to rerun the catalog under v0.3 and compare Auto ↔ Accurate convergence
+
+## Important limitation
+
+Validation measures reproducibility and drift. It does not prove genre correctness. Manual/ground-truth genre labels remain necessary for accuracy calibration.
