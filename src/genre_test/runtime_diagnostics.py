@@ -35,10 +35,12 @@ def _hf_token_status() -> tuple[bool, str]:
         return True, "HUGGING_FACE_HUB_TOKEN"
     try:
         from huggingface_hub import get_token
-
+    except ImportError:  # pragma: no cover - transformers normally installs this dependency
+        return False, "huggingface_hub unavailable"
+    try:
         token = get_token()
-    except Exception:  # pragma: no cover - optional dependency/runtime cache edge cases
-        return False, "unavailable"
+    except OSError:  # pragma: no cover - damaged/unreadable local HF token cache
+        return False, "token cache unreadable"
     return (True, "huggingface_hub cache") if token else (False, "none")
 
 
