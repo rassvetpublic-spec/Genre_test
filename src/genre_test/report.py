@@ -19,8 +19,13 @@ def write_summary_csv(results: list[AnalysisResult], out_dir: Path) -> Path:
     target = out_dir / "summary.csv"
     fields = [
         "path",
+        "resolved_genre",
+        "classification",
+        "confidence",
         "primary_genre",
         "primary_genre_score",
+        "secondary_genre",
+        "family_margin",
         "bpm",
         "key",
         "mode",
@@ -40,8 +45,13 @@ def write_summary_csv(results: list[AnalysisResult], out_dir: Path) -> Path:
             styles = result.top_styles[:3]
             row = {
                 "path": result.path,
+                "resolved_genre": result.resolved_genre,
+                "classification": result.classification,
+                "confidence": result.confidence,
                 "primary_genre": result.primary_genre,
                 "primary_genre_score": result.primary_genre_score,
+                "secondary_genre": result.secondary_genre,
+                "family_margin": result.family_margin,
                 "bpm": result.audio_features.bpm,
                 "key": result.audio_features.key,
                 "mode": result.audio_features.mode,

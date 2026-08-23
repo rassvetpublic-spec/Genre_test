@@ -7,6 +7,7 @@ from .audio import load_audio, select_windows
 from .features import extract_audio_features
 from .maest import DEFAULT_MODEL, MaestClassifier
 from .models import AnalysisResult
+from .resolver import resolve_genre
 
 
 class GenreAnalyzer:
@@ -33,10 +34,16 @@ class GenreAnalyzer:
         predictions = [self.classifier.predict(w, top_k=max(25, self.top_k)) for w in windows]
         styles, genres = aggregate_predictions(predictions, top_k=self.top_k)
         primary = genres[0] if genres else None
+        resolution = resolve_genre(styles, genres)
         return AnalysisResult(
             path=str(path.resolve()),
             primary_genre=primary.label if primary else None,
             primary_genre_score=round(primary.score, 6) if primary else None,
+            resolved_genre=resolution.resolved_genre,
+            classification=resolution.classification,
+            confidence=resolution.confidence,
+            family_margin=resolution.family_margin,
+            secondary_genre=resolution.secondary_family,
             top_styles=styles,
             broad_genres=genres,
             audio_features=features,

@@ -27,7 +27,7 @@ def select_windows(
 ) -> list[np.ndarray]:
     if count < 1:
         raise ValueError("count must be >= 1")
-    width = max(1, int(round(window_seconds * sr)))
+    width = max(1, round(window_seconds * sr))
     n = audio.size
 
     if n <= width:
