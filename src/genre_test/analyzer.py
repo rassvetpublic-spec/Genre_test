@@ -8,6 +8,7 @@ from .aggregate import aggregate_predictions
 from .analysis_policy import (
     ANALYSIS_MODES,
     duration_window_target,
+    input_quality_for_duration,
     needs_more_auto_windows,
     spread_indices,
 )
@@ -19,9 +20,6 @@ from .models import AnalysisResult, AudioFeatures, StyleScore
 from .resolver import GenreResolution, resolve_genre
 from .runtime_meta import RESULT_SCHEMA_VERSION, current_git_commit, new_run_id, utc_now_iso
 from .track_identity import identify_track
-
-INSUFFICIENT_AUDIO_SECONDS = 10.0
-SHORT_AUDIO_SECONDS = 30.0
 
 
 class GenreAnalyzer:
@@ -64,26 +62,6 @@ class GenreAnalyzer:
         prediction = self.classifier.predict(window, top_k=self.internal_top_k)
         check_cancel(cancel_check)
         return prediction
-
-    @staticmethod
-    def _input_quality(duration_s: float) -> tuple[str, tuple[str, ...]]:
-        if duration_s < INSUFFICIENT_AUDIO_SECONDS:
-            return (
-                "INSUFFICIENT_AUDIO",
-                (
-                    f"duration {duration_s:.2f}s is below the {INSUFFICIENT_AUDIO_SECONDS:.0f}s "
-                    "minimum for a genre verdict",
-                ),
-            )
-        if duration_s < SHORT_AUDIO_SECONDS:
-            return (
-                "SHORT_INPUT",
-                (
-                    f"duration {duration_s:.2f}s is shorter than one full "
-                    f"{SHORT_AUDIO_SECONDS:.0f}s MAEST window; confidence is capped at medium",
-                ),
-            )
-        return "NORMAL", ()
 
     def _resolve_predictions(
         self, predictions: list[list[dict[str, float | str]]]
@@ -209,7 +187,7 @@ class GenreAnalyzer:
         check_cancel(cancel_check)
         resolved_track_id = track_id or identity.track_id
         source_file_size = identity.size_bytes if identity else resolved_path.stat().st_size
-        input_quality, quality_notes = self._input_quality(features.duration_s)
+        input_quality, quality_notes = input_quality_for_duration(features.duration_s)
 
         if input_quality == "INSUFFICIENT_AUDIO":
             return self._build_result(
@@ -284,7 +262,7 @@ class GenreAnalyzer:
         check_cancel(cancel_check)
         resolved_track_id = track_id or identity.track_id
         source_file_size = identity.size_bytes if identity else resolved_path.stat().st_size
-        input_quality, quality_notes = self._input_quality(features.duration_s)
+        input_quality, quality_notes = input_quality_for_duration(features.duration_s)
 
         if input_quality == "INSUFFICIENT_AUDIO":
             return {
