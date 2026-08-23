@@ -8,7 +8,8 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from .analyzer import ANALYSIS_MODES, GenreAnalyzer
+from .analysis_policy import ANALYSIS_MODES
+from .analyzer import GenreAnalyzer
 from .audio import iter_audio_files
 from .maest import DEFAULT_MODEL
 from .models import AnalysisResult
