@@ -95,7 +95,7 @@ def resolve_genre(
 
     # Fine-style confidence must account for the strongest competing style from either of the
     # two leading broad families. This catches cases where broad-family certainty is high but
-    # the exact subgenre is not, or where the best style belongs to the secondary family.
+    # the exact subgenre is not, or where the best fine style belongs to the secondary family.
     evidence_families = {first.label}
     if second:
         evidence_families.add(second.label)
@@ -108,6 +108,20 @@ def resolve_genre(
         ),
         None,
     )
+
+    # If the broad-family winner and fine-style winner disagree, do not force the lower-scoring
+    # style merely because it belongs to the broad-family winner. Treat this as cross-family
+    # ambiguity, resolve to the strongest fine style, and expose the other style as secondary.
+    if (
+        candidate is not None
+        and competitor is not None
+        and second is not None
+        and competitor.score > candidate.score
+        and broad_genre(competitor.label) == second.label
+    ):
+        candidate, competitor = competitor, candidate
+        classification = "hybrid"
+        family_confidence = "low-medium"
 
     if candidate is None:
         resolved = first.label
