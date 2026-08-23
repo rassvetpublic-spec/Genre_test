@@ -24,8 +24,14 @@ def format_result_text(result: AnalysisResult, top_n: int = 10) -> str:
     ]
     if result.secondary_genre:
         lines.append(f"Secondary family: {result.secondary_genre}")
+    if result.secondary_style:
+        lines.append(f"Alternative style: {result.secondary_style}")
     if result.family_margin is not None:
         lines.append(f"Family margin: {result.family_margin:.3f}")
+    if result.family_ratio is not None:
+        lines.append(f"Secondary/primary family ratio: {result.family_ratio:.3f}")
+    if result.style_margin is not None:
+        lines.append(f"Relative style margin: {result.style_margin:.3f}")
     lines.extend(
         [
             f"Tempo: {tempo_candidates(result.audio_features.bpm)}",
