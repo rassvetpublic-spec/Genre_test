@@ -9,7 +9,6 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from . import __version__
-from .analyzer import GenreAnalyzer
 from .audio import iter_audio_files
 from .cancellation import AnalysisCancelled
 from .gui_text import bind_copy_shortcuts
@@ -25,6 +24,7 @@ from .performance import (
     tracks_per_minute,
 )
 from .presentation import format_result_text
+from .profile_analyzer import ProfileAnalyzer
 from .report import write_json, write_summary_csv
 from .runtime_diagnostics import collect_runtime_diagnostics
 from .runtime_meta import default_history_path, default_log_path, default_results_dir
@@ -42,6 +42,12 @@ MODE_LABELS = {
     "Экспертный": "expert",
 }
 
+VIEW_LABELS = {
+    "Обычный": "normal",
+    "SUNO": "suno",
+    "Дистрибьютор": "distributor",
+}
+
 SEPARATOR = "=" * 88
 
 
@@ -49,13 +55,14 @@ class GenreTestWindow(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title(f"Genre_test v{__version__} — Music Genre Analyzer")
-        self.geometry("1040x800")
-        self.minsize(820, 650)
+        self.geometry("1120x820")
+        self.minsize(860, 650)
 
         self.input_var = tk.StringVar()
         self.out_var = tk.StringVar(value=str(default_results_dir()))
         self.device_var = tk.StringVar(value="auto")
         self.mode_var = tk.StringVar(value="Авто")
+        self.view_var = tk.StringVar(value="Обычный")
         self.windows_var = tk.IntVar(value=5)
         self.top_k_var = tk.IntVar(value=15)
         self.status_var = tk.StringVar(value="Готов")
@@ -143,6 +150,15 @@ class GenreTestWindow(tk.Tk):
         )
         mode_combo.pack(side="left", padx=(6, 18))
         mode_combo.bind("<<ComboboxSelected>>", self._sync_mode_ui)
+
+        ttk.Label(settings, text="Вывод").pack(side="left")
+        ttk.Combobox(
+            settings,
+            textvariable=self.view_var,
+            values=tuple(VIEW_LABELS),
+            state="readonly",
+            width=14,
+        ).pack(side="left", padx=(6, 18))
 
         self.advanced_frame = ttk.Frame(settings)
         ttk.Label(self.advanced_frame, text="Окон").pack(side="left")
@@ -265,15 +281,19 @@ class GenreTestWindow(tk.Tk):
             return
         out = Path(self.out_var.get().strip().strip('"')).expanduser()
         mode = MODE_LABELS.get(self.mode_var.get(), "auto")
+        view = VIEW_LABELS.get(self.view_var.get(), "normal")
         self.output.delete("1.0", "end")
-        self._append_output(f"Источник: {source}\nРежим: {mode}\nПодготовка анализа…")
+        self._append_output(
+            f"Источник: {source}\nРежим: {mode}\nВывод: {view}\n"
+            "Профиль: MAEST + AudioSet AST\nПодготовка анализа…"
+        )
         self._cancel_event.clear()
         self._busy = True
         self.run_button.configure(state="disabled")
         self.stop_button.configure(state="normal")
         self.progress.start(10)
-        self.status_var.set("Загрузка модели / анализ…")
-        append_log(f"Analysis started: source={source}; mode={mode}; output={out}")
+        self.status_var.set("Загрузка моделей / анализ…")
+        append_log(f"Analysis started: source={source}; mode={mode}; view={view}; output={out}")
         threading.Thread(
             target=self._worker,
             args=(
@@ -281,6 +301,7 @@ class GenreTestWindow(tk.Tk):
                 out,
                 self.device_var.get(),
                 mode,
+                view,
                 self.windows_var.get(),
                 self.top_k_var.get(),
             ),
@@ -301,6 +322,7 @@ class GenreTestWindow(tk.Tk):
         out: Path,
         device: str,
         mode: str,
+        view: str,
         windows: int,
         top_k: int,
     ) -> None:
@@ -309,12 +331,13 @@ class GenreTestWindow(tk.Tk):
         file_errors: list[str] = []
         processing_started: float | None = None
         try:
-            analyzer = GenreAnalyzer(
+            analyzer = ProfileAnalyzer(
                 model_id=DEFAULT_MODEL,
                 device=device,
                 analysis_mode=mode,
                 window_count=windows,
                 top_k=top_k,
+                semantic_mode="auto",
             )
             history = HistoryDB()
             processing_started = clock()
@@ -330,6 +353,10 @@ class GenreTestWindow(tk.Tk):
                     path=source,
                     status="ok",
                     mode=mode,
+                    profile_view=view,
+                    semantic_status=(
+                        result.semantic_evidence.status if result.semantic_evidence else "not_available"
+                    ),
                     elapsed_ms=milliseconds(item_s),
                     includes_persistence=True,
                 )
@@ -344,7 +371,7 @@ class GenreTestWindow(tk.Tk):
                     avg_seconds_per_track=average_seconds(1, item_s),
                     tracks_per_minute=tracks_per_minute(1, item_s),
                 )
-                text = format_result_text(result) + f"\n\nElapsed: {item_s:.2f} s"
+                text = format_result_text(result, view=view) + f"\n\nElapsed: {item_s:.2f} s"
                 append_log(f"Analysis complete: {source}; elapsed={item_s:.3f}s")
                 self._queue.put(("done", text))
                 return
@@ -389,10 +416,14 @@ class GenreTestWindow(tk.Tk):
                     path=path,
                     status="ok",
                     mode=mode,
+                    profile_view=view,
+                    semantic_status=(
+                        result.semantic_evidence.status if result.semantic_evidence else "not_available"
+                    ),
                     elapsed_ms=milliseconds(item_s),
                     includes_persistence=True,
                 )
-                block = format_result_text(result, top_n=5) + f"\nElapsed: {item_s:.2f} s"
+                block = format_result_text(result, top_n=5, view=view) + f"\nElapsed: {item_s:.2f} s"
                 self._queue.put(("append_block", block))
 
             summary_csv = write_summary_csv(results, out) if results else None
@@ -402,8 +433,13 @@ class GenreTestWindow(tk.Tk):
             )
             avg_s = average_seconds(len(results), processing_s)
             rate = tracks_per_minute(len(results), processing_s)
+            semantic_ok = sum(
+                result.semantic_evidence is not None and result.semantic_evidence.status == "ok"
+                for result in results
+            )
             summary = (
                 f"Completed: {len(results)} / {len(files)}\n"
+                f"Semantic profiles: {semantic_ok} / {len(results)}\n"
                 f"File errors skipped: {len(file_errors)}\n"
                 f"Elapsed: {total_s:.2f} s\n"
                 f"Processing: {processing_s:.2f} s\n"
@@ -414,7 +450,7 @@ class GenreTestWindow(tk.Tk):
                 summary += f"\nSummary CSV: {summary_csv}"
             append_log(
                 f"Batch complete: source={source}; completed={len(results)}; "
-                f"errors={len(file_errors)}; elapsed={total_s:.3f}s; "
+                f"semantic_ok={semantic_ok}; errors={len(file_errors)}; elapsed={total_s:.3f}s; "
                 f"throughput={rate:.3f} tracks/min"
             )
             append_perf(
@@ -423,6 +459,7 @@ class GenreTestWindow(tk.Tk):
                 status="complete",
                 files_seen=len(files),
                 completed=len(results),
+                semantic_ok=semantic_ok,
                 errors=len(file_errors),
                 total_ms=milliseconds(total_s),
                 processing_ms=milliseconds(processing_s),
