@@ -6,6 +6,8 @@ from pathlib import Path
 import librosa
 import numpy as np
 
+from .runtime_diagnostics import find_ffmpeg
+
 SUPPORTED_EXTENSIONS = {".wav", ".flac", ".mp3", ".ogg", ".m4a", ".aac"}
 DEFAULT_EXCLUDED_DIR_NAMES = {
     ".git",
@@ -17,6 +19,9 @@ DEFAULT_EXCLUDED_DIR_NAMES = {
 
 
 def load_audio(path: Path, sample_rate: int) -> tuple[np.ndarray, int]:
+    # Make WinGet/Scoop/Chocolatey FFmpeg aliases visible to librosa/audioread
+    # even when the current process inherited a stale PATH.
+    find_ffmpeg()
     audio, sr = librosa.load(path, sr=sample_rate, mono=True)
     audio = np.asarray(audio, dtype=np.float32)
     if audio.size == 0:
