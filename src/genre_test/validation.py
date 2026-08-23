@@ -40,6 +40,14 @@ def _worst_comparison(
     return comparison.severity, name, tuple(comparison.reasons)
 
 
+def _has_genre_verdict(result: AnalysisResult | None) -> bool:
+    return bool(
+        result
+        and result.input_quality != "INSUFFICIENT_AUDIO"
+        and result.resolved_genre is not None
+    )
+
+
 @dataclass(frozen=True)
 class ValidationOutcome:
     track_id: str
@@ -86,6 +94,7 @@ class ValidationOutcome:
             "mode_worst_pair": mode_pair,
             "mode_reasons": "; ".join(mode_reasons),
             "history_severity": history_severity,
+            "history_worst_mode": history_mode,
             "history_reasons": "; ".join(history_reasons),
             "modes": ",".join(self.results),
             "convergence": self.convergence.level if self.convergence else "",
@@ -123,6 +132,7 @@ class ValidationFileError:
             "mode_worst_pair": "",
             "mode_reasons": "",
             "history_severity": "",
+            "history_worst_mode": "",
             "history_reasons": "",
             "modes": "",
             "convergence": "",
@@ -179,16 +189,16 @@ class ValidationSessionResult:
             fast = outcome.results.get("fast")
             auto = outcome.results.get("auto")
             accurate = outcome.results.get("accurate")
-            if auto and accurate:
+            if _has_genre_verdict(auto) and _has_genre_verdict(accurate):
                 auto_accurate_total += 1
                 auto_accurate_matches += int(auto.resolved_genre == accurate.resolved_genre)
-                if accurate.windows_analyzed > 0:
-                    accurate_windows_total += accurate.windows_analyzed
-                    auto_windows_total += auto.windows_analyzed
-                    auto_early_stop_tracks += int(
-                        auto.windows_analyzed < accurate.windows_analyzed
-                    )
-            if fast and accurate:
+            if auto and accurate and accurate.windows_analyzed > 0:
+                accurate_windows_total += accurate.windows_analyzed
+                auto_windows_total += auto.windows_analyzed
+                auto_early_stop_tracks += int(
+                    auto.windows_analyzed < accurate.windows_analyzed
+                )
+            if _has_genre_verdict(fast) and _has_genre_verdict(accurate):
                 fast_accurate_total += 1
                 fast_accurate_matches += int(fast.resolved_genre == accurate.resolved_genre)
 
@@ -610,6 +620,18 @@ def format_validation_session(result: ValidationSessionResult) -> str:
     mode_counts = summary["mode_severity_counts"]
     history_counts = summary["history_severity_counts"]
     quality_counts = summary["input_quality_counts"]
+    auto_match_line = (
+        f"Auto vs Accurate genre match: {summary['auto_vs_accurate_genre_match_pct']}% "
+        f"({summary['auto_vs_accurate_total']} verdict-bearing tracks)"
+    )
+    fast_match_line = (
+        f"Fast vs Accurate genre match: {summary['fast_vs_accurate_genre_match_pct']}% "
+        f"({summary['fast_vs_accurate_total']} verdict-bearing tracks)"
+    )
+    saved_line = (
+        f"Auto windows saved: {summary['auto_saved_windows']} / "
+        f"{summary['accurate_windows_total']} ({summary['auto_saved_windows_pct']}%)"
+    )
     lines = [
         f"Session: {result.session_id}",
         f"Status: {'STOPPED BY USER' if result.cancelled else 'COMPLETE'}",
@@ -632,13 +654,9 @@ def format_validation_session(result: ValidationSessionResult) -> str:
         f"MINOR: {mode_counts['MINOR']}",
         f"SIGNIFICANT: {mode_counts['SIGNIFICANT']}",
         f"CRITICAL: {mode_counts['CRITICAL']}",
-        f"Auto vs Accurate genre match: {summary['auto_vs_accurate_genre_match_pct']}% "
-        f"({summary['auto_vs_accurate_total']} tracks)",
-        f"Fast vs Accurate genre match: {summary['fast_vs_accurate_genre_match_pct']}% "
-        f"({summary['fast_vs_accurate_total']} tracks)",
-        f"Auto windows saved: {summary['auto_saved_windows']} / "
-        f"{summary['accurate_windows_total']} "
-        f"({summary['auto_saved_windows_pct']}%)",
+        auto_match_line,
+        fast_match_line,
+        saved_line,
         f"Auto early-stop tracks: {summary['auto_early_stop_tracks']}",
         "",
         f"History drift ({summary['history_comparison_tracks']} tracks):",
