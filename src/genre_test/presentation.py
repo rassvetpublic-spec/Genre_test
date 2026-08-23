@@ -138,14 +138,20 @@ def format_validation_run_metadata(result: ValidationSessionResult) -> str:
                 if item.primary_genre_score is not None
                 else "n/a"
             )
+            summary_line = (
+                f"    genre={item.resolved_genre or 'n/a'} | "
+                f"family={item.primary_genre or 'n/a'} ({family_score}) | "
+                f"classification={item.classification} | confidence={item.confidence}"
+            )
+            runtime_line = (
+                f"    quality={item.input_quality} | windows={item.windows_analyzed} | "
+                f"device={item.device}"
+            )
             lines.extend(
                 [
                     f"  [{mode}]",
-                    f"    genre={item.resolved_genre or 'n/a'} | family={item.primary_genre or 'n/a'} "
-                    f"({family_score}) | classification={item.classification} | "
-                    f"confidence={item.confidence}",
-                    f"    quality={item.input_quality} | windows={item.windows_analyzed} | "
-                    f"device={item.device}",
+                    summary_line,
+                    runtime_line,
                     f"    analyzer={item.analyzer_version} | schema={item.schema_version}",
                     f"    run_id={item.run_id or 'n/a'}",
                     f"    track_id={item.track_id or outcome.track_id}",
