@@ -6,18 +6,23 @@ from typing import TYPE_CHECKING
 
 import typer
 from rich.console import Console
-from rich.table import Table
 
 from . import __version__
-from .model_config import DEFAULT_CUDA_BATCH_SIZE, DEFAULT_MODEL, DEFAULT_MODEL_REVISION
+from .model_config import (
+    DEFAULT_CUDA_BATCH_SIZE,
+    DEFAULT_MODEL,
+    DEFAULT_MODEL_REVISION,
+    DEFAULT_SEMANTIC_MODEL,
+    DEFAULT_SEMANTIC_MODEL_REVISION,
+)
 
 if TYPE_CHECKING:
-    from .analyzer import GenreAnalyzer
     from .models import AnalysisResult
+    from .profile_analyzer import ProfileAnalyzer
 
 app = typer.Typer(
     no_args_is_help=True,
-    help="Local music genre analyzer and validation lab",
+    help="Local ensemble music analyzer and validation lab",
 )
 console = Console()
 
@@ -42,28 +47,11 @@ def root_callback(
     del version
 
 
-def _print_result(result: AnalysisResult) -> None:
-    console.print(f"\n[bold]{Path(result.path).name}[/bold]")
-    console.print(
-        f"Resolved: [bold cyan]{result.resolved_genre or result.primary_genre}[/bold cyan] | "
-        f"Family: {result.primary_genre} ({(result.primary_genre_score or 0.0):.3f}) | "
-        f"{result.classification}, confidence={result.confidence} | "
-        f"quality={result.input_quality} | "
-        f"mode={result.analysis_mode}, windows={result.windows_analyzed} | "
-        f"BPM: {result.audio_features.bpm} | "
-        f"Key: {result.audio_features.key} {result.audio_features.mode or ''}"
-    )
-    console.print(
-        f"Version: {result.analyzer_version} | schema={result.schema_version} | "
-        f"MAEST revision={result.model_revision or 'un-pinned'}"
-    )
-    console.print(f"run={result.run_id} | track={result.track_id}")
-    if result.quality_notes:
-        console.print("QC: " + "; ".join(result.quality_notes))
-    table = Table("#", "Style", "Score")
-    for idx, item in enumerate(result.top_styles[:10], 1):
-        table.add_row(str(idx), item.label, f"{item.score:.4f}")
-    console.print(table)
+def _print_result(result: AnalysisResult, view: str = "normal") -> None:
+    from .presentation import format_result_text
+
+    console.print()
+    console.print(format_result_text(result, view=view))
 
 
 def _make_analyzer(
@@ -73,22 +61,27 @@ def _make_analyzer(
     mode: str,
     windows: int,
     top_k: int,
-) -> GenreAnalyzer:
+    semantic_mode: str,
+) -> ProfileAnalyzer:
     from .analysis_policy import ANALYSIS_MODES
-    from .analyzer import GenreAnalyzer
+    from .profile_analyzer import ProfileAnalyzer, SEMANTIC_MODES
 
     normalized_mode = mode.lower().strip()
     if normalized_mode not in ANALYSIS_MODES:
         raise typer.BadParameter(
             f"mode must be one of: {', '.join(sorted(ANALYSIS_MODES))}"
         )
-    return GenreAnalyzer(
+    normalized_semantic = semantic_mode.lower().strip()
+    if normalized_semantic not in SEMANTIC_MODES:
+        raise typer.BadParameter("semantic must be auto, on or off")
+    return ProfileAnalyzer(
         model_id=model,
         revision=revision,
         device=device,
         analysis_mode=normalized_mode,
         window_count=windows,
         top_k=top_k,
+        semantic_mode=normalized_semantic,
     )
 
 
@@ -109,7 +102,7 @@ def _store_result(
 
 @app.command()
 def doctor() -> None:
-    """Show runtime, decoder, authentication, pinned model and CUDA status."""
+    """Show runtime, decoder, authentication and pinned model/CUDA status."""
     import soundfile as sf
     import torch
 
@@ -137,7 +130,10 @@ def doctor() -> None:
     console.print(f"HF authentication: {diagnostics.hf_auth_label}")
     console.print(f"Default MAEST: {DEFAULT_MODEL}")
     console.print(f"Pinned MAEST revision: {DEFAULT_MODEL_REVISION}")
-    console.print(f"Default CUDA inference batch: up to {DEFAULT_CUDA_BATCH_SIZE} windows")
+    console.print(f"Default AudioSet AST: {DEFAULT_SEMANTIC_MODEL}")
+    console.print(f"Pinned AudioSet AST revision: {DEFAULT_SEMANTIC_MODEL_REVISION}")
+    console.print(f"Default CUDA MAEST batch: up to {DEFAULT_CUDA_BATCH_SIZE} windows")
+    console.print("Semantic profile: 3 x 10 s AudioSet windows, one batched AST pass")
     console.print(f"History DB: {default_history_path()}")
 
 
@@ -145,13 +141,18 @@ def doctor() -> None:
 def analyze(
     audio: Path = typer.Argument(..., exists=True, dir_okay=False, readable=True),
     out: Path = typer.Option(Path("results"), help="Output directory"),
-    model: str = typer.Option(DEFAULT_MODEL, help="Hugging Face model id"),
+    model: str = typer.Option(DEFAULT_MODEL, help="Hugging Face MAEST model id"),
     revision: str | None = typer.Option(
         None,
-        help="Optional fixed model revision/commit; default MAEST is pinned automatically",
+        help="Optional fixed MAEST revision/commit; default MAEST is pinned automatically",
     ),
     device: str = typer.Option("auto", help="auto|cpu|cuda"),
     mode: str = typer.Option("auto", help="auto|fast|accurate|expert"),
+    semantic: str = typer.Option(
+        "auto",
+        help="AudioSet semantic layer: auto|on|off; auto falls back to MAEST-only on failure",
+    ),
+    view: str = typer.Option("normal", help="normal|suno|distributor"),
     windows: int = typer.Option(5, min=1, max=12, help="Expert mode only"),
     top_k: int = typer.Option(15, min=3, max=50, help="Reported detailed styles"),
     history_db: Path | None = typer.Option(
@@ -164,11 +165,13 @@ def analyze(
         help="Do not store this run in history",
     ),
 ) -> None:
-    """Analyze one audio file and store a versioned snapshot."""
-    analyzer = _make_analyzer(model, revision, device, mode, windows, top_k)
+    """Analyze one audio file and store an ensemble AudioProfile snapshot."""
+    if view not in {"normal", "suno", "distributor"}:
+        raise typer.BadParameter("view must be normal, suno or distributor")
+    analyzer = _make_analyzer(model, revision, device, mode, windows, top_k, semantic)
     result = analyzer.analyze(audio)
     target = _store_result(result, out, history_db, no_history)
-    _print_result(result)
+    _print_result(result, view)
     console.print(f"JSON: {target}")
 
 
@@ -176,13 +179,18 @@ def analyze(
 def batch(
     source: Path = typer.Argument(..., exists=True, readable=True),
     out: Path = typer.Option(Path("results"), help="Output directory"),
-    model: str = typer.Option(DEFAULT_MODEL, help="Hugging Face model id"),
+    model: str = typer.Option(DEFAULT_MODEL, help="Hugging Face MAEST model id"),
     revision: str | None = typer.Option(
         None,
-        help="Optional fixed model revision/commit",
+        help="Optional fixed MAEST revision/commit",
     ),
     device: str = typer.Option("auto", help="auto|cpu|cuda"),
     mode: str = typer.Option("auto", help="auto|fast|accurate|expert"),
+    semantic: str = typer.Option(
+        "auto",
+        help="AudioSet semantic layer: auto|on|off",
+    ),
+    view: str = typer.Option("normal", help="normal|suno|distributor"),
     windows: int = typer.Option(5, min=1, max=12, help="Expert mode only"),
     top_k: int = typer.Option(15, min=3, max=50, help="Reported detailed styles"),
     history_db: Path | None = typer.Option(
@@ -205,11 +213,13 @@ def batch(
     from .history import HistoryDB
     from .report import write_json, write_summary_csv
 
+    if view not in {"normal", "suno", "distributor"}:
+        raise typer.BadParameter("view must be normal, suno or distributor")
     files = iter_audio_files(source, include_service_dirs=include_service_dirs)
     if not files:
         raise typer.BadParameter("No supported audio files found")
 
-    analyzer = _make_analyzer(model, revision, device, mode, windows, top_k)
+    analyzer = _make_analyzer(model, revision, device, mode, windows, top_k, semantic)
     history = None if no_history else HistoryDB(history_db)
     results: list[AnalysisResult] = []
     for idx, path in enumerate(files, 1):
@@ -219,7 +229,7 @@ def batch(
         target = write_json(result, out)
         if history:
             history.record_result(result)
-        _print_result(result)
+        _print_result(result, view)
         console.print(f"JSON: {target}")
 
     csv_path = write_summary_csv(results, out)
@@ -245,7 +255,7 @@ def validate_command(
     compare_modes: bool = typer.Option(
         False,
         "--compare-modes",
-        help="Run Fast + Auto + Accurate from one shared prediction cache",
+        help="Run Fast + Auto + Accurate from one shared MAEST prediction cache",
     ),
     filter_mode: str = typer.Option(
         "all",
@@ -263,7 +273,7 @@ def validate_command(
         help="Include normally ignored service/cache audio directories",
     ),
 ) -> None:
-    """Recheck scattered tracks, compare modes and automatically analyze drift."""
+    """Recheck raw MAEST convergence/history without changing the 0.3 validation baseline."""
     from .analysis_policy import ANALYSIS_MODES
     from .validation import ValidationEngine, format_validation_session
     from .validation_policy import RECHECK_FILTERS
@@ -331,7 +341,7 @@ def compare_versions_command(
         help="Override history SQLite path",
     ),
 ) -> None:
-    """Compare latest stored results for two analyzer versions."""
+    """Compare latest stored raw MAEST results for two analyzer versions."""
     from .analysis_policy import ANALYSIS_MODES
     from .validation import ValidationEngine, format_version_comparison
 
