@@ -1,36 +1,45 @@
 from __future__ import annotations
 
 import platform
-import shutil
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import soundfile as sf
-import torch
 import typer
 from rich.console import Console
 from rich.table import Table
 
 from . import __version__
-from .analysis_policy import ANALYSIS_MODES
-from .analyzer import GenreAnalyzer
-from .audio import iter_audio_files
-from .history import HistoryDB
-from .maest import DEFAULT_MODEL, DEFAULT_MODEL_REVISION
-from .models import AnalysisResult
-from .report import write_json, write_summary_csv
-from .runtime_meta import default_history_path
-from .validation import (
-    ValidationEngine,
-    format_validation_session,
-    format_version_comparison,
-)
-from .validation_policy import RECHECK_FILTERS
+from .model_config import DEFAULT_CUDA_BATCH_SIZE, DEFAULT_MODEL, DEFAULT_MODEL_REVISION
+
+if TYPE_CHECKING:
+    from .analyzer import GenreAnalyzer
+    from .models import AnalysisResult
 
 app = typer.Typer(
     no_args_is_help=True,
     help="Local music genre analyzer and validation lab",
 )
 console = Console()
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        console.print(f"Genre_test {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def root_callback(
+    version: bool = typer.Option(
+        False,
+        "--version",
+        callback=_version_callback,
+        is_eager=True,
+        help="Show Genre_test version and exit",
+    ),
+) -> None:
+    """Genre_test command line interface."""
+    del version
 
 
 def _print_result(result: AnalysisResult) -> None:
@@ -45,9 +54,10 @@ def _print_result(result: AnalysisResult) -> None:
         f"Key: {result.audio_features.key} {result.audio_features.mode or ''}"
     )
     console.print(
-        f"Version: {result.analyzer_version} | run={result.run_id} | "
-        f"track={result.track_id}"
+        f"Version: {result.analyzer_version} | schema={result.schema_version} | "
+        f"MAEST revision={result.model_revision or 'un-pinned'}"
     )
+    console.print(f"run={result.run_id} | track={result.track_id}")
     if result.quality_notes:
         console.print("QC: " + "; ".join(result.quality_notes))
     table = Table("#", "Style", "Score")
@@ -64,6 +74,9 @@ def _make_analyzer(
     windows: int,
     top_k: int,
 ) -> GenreAnalyzer:
+    from .analysis_policy import ANALYSIS_MODES
+    from .analyzer import GenreAnalyzer
+
     normalized_mode = mode.lower().strip()
     if normalized_mode not in ANALYSIS_MODES:
         raise typer.BadParameter(
@@ -85,6 +98,9 @@ def _store_result(
     history_db: Path | None,
     no_history: bool,
 ) -> Path:
+    from .history import HistoryDB
+    from .report import write_json
+
     target = write_json(result, out)
     if not no_history:
         HistoryDB(history_db).record_result(result)
@@ -93,7 +109,14 @@ def _store_result(
 
 @app.command()
 def doctor() -> None:
-    """Show runtime, decoder, pinned model and CUDA status."""
+    """Show runtime, decoder, authentication, pinned model and CUDA status."""
+    import soundfile as sf
+    import torch
+
+    from .runtime_diagnostics import collect_runtime_diagnostics
+    from .runtime_meta import default_history_path
+
+    diagnostics = collect_runtime_diagnostics()
     console.print(f"Genre_test: {__version__}")
     console.print(f"Python: {platform.python_version()}")
     console.print(f"Platform: {platform.platform()}")
@@ -103,14 +126,18 @@ def doctor() -> None:
         console.print(f"CUDA runtime: {torch.version.cuda}")
         console.print(f"GPU: {torch.cuda.get_device_name(0)}")
     console.print(f"SoundFile: {sf.__version__}")
-    ffmpeg = shutil.which("ffmpeg")
-    console.print(f"FFmpeg: {ffmpeg or 'MISSING'}")
-    console.print(
-        "AAC/extended decode fallback: "
-        + ("available via FFmpeg" if ffmpeg else "unavailable without FFmpeg")
-    )
+    if diagnostics.ffmpeg_available:
+        console.print(f"FFmpeg: {diagnostics.ffmpeg_path}")
+        console.print("AAC/extended decode fallback: available via FFmpeg")
+    else:
+        console.print("[bold red]FFmpeg: MISSING[/bold red]")
+        console.print(
+            "[bold red]AAC/extended decode fallback: unavailable without FFmpeg[/bold red]"
+        )
+    console.print(f"HF authentication: {diagnostics.hf_auth_label}")
     console.print(f"Default MAEST: {DEFAULT_MODEL}")
     console.print(f"Pinned MAEST revision: {DEFAULT_MODEL_REVISION}")
+    console.print(f"Default CUDA inference batch: up to {DEFAULT_CUDA_BATCH_SIZE} windows")
     console.print(f"History DB: {default_history_path()}")
 
 
@@ -174,6 +201,10 @@ def batch(
     ),
 ) -> None:
     """Analyze all supported audio files in a directory recursively."""
+    from .audio import iter_audio_files
+    from .history import HistoryDB
+    from .report import write_json, write_summary_csv
+
     files = iter_audio_files(source, include_service_dirs=include_service_dirs)
     if not files:
         raise typer.BadParameter("No supported audio files found")
@@ -233,6 +264,10 @@ def validate_command(
     ),
 ) -> None:
     """Recheck scattered tracks, compare modes and automatically analyze drift."""
+    from .analysis_policy import ANALYSIS_MODES
+    from .validation import ValidationEngine, format_validation_session
+    from .validation_policy import RECHECK_FILTERS
+
     if filter_mode not in RECHECK_FILTERS:
         raise typer.BadParameter(
             f"filter must be one of: {', '.join(sorted(RECHECK_FILTERS))}"
@@ -271,6 +306,8 @@ def history_import_command(
     ),
 ) -> None:
     """Import legacy/current *.genre*.json snapshots into central history."""
+    from .validation import ValidationEngine
+
     engine = ValidationEngine(history_path=history_db)
     imported, skipped = engine.import_history_sources(sources)
     console.print(f"Imported: {imported}; skipped/unmatched: {skipped}")
@@ -282,8 +319,8 @@ def compare_versions_command(
     version_a: str = typer.Argument(...),
     version_b: str = typer.Argument(...),
     mode: str = typer.Option(
-        "any",
-        help="auto|fast|accurate|expert|any",
+        "auto",
+        help="auto|fast|accurate|expert|any; 'any' is diagnostic and may compare different modes",
     ),
     out: Path = typer.Option(
         Path("results") / "validation",
@@ -295,10 +332,11 @@ def compare_versions_command(
     ),
 ) -> None:
     """Compare latest stored results for two analyzer versions."""
+    from .analysis_policy import ANALYSIS_MODES
+    from .validation import ValidationEngine, format_version_comparison
+
     if mode not in ANALYSIS_MODES | {"any"}:
-        raise typer.BadParameter(
-            "mode must be auto, fast, accurate, expert or any"
-        )
+        raise typer.BadParameter("mode must be auto, fast, accurate, expert or any")
     engine = ValidationEngine(history_path=history_db, out_dir=out)
     result = engine.compare_versions(version_a, version_b, mode=mode)
     console.print(format_version_comparison(result))

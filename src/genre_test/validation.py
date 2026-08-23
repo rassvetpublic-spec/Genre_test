@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import traceback
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import __version__
@@ -48,6 +48,17 @@ def _has_genre_verdict(result: AnalysisResult | None) -> bool:
     )
 
 
+def _version_comparability(
+    left: AnalysisResult,
+    right: AnalysisResult,
+) -> tuple[bool, str]:
+    if left.input_quality == "INSUFFICIENT_AUDIO" or right.input_quality == "INSUFFICIENT_AUDIO":
+        return False, "genre verdict unavailable because short-input QC marks audio insufficient"
+    if left.resolved_genre is None or right.resolved_genre is None:
+        return False, "one side has no resolved genre verdict"
+    return True, ""
+
+
 @dataclass(frozen=True)
 class ValidationOutcome:
     track_id: str
@@ -57,6 +68,7 @@ class ValidationOutcome:
     results: dict[str, AnalysisResult]
     convergence: ModeConvergence | None
     previous_comparisons: dict[str, ComparisonResult]
+    history_not_comparable: dict[str, str] = field(default_factory=dict)
 
     def mode_details(self) -> tuple[str, str, tuple[str, ...]]:
         if not self.convergence:
@@ -72,9 +84,9 @@ class ValidationOutcome:
         fast = self.results.get("fast")
         auto = self.results.get("auto")
         accurate = self.results.get("accurate")
-        auto_saved = ""
+        standalone_auto_saved_pct: float | str = ""
         if auto and accurate and accurate.windows_analyzed > 0:
-            auto_saved = round(
+            standalone_auto_saved_pct = round(
                 100.0
                 * max(0, accurate.windows_analyzed - auto.windows_analyzed)
                 / accurate.windows_analyzed,
@@ -85,6 +97,14 @@ class ValidationOutcome:
             note_parts.append(f"mode[{mode_pair}]: {'; '.join(mode_reasons)}")
         if history_reasons:
             note_parts.append(f"history[{history_mode}]: {'; '.join(history_reasons)}")
+        if self.history_not_comparable:
+            note_parts.append(
+                "history_not_comparable: "
+                + "; ".join(
+                    f"{mode}: {reason}"
+                    for mode, reason in sorted(self.history_not_comparable.items())
+                )
+            )
         return {
             "track_id": self.track_id,
             "path": self.path,
@@ -96,6 +116,10 @@ class ValidationOutcome:
             "history_severity": history_severity,
             "history_worst_mode": history_mode,
             "history_reasons": "; ".join(history_reasons),
+            "history_not_comparable": "; ".join(
+                f"{mode}: {reason}"
+                for mode, reason in sorted(self.history_not_comparable.items())
+            ),
             "modes": ",".join(self.results),
             "convergence": self.convergence.level if self.convergence else "",
             "resolved_genres": "; ".join(
@@ -110,7 +134,7 @@ class ValidationOutcome:
             "fast_windows": fast.windows_analyzed if fast else "",
             "auto_windows": auto.windows_analyzed if auto else "",
             "accurate_windows": accurate.windows_analyzed if accurate else "",
-            "auto_saved_windows_pct": auto_saved,
+            "standalone_auto_saved_windows_pct": standalone_auto_saved_pct,
             "notes": " | ".join(note_parts),
         }
 
@@ -134,6 +158,7 @@ class ValidationFileError:
             "history_severity": "",
             "history_worst_mode": "",
             "history_reasons": "",
+            "history_not_comparable": "",
             "modes": "",
             "convergence": "",
             "resolved_genres": "",
@@ -142,7 +167,7 @@ class ValidationFileError:
             "fast_windows": "",
             "auto_windows": "",
             "accurate_windows": "",
-            "auto_saved_windows_pct": "",
+            "standalone_auto_saved_windows_pct": "",
             "notes": f"{self.error_type}: {self.message}",
         }
 
@@ -168,6 +193,7 @@ class ValidationSessionResult:
         history_counts = {name: 0 for name in SEVERITY_ORDER}
         mode_tracks = 0
         history_tracks = 0
+        history_not_comparable_tracks = 0
         auto_accurate_total = 0
         auto_accurate_matches = 0
         fast_accurate_total = 0
@@ -185,6 +211,8 @@ class ValidationSessionResult:
             if history_severity:
                 history_tracks += 1
                 history_counts[history_severity] += 1
+            if outcome.history_not_comparable:
+                history_not_comparable_tracks += 1
 
             fast = outcome.results.get("fast")
             auto = outcome.results.get("auto")
@@ -228,6 +256,7 @@ class ValidationSessionResult:
             "mode_comparison_tracks": mode_tracks,
             "mode_severity_counts": mode_counts,
             "history_comparison_tracks": history_tracks,
+            "history_not_comparable_tracks": history_not_comparable_tracks,
             "history_severity_counts": history_counts,
             "auto_vs_accurate_total": auto_accurate_total,
             "auto_vs_accurate_genre_match_pct": pct(
@@ -239,8 +268,8 @@ class ValidationSessionResult:
             ),
             "accurate_windows_total": accurate_windows_total,
             "auto_windows_total": auto_windows_total,
-            "auto_saved_windows": saved_windows,
-            "auto_saved_windows_pct": pct(saved_windows, accurate_windows_total),
+            "standalone_auto_saved_windows": saved_windows,
+            "standalone_auto_saved_windows_pct": pct(saved_windows, accurate_windows_total),
             "auto_early_stop_tracks": auto_early_stop_tracks,
             "input_quality_counts": quality_counts,
         }
@@ -422,10 +451,15 @@ class ValidationEngine:
                 self.history.record_result(result, session_id=session_id)
 
             previous_comparisons: dict[str, ComparisonResult] = {}
+            history_not_comparable: dict[str, str] = {}
             severities: list[str] = []
             for run_mode, result in results.items():
                 old = previous.get(run_mode)
                 if old and old.run_id and result.run_id:
+                    comparable, reason = _version_comparability(old, result)
+                    if not comparable:
+                        history_not_comparable[run_mode] = reason
+                        continue
                     comparison = compare_results(old, result)
                     previous_comparisons[run_mode] = comparison
                     severities.append(comparison.severity)
@@ -447,7 +481,8 @@ class ValidationEngine:
                     left_mode, right_mode = pair_name.split("_vs_", 1)
                     left = results[left_mode]
                     right = results[right_mode]
-                    if left.run_id and right.run_id:
+                    comparable, _ = _version_comparability(left, right)
+                    if comparable and left.run_id and right.run_id:
                         self.history.store_comparison(
                             track.track_id,
                             left.run_id,
@@ -471,6 +506,7 @@ class ValidationEngine:
                     results=results,
                     convergence=convergence,
                     previous_comparisons=previous_comparisons,
+                    history_not_comparable=history_not_comparable,
                 )
             )
 
@@ -551,6 +587,8 @@ class ValidationEngine:
         tempo_equivalent = 0
         key_known = 0
         key_matches = 0
+        comparable_total = 0
+        not_comparable = 0
 
         for track_id in self.history.track_ids():
             selected_mode = None if mode == "any" else mode
@@ -562,7 +600,39 @@ class ValidationEngine:
             )
             if not left or not right:
                 continue
+
+            comparable, comparison_reason = _version_comparability(left, right)
+            base_row: dict[str, object] = {
+                "track_id": track_id,
+                "path": right.path or left.path,
+                "left_mode": left.analysis_mode,
+                "right_mode": right.analysis_mode,
+                "left_quality": left.input_quality,
+                "right_quality": right.input_quality,
+                "left_genre": left.resolved_genre,
+                "right_genre": right.resolved_genre,
+                "left_family": left.primary_genre,
+                "right_family": right.primary_genre,
+                "comparable": comparable,
+                "comparison_reason": comparison_reason,
+            }
+            if not comparable:
+                not_comparable += 1
+                rows.append(
+                    {
+                        **base_row,
+                        "severity": "NOT_COMPARABLE",
+                        "tempo_relation": "not_comparable",
+                        "js_divergence": "",
+                        "cosine_similarity": "",
+                        "topn_weighted_overlap": "",
+                        "reasons": comparison_reason,
+                    }
+                )
+                continue
+
             comparison = compare_results(left, right)
+            comparable_total += 1
             counts[comparison.severity] += 1
             broad_matches += int(comparison.broad_match)
             resolved_matches += int(comparison.resolved_match)
@@ -572,13 +642,8 @@ class ValidationEngine:
                 key_matches += int(comparison.key_match)
             rows.append(
                 {
-                    "track_id": track_id,
-                    "path": right.path or left.path,
+                    **base_row,
                     "severity": comparison.severity,
-                    "left_genre": left.resolved_genre,
-                    "right_genre": right.resolved_genre,
-                    "left_family": left.primary_genre,
-                    "right_family": right.primary_genre,
                     "tempo_relation": comparison.tempo_relation,
                     "js_divergence": comparison.js_divergence,
                     "cosine_similarity": comparison.cosine_similarity,
@@ -587,20 +652,25 @@ class ValidationEngine:
                 }
             )
 
-        total = len(rows)
-
-        def pct(value: int, denom: int = total) -> float:
+        def pct(value: int, denom: int) -> float:
             return round(100.0 * value / denom, 2) if denom else 0.0
 
         summary: dict[str, object] = {
             "version_a": version_a,
             "version_b": version_b,
             "mode": mode,
-            "tracks_compared": total,
+            "mode_warning": (
+                "diagnostic any-mode comparison may pair different analysis modes"
+                if mode == "any"
+                else ""
+            ),
+            "tracks_considered": len(rows),
+            "tracks_compared": comparable_total,
+            "not_comparable_tracks": not_comparable,
             "severity_counts": counts,
-            "broad_family_match_pct": pct(broad_matches),
-            "resolved_genre_match_pct": pct(resolved_matches),
-            "tempo_equivalent_pct": pct(tempo_equivalent),
+            "broad_family_match_pct": pct(broad_matches, comparable_total),
+            "resolved_genre_match_pct": pct(resolved_matches, comparable_total),
+            "tempo_equivalent_pct": pct(tempo_equivalent, comparable_total),
             "key_mode_match_pct": pct(key_matches, key_known),
             "key_mode_known": key_known,
         }
@@ -629,8 +699,9 @@ def format_validation_session(result: ValidationSessionResult) -> str:
         f"({summary['fast_vs_accurate_total']} verdict-bearing tracks)"
     )
     saved_line = (
-        f"Auto windows saved: {summary['auto_saved_windows']} / "
-        f"{summary['accurate_windows_total']} ({summary['auto_saved_windows_pct']}%)"
+        "Standalone Auto theoretical windows saved vs Accurate: "
+        f"{summary['standalone_auto_saved_windows']} / {summary['accurate_windows_total']} "
+        f"({summary['standalone_auto_saved_windows_pct']}%)"
     )
     lines = [
         f"Session: {result.session_id}",
@@ -659,7 +730,8 @@ def format_validation_session(result: ValidationSessionResult) -> str:
         saved_line,
         f"Auto early-stop tracks: {summary['auto_early_stop_tracks']}",
         "",
-        f"History drift ({summary['history_comparison_tracks']} tracks):",
+        f"History drift ({summary['history_comparison_tracks']} comparable tracks):",
+        f"History NOT_COMPARABLE: {summary['history_not_comparable_tracks']}",
         f"STABLE: {history_counts['STABLE']}",
         f"MINOR: {history_counts['MINOR']}",
         f"SIGNIFICANT: {history_counts['SIGNIFICANT']}",
@@ -694,6 +766,14 @@ def format_validation_session(result: ValidationSessionResult) -> str:
                 f"  history: {history_severity} [{history_mode}] — "
                 f"{'; '.join(history_reasons)}"
             )
+        if outcome.history_not_comparable:
+            lines.append(
+                "  history: NOT_COMPARABLE — "
+                + "; ".join(
+                    f"{mode}: {reason}"
+                    for mode, reason in sorted(outcome.history_not_comparable.items())
+                )
+            )
         fast = outcome.results.get("fast")
         auto = outcome.results.get("auto")
         accurate = outcome.results.get("accurate")
@@ -714,7 +794,9 @@ def format_version_comparison(result: VersionComparisonResult) -> str:
     counts = summary["severity_counts"]
     lines = [
         f"Versions: {summary['version_a']} -> {summary['version_b']} ({summary['mode']})",
+        f"Tracks considered: {summary['tracks_considered']}",
         f"Tracks compared: {summary['tracks_compared']}",
+        f"Not comparable: {summary['not_comparable_tracks']}",
         f"Stable: {counts['STABLE']}",
         f"Minor: {counts['MINOR']}",
         f"Significant: {counts['SIGNIFICANT']}",
@@ -724,12 +806,21 @@ def format_version_comparison(result: VersionComparisonResult) -> str:
         f"Tempo equivalent: {summary['tempo_equivalent_pct']}%",
         f"Key/mode match: {summary['key_mode_match_pct']}%",
     ]
+    if summary.get("mode_warning"):
+        lines.append(f"WARNING: {summary['mode_warning']}")
     if result.json_report:
         lines.append(f"JSON report: {result.json_report}")
     if result.csv_report:
         lines.append(f"CSV report: {result.csv_report}")
     for row in result.rows:
-        if row["severity"] != "STABLE":
+        if not row["comparable"]:
+            lines.append(
+                f"\n[NOT_COMPARABLE] {Path(str(row['path'])).name}: "
+                f"{row['left_genre'] or row['left_quality']} -> "
+                f"{row['right_genre'] or row['right_quality']} "
+                f"({row['comparison_reason']})"
+            )
+        elif row["severity"] != "STABLE":
             lines.append(
                 f"\n[{row['severity']}] {Path(str(row['path'])).name}: "
                 f"{row['left_genre']} -> {row['right_genre']} ({row['reasons']})"
