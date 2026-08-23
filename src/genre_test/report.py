@@ -128,6 +128,7 @@ def write_validation_report(
         "mode_worst_pair",
         "mode_reasons",
         "history_severity",
+        "history_worst_mode",
         "history_reasons",
         "modes",
         "convergence",
