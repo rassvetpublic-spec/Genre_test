@@ -52,15 +52,40 @@
 - [x] CLI `validate`, `history-import`, `compare-versions`
 - [x] pure regression tests for identity/history/comparison/convergence/filtering
 
-## P1 — real-data validation
+## v0.3.1 — runtime hardening
 
-- [ ] import the existing historical result JSON set into v0.3 history
-- [ ] rerun diagnostic tracks with v0.3 `Fast + Auto + Accurate`
-- [ ] measure Auto ↔ Accurate convergence and runtime
+- [x] cooperative Safe Stop in Analysis and Validation
+- [x] copy-output controls
+- [x] persistent repo-local log
+- [x] repo-local history/results/Hugging Face cache
+- [x] safe migration from pre-v0.3.1 history
+- [x] skip unreadable audio instead of aborting a large run
+- [x] persist file errors into Validation JSON/CSV
+
+## v0.3.2 — validation hardening
+
+- [x] run full real-catalog Fast + Auto + Accurate benchmark
+- [x] establish Auto vs Accurate baseline: 225/225 resolved-genre match
+- [x] establish Fast vs Accurate baseline: 181/225 resolved-genre match
+- [x] resolve negative-style-margin cross-family conflicts as hybrid
+- [x] split current mode convergence from historical drift in reports
+- [x] record worst mode pair and reason
+- [x] report Fast/Auto/Accurate window counts
+- [x] report Auto inference-window savings
+- [x] ignore service/cache directories by default
+- [x] add GUI/CLI service-directory override
+- [x] add short-input QC gates
+- [x] add FFmpeg/SoundFile decoder diagnostics
+- [x] pin default MAEST Hugging Face revision
+- [x] bump result schema to 3
+
+## P1 — accuracy calibration
+
+- [ ] rerun only unstable/changed tracks under v0.3.2
+- [ ] compare v0.3.1 ↔ v0.3.2 resolver drift
 - [ ] expand manually reviewed benchmark to 20+ intentionally different tracks
 - [ ] attach manually reviewed expected genre labels
 - [ ] calibrate severity/JS/Top-N thresholds against observed false alarms
-- [ ] pin the MAEST Hugging Face revision for strict reproducibility
 - [ ] improve key/BPM validation
 - [ ] add HF authentication status to `doctor`
 
