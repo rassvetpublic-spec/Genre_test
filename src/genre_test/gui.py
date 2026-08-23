@@ -15,6 +15,14 @@ from .cancellation import AnalysisCancelled
 from .history import HistoryDB
 from .logging_utils import append_log
 from .maest import DEFAULT_MODEL
+from .performance import (
+    append_perf,
+    average_seconds,
+    clock,
+    elapsed_seconds,
+    milliseconds,
+    tracks_per_minute,
+)
 from .presentation import format_result_text
 from .report import write_json, write_summary_csv
 from .runtime_meta import default_history_path, default_log_path, default_results_dir
@@ -260,9 +268,11 @@ class GenreTestWindow(tk.Tk):
         windows: int,
         top_k: int,
     ) -> None:
+        session_started = clock()
         results = []
         blocks = []
         file_errors: list[str] = []
+        processing_started: float | None = None
         try:
             analyzer = GenreAnalyzer(
                 model_id=DEFAULT_MODEL,
@@ -272,17 +282,41 @@ class GenreTestWindow(tk.Tk):
                 top_k=top_k,
             )
             history = HistoryDB()
+            processing_started = clock()
             if source.is_file():
+                item_started = clock()
                 result = analyzer.analyze(source, cancel_check=self._cancel_event.is_set)
                 target = write_json(result, out)
                 history.record_result(result)
+                item_s = elapsed_seconds(item_started)
+                total_s = elapsed_seconds(session_started)
+                append_perf(
+                    "analysis_item",
+                    path=source,
+                    status="ok",
+                    mode=mode,
+                    elapsed_ms=milliseconds(item_s),
+                    includes_persistence=True,
+                )
+                append_perf(
+                    "analysis_session",
+                    source=source,
+                    status="complete",
+                    completed=1,
+                    errors=0,
+                    total_ms=milliseconds(total_s),
+                    processing_ms=milliseconds(elapsed_seconds(processing_started)),
+                    avg_seconds_per_track=average_seconds(1, item_s),
+                    tracks_per_minute=tracks_per_minute(1, item_s),
+                )
                 text = (
                     format_result_text(result)
                     + f"\n\nJSON snapshot: {target}"
                     + f"\nHistory DB: {history.path}"
                     + f"\nLog: {default_log_path()}"
+                    + f"\nElapsed: {item_s:.2f} s"
                 )
-                append_log(f"Analysis complete: {source}")
+                append_log(f"Analysis complete: {source}; elapsed={item_s:.3f}s")
                 self._queue.put(("done", text))
                 return
 
@@ -295,33 +329,75 @@ class GenreTestWindow(tk.Tk):
                 if self._cancel_event.is_set():
                     raise AnalysisCancelled("Operation cancelled by user")
                 self._queue.put(("status", f"[{idx}/{len(files)}] {path.name}"))
+                item_started = clock()
                 try:
                     result = analyzer.analyze(path, cancel_check=self._cancel_event.is_set)
                 except AnalysisCancelled:
                     raise
                 except Exception as exc:
+                    item_s = elapsed_seconds(item_started)
                     detail = traceback.format_exc()
                     summary = f"[ERROR] {path}: {type(exc).__name__}: {exc}"
                     file_errors.append(summary)
                     blocks.append(summary)
                     append_log(f"Batch file failed: {path}\n{detail}")
+                    append_perf(
+                        "analysis_item",
+                        path=path,
+                        status="error",
+                        mode=mode,
+                        elapsed_ms=milliseconds(item_s),
+                        error_type=type(exc).__name__,
+                    )
                     continue
                 results.append(result)
                 target = write_json(result, out)
                 history.record_result(result)
+                item_s = elapsed_seconds(item_started)
+                append_perf(
+                    "analysis_item",
+                    path=path,
+                    status="ok",
+                    mode=mode,
+                    elapsed_ms=milliseconds(item_s),
+                    includes_persistence=True,
+                )
                 blocks.append(format_result_text(result, top_n=5) + f"\nJSON: {target}")
 
             if results:
                 csv_path = write_summary_csv(results, out)
                 blocks.append(f"Summary CSV: {csv_path}")
+            total_s = elapsed_seconds(session_started)
+            processing_s = (
+                elapsed_seconds(processing_started) if processing_started is not None else total_s
+            )
+            avg_s = average_seconds(len(results), processing_s)
+            rate = tracks_per_minute(len(results), processing_s)
             blocks.append(
                 f"Completed: {len(results)} / {len(files)}\n"
                 f"File errors skipped: {len(file_errors)}\n"
+                f"Elapsed: {total_s:.2f} s\n"
+                f"Processing: {processing_s:.2f} s\n"
+                f"Average: {avg_s:.3f} s/track\n"
+                f"Throughput: {rate:.3f} tracks/min\n"
                 f"History DB: {history.path}\nLog: {default_log_path()}"
             )
             append_log(
                 f"Batch complete: source={source}; completed={len(results)}; "
-                f"errors={len(file_errors)}"
+                f"errors={len(file_errors)}; elapsed={total_s:.3f}s; "
+                f"throughput={rate:.3f} tracks/min"
+            )
+            append_perf(
+                "analysis_session",
+                source=source,
+                status="complete",
+                files_seen=len(files),
+                completed=len(results),
+                errors=len(file_errors),
+                total_ms=milliseconds(total_s),
+                processing_ms=milliseconds(processing_s),
+                avg_seconds_per_track=avg_s,
+                tracks_per_minute=rate,
             )
             self._queue.put(
                 (
@@ -333,21 +409,50 @@ class GenreTestWindow(tk.Tk):
             if results:
                 csv_path = write_summary_csv(results, out)
                 blocks.append(f"Partial summary CSV: {csv_path}")
+            total_s = elapsed_seconds(session_started)
+            processing_s = (
+                elapsed_seconds(processing_started) if processing_started is not None else total_s
+            )
+            avg_s = average_seconds(len(results), processing_s)
+            rate = tracks_per_minute(len(results), processing_s)
             message = (
                 "Остановлено пользователем безопасно.\n"
                 f"Полностью завершённых треков сохранено: {len(results)}.\n"
                 f"Ошибочных файлов пропущено: {len(file_errors)}.\n"
+                f"Время до остановки: {total_s:.2f} s.\n"
+                f"Среднее: {avg_s:.3f} s/track; {rate:.3f} tracks/min.\n"
                 "Текущий незавершённый трек в историю не записан."
             )
             if blocks:
                 message += "\n\n" + ("\n\n" + "=" * 72 + "\n\n").join(blocks)
             append_log(
-                f"Analysis stopped safely: completed={len(results)}; errors={len(file_errors)}"
+                f"Analysis stopped safely: completed={len(results)}; errors={len(file_errors)}; "
+                f"elapsed={total_s:.3f}s"
+            )
+            append_perf(
+                "analysis_session",
+                source=source,
+                status="stopped",
+                completed=len(results),
+                errors=len(file_errors),
+                total_ms=milliseconds(total_s),
+                processing_ms=milliseconds(processing_s),
+                avg_seconds_per_track=avg_s,
+                tracks_per_minute=rate,
             )
             self._queue.put(("cancelled", message))
         except Exception:
+            total_s = elapsed_seconds(session_started)
             detail = traceback.format_exc()
-            append_log(f"Analysis fatal error:\n{detail}")
+            append_log(f"Analysis fatal error after {total_s:.3f}s:\n{detail}")
+            append_perf(
+                "analysis_session",
+                source=source,
+                status="fatal_error",
+                completed=len(results),
+                errors=len(file_errors),
+                total_ms=milliseconds(total_s),
+            )
             self._queue.put(("error", detail))
 
     def _poll_queue(self) -> None:
