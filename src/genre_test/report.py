@@ -52,6 +52,28 @@ def write_summary_csv(results: list[AnalysisResult], out_dir: Path) -> Path:
         "bpm",
         "key",
         "mode",
+        "profile_primary_genre",
+        "profile_broad_family",
+        "profile_confidence",
+        "profile_secondary_influence",
+        "profile_adjacent_genres",
+        "profile_moods",
+        "profile_vocal",
+        "profile_instruments",
+        "profile_production",
+        "distributor_genre",
+        "distributor_subgenre",
+        "suno_style",
+        "ensemble_agreement",
+        "ensemble_sources",
+        "semantic_status",
+        "semantic_model_id",
+        "semantic_model_revision",
+        "semantic_windows",
+        "semantic_genres",
+        "semantic_vocals",
+        "semantic_instruments",
+        "semantic_moods",
         "top_style_1",
         "top_style_1_score",
         "top_style_2",
@@ -68,6 +90,8 @@ def write_summary_csv(results: list[AnalysisResult], out_dir: Path) -> Path:
         writer.writeheader()
         for result in results:
             styles = result.top_styles[:3]
+            profile = result.audio_profile
+            semantic = result.semantic_evidence
             row = {
                 "track_id": result.track_id,
                 "run_id": result.run_id,
@@ -95,6 +119,46 @@ def write_summary_csv(results: list[AnalysisResult], out_dir: Path) -> Path:
                 "bpm": result.audio_features.bpm,
                 "key": result.audio_features.key,
                 "mode": result.audio_features.mode,
+                "profile_primary_genre": profile.primary_genre if profile else "",
+                "profile_broad_family": profile.broad_family if profile else "",
+                "profile_confidence": profile.confidence if profile else "",
+                "profile_secondary_influence": profile.secondary_influence if profile else "",
+                "profile_adjacent_genres": "; ".join(profile.adjacent_genres) if profile else "",
+                "profile_moods": "; ".join(profile.moods) if profile else "",
+                "profile_vocal": profile.vocal if profile else "",
+                "profile_instruments": "; ".join(profile.instruments) if profile else "",
+                "profile_production": "; ".join(profile.production) if profile else "",
+                "distributor_genre": profile.distributor_genre if profile else "",
+                "distributor_subgenre": profile.distributor_subgenre if profile else "",
+                "suno_style": profile.suno_style if profile else "",
+                "ensemble_agreement": profile.ensemble_agreement if profile else "",
+                "ensemble_sources": "; ".join(profile.ensemble_sources) if profile else "",
+                "semantic_status": semantic.status if semantic else "",
+                "semantic_model_id": semantic.model_id if semantic else "",
+                "semantic_model_revision": semantic.model_revision if semantic else "",
+                "semantic_windows": semantic.windows_analyzed if semantic else "",
+                "semantic_genres": (
+                    "; ".join(f"{item.label}={item.score:.4f}" for item in semantic.genre_tags)
+                    if semantic
+                    else ""
+                ),
+                "semantic_vocals": (
+                    "; ".join(f"{item.label}={item.score:.4f}" for item in semantic.vocal_tags)
+                    if semantic
+                    else ""
+                ),
+                "semantic_instruments": (
+                    "; ".join(
+                        f"{item.label}={item.score:.4f}" for item in semantic.instrument_tags
+                    )
+                    if semantic
+                    else ""
+                ),
+                "semantic_moods": (
+                    "; ".join(f"{item.label}={item.score:.4f}" for item in semantic.mood_tags)
+                    if semantic
+                    else ""
+                ),
                 "device": result.device,
                 "model_id": result.model_id,
                 "model_revision": result.model_revision,
