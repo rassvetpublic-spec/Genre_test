@@ -1,6 +1,6 @@
 # Genre_test
 
-**Current version: 0.3.2**
+**Current version: 0.3.3**
 
 Локальный анализатор музыкального жанра для Windows/Linux с **MAEST Discogs 519**, адаптивным Auto-анализом и Validation Lab для проверки сходимости, истории и регрессий между версиями.
 
@@ -142,6 +142,46 @@ SQLite хранит:
 - broad-family scores;
 - validation sessions;
 - pairwise comparisons.
+
+## Performance telemetry — v0.3.3
+
+Обычный repo-local `genre_test.log` содержит timestamp каждой строки и дополнительные machine-readable записи:
+
+```text
+PERF {"event":"analyzer_init", ...}
+PERF {"event":"maest_window", ...}
+PERF {"event":"track", ...}
+PERF {"event":"analysis_item", ...}
+PERF {"event":"analysis_session", ...}
+```
+
+После префикса `PERF ` находится валидный JSON, поэтому журнал можно автоматически разбирать и сравнивать между версиями.
+
+Per-track telemetry содержит:
+
+```text
+total_ms
+load_ms
+features_ms
+identity_ms
+select_windows_ms
+auto_decision_ms
+build_result_ms
+inference_total_ms
+inference_avg_ms
+inference_max_ms
+windows_analyzed
+unique_inference_windows
+logical_window_uses
+cache_reused_window_uses
+auto_expanded
+realtime_factor
+realtime_speed_x
+```
+
+`realtime_factor` — время обработки / длительность аудио; меньше 1 означает быстрее realtime. `realtime_speed_x` — обратная величина: например `20.0` означает обработку примерно в 20 раз быстрее длительности трека.
+
+Для batch дополнительно логируются end-to-end время с JSON/history persistence, среднее `s/track` и `tracks/min`. Для `Fast + Auto + Accurate` можно видеть фактическое число уникальных MAEST inference и экономию shared prediction cache.
 
 ## Fast / Auto / Accurate convergence
 
