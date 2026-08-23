@@ -12,6 +12,7 @@ from .analysis_policy import (
     spread_indices,
 )
 from .audio import load_audio, select_windows
+from .cancellation import CancelCheck, check_cancel
 from .features import extract_audio_features
 from .maest import DEFAULT_MODEL, MaestClassifier
 from .models import AnalysisResult, AudioFeatures, StyleScore
@@ -49,8 +50,17 @@ class GenreAnalyzer:
         self.git_commit = current_git_commit()
         self.classifier = MaestClassifier(model_id=model_id, revision=revision, device=device)
 
-    def _predict(self, window) -> list[dict[str, float | str]]:
-        return self.classifier.predict(window, top_k=self.internal_top_k)
+    def _predict(
+        self,
+        window,
+        cancel_check: CancelCheck | None = None,
+    ) -> list[dict[str, float | str]]:
+        # Never interrupt the model call itself. Observe cancellation immediately before and
+        # immediately after one inference window so CUDA/PyTorch can leave the step cleanly.
+        check_cancel(cancel_check)
+        prediction = self.classifier.predict(window, top_k=self.internal_top_k)
+        check_cancel(cancel_check)
+        return prediction
 
     def _resolve_predictions(
         self, predictions: list[list[dict[str, float | str]]]
@@ -102,7 +112,9 @@ class GenreAnalyzer:
         )
 
     def _prediction_cache(
-        self, windows
+        self,
+        windows,
+        cancel_check: CancelCheck | None = None,
     ) -> tuple[
         dict[int, list[dict[str, float | str]]],
         Callable[[int], list[dict[str, float | str]]],
@@ -110,51 +122,71 @@ class GenreAnalyzer:
         cache: dict[int, list[dict[str, float | str]]] = {}
 
         def get(index: int) -> list[dict[str, float | str]]:
+            check_cancel(cancel_check)
             if index not in cache:
-                cache[index] = self._predict(windows[index])
+                cache[index] = self._predict(windows[index], cancel_check)
+            check_cancel(cancel_check)
             return cache[index]
 
         return cache, get
+
+    def _predict_windows(
+        self,
+        windows,
+        cancel_check: CancelCheck | None = None,
+    ) -> list[list[dict[str, float | str]]]:
+        predictions: list[list[dict[str, float | str]]] = []
+        for window in windows:
+            check_cancel(cancel_check)
+            predictions.append(self._predict(window, cancel_check))
+        return predictions
 
     def analyze(
         self,
         path: Path,
         analysis_mode: str | None = None,
         track_id: str | None = None,
+        cancel_check: CancelCheck | None = None,
     ) -> AnalysisResult:
         mode = (analysis_mode or self.analysis_mode).lower().strip()
         if mode not in ANALYSIS_MODES:
             raise ValueError(f"Unknown analysis mode: {mode}")
 
+        check_cancel(cancel_check)
         resolved_path = path.resolve()
         audio, sr = load_audio(resolved_path, self.sample_rate)
+        check_cancel(cancel_check)
         features = extract_audio_features(audio, sr)
+        check_cancel(cancel_check)
         identity = identify_track(resolved_path) if track_id is None else None
+        check_cancel(cancel_check)
         resolved_track_id = track_id or identity.track_id
         source_file_size = identity.size_bytes if identity else resolved_path.stat().st_size
         target = duration_window_target(features.duration_s)
 
         if mode == "expert":
             windows = select_windows(audio, sr, self.window_seconds, self.window_count)
-            predictions = [self._predict(window) for window in windows]
+            predictions = self._predict_windows(windows, cancel_check)
         else:
             windows = select_windows(audio, sr, self.window_seconds, target)
             if mode == "fast":
                 indices = spread_indices(len(windows), min(len(windows), 3))
-                predictions = [self._predict(windows[index]) for index in indices]
+                predictions = [self._predict(windows[index], cancel_check) for index in indices]
             elif mode == "accurate" or len(windows) <= 5:
-                predictions = [self._predict(window) for window in windows]
+                predictions = self._predict_windows(windows, cancel_check)
             else:
                 initial_indices = spread_indices(len(windows), 5)
-                cache, get = self._prediction_cache(windows)
+                cache, get = self._prediction_cache(windows, cancel_check)
                 initial_predictions = [get(index) for index in initial_indices]
                 _, _, resolution = self._resolve_predictions(initial_predictions)
+                check_cancel(cancel_check)
                 if needs_more_auto_windows(resolution.classification, resolution.confidence):
                     predictions = [get(index) for index in range(len(windows))]
                 else:
                     predictions = initial_predictions
                 del cache
 
+        check_cancel(cancel_check)
         return self._build_result(
             resolved_path,
             features,
@@ -169,6 +201,7 @@ class GenreAnalyzer:
         path: Path,
         modes: Iterable[str] = ("fast", "auto", "accurate"),
         track_id: str | None = None,
+        cancel_check: CancelCheck | None = None,
     ) -> dict[str, AnalysisResult]:
         requested = list(dict.fromkeys(mode.lower().strip() for mode in modes))
         if not requested:
@@ -179,15 +212,19 @@ class GenreAnalyzer:
         if "expert" in requested:
             raise ValueError("analyze_modes does not combine expert mode with automatic modes")
 
+        check_cancel(cancel_check)
         resolved_path = path.resolve()
         audio, sr = load_audio(resolved_path, self.sample_rate)
+        check_cancel(cancel_check)
         features = extract_audio_features(audio, sr)
+        check_cancel(cancel_check)
         identity = identify_track(resolved_path) if track_id is None else None
+        check_cancel(cancel_check)
         resolved_track_id = track_id or identity.track_id
         source_file_size = identity.size_bytes if identity else resolved_path.stat().st_size
         target = duration_window_target(features.duration_s)
         windows = select_windows(audio, sr, self.window_seconds, target)
-        cache, get = self._prediction_cache(windows)
+        cache, get = self._prediction_cache(windows, cancel_check)
         result_predictions: dict[str, list[list[dict[str, float | str]]]] = {}
 
         if "fast" in requested:
@@ -202,6 +239,7 @@ class GenreAnalyzer:
                 initial_indices = spread_indices(len(windows), 5)
                 initial_predictions = [get(index) for index in initial_indices]
                 _, _, resolution = self._resolve_predictions(initial_predictions)
+                check_cancel(cancel_check)
                 if needs_more_auto_windows(resolution.classification, resolution.confidence):
                     result_predictions["auto"] = [get(index) for index in range(len(windows))]
                 else:
@@ -210,6 +248,7 @@ class GenreAnalyzer:
         if "accurate" in requested:
             result_predictions["accurate"] = [get(index) for index in range(len(windows))]
 
+        check_cancel(cancel_check)
         results = {
             mode: self._build_result(
                 resolved_path,
@@ -222,4 +261,5 @@ class GenreAnalyzer:
             for mode in requested
         }
         del cache
+        check_cancel(cancel_check)
         return results

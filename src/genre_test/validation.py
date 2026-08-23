@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import traceback
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -7,9 +8,11 @@ from pathlib import Path
 from . import __version__
 from .analyzer import GenreAnalyzer
 from .audio import iter_audio_files
+from .cancellation import AnalysisCancelled, CancelCheck, check_cancel
 from .comparison import SEVERITY_ORDER, ComparisonResult, compare_results
 from .convergence import ModeConvergence, compare_modes
 from .history import HistoryDB
+from .logging_utils import append_log
 from .maest import DEFAULT_MODEL
 from .models import AnalysisResult
 from .report import write_json, write_validation_report, write_version_comparison_report
@@ -58,6 +61,27 @@ class ValidationOutcome:
 
 
 @dataclass(frozen=True)
+class ValidationFileError:
+    track_id: str
+    path: str
+    error_type: str
+    message: str
+
+    def report_row(self) -> dict[str, object]:
+        return {
+            "track_id": self.track_id,
+            "path": self.path,
+            "status": "ERROR",
+            "severity": "",
+            "modes": "",
+            "convergence": "",
+            "resolved_genres": "",
+            "versions": "",
+            "notes": f"{self.error_type}: {self.message}",
+        }
+
+
+@dataclass(frozen=True)
 class ValidationSessionResult:
     session_id: str
     scanned_tracks: int
@@ -66,6 +90,9 @@ class ValidationSessionResult:
     duplicate_paths: int
     severity_counts: dict[str, int]
     outcomes: list[ValidationOutcome]
+    errors: list[ValidationFileError]
+    cancelled: bool = False
+    remaining_tracks: int = 0
     json_report: str | None = None
     csv_report: str | None = None
 
@@ -73,9 +100,13 @@ class ValidationSessionResult:
         return {
             "session_id": self.session_id,
             "analyzer_version": __version__,
+            "status": "stopped" if self.cancelled else "complete",
+            "cancelled": self.cancelled,
             "scanned_tracks": self.scanned_tracks,
             "analyzed_tracks": self.analyzed_tracks,
             "skipped_tracks": self.skipped_tracks,
+            "error_tracks": len(self.errors),
+            "remaining_tracks": self.remaining_tracks,
             "duplicate_paths": self.duplicate_paths,
             "severity_counts": self.severity_counts,
         }
@@ -119,12 +150,17 @@ class ValidationEngine:
         return self._analyzer
 
     def scan_sources(
-        self, sources: Iterable[Path], progress: ProgressCallback | None = None
+        self,
+        sources: Iterable[Path],
+        progress: ProgressCallback | None = None,
+        cancel_check: CancelCheck | None = None,
     ) -> list[ScannedTrack]:
         paths: list[Path] = []
         seen_paths: set[str] = set()
         for source in sources:
+            check_cancel(cancel_check)
             for path in iter_audio_files(source.expanduser()):
+                check_cancel(cancel_check)
                 resolved = path.resolve()
                 key = str(resolved).casefold()
                 if key not in seen_paths:
@@ -134,9 +170,17 @@ class ValidationEngine:
         grouped: dict[str, list[Path]] = {}
         total = len(paths)
         for index, path in enumerate(paths, 1):
+            check_cancel(cancel_check)
             if progress:
                 progress(index, total, f"Идентификация: {path.name}")
-            track_id = self.history.resolve_track_id(path)
+            try:
+                track_id = self.history.resolve_track_id(path)
+            except OSError as exc:
+                append_log(f"Track identity failed, skipped: {path}: {exc}")
+                if progress:
+                    progress(index, total, f"Пропуск недоступного файла: {path.name}")
+                continue
+            check_cancel(cancel_check)
             grouped.setdefault(track_id, []).append(path)
 
         return [
@@ -153,19 +197,27 @@ class ValidationEngine:
         compare_all_modes: bool = False,
         filter_mode: str = "all",
         progress: ProgressCallback | None = None,
+        cancel_check: CancelCheck | None = None,
     ) -> ValidationSessionResult:
         sources = [Path(source) for source in sources]
         if filter_mode not in RECHECK_FILTERS:
             raise ValueError(f"Unknown filter mode: {filter_mode}")
         modes = ["fast", "auto", "accurate"] if compare_all_modes else [mode]
-        tracks = self.scan_sources(sources, progress)
+        tracks = self.scan_sources(sources, progress, cancel_check)
+        check_cancel(cancel_check)
         session_id = self.history.create_session(__version__, sources, modes, filter_mode)
         analyzer = self._get_analyzer()
         outcomes: list[ValidationOutcome] = []
+        errors: list[ValidationFileError] = []
         skipped = 0
+        cancelled = False
         duplicate_paths = sum(len(track.duplicate_paths) for track in tracks)
 
         for index, track in enumerate(tracks, 1):
+            if cancel_check is not None and cancel_check():
+                cancelled = True
+                break
+
             reference_mode = "auto" if compare_all_modes else mode
             latest_info = self.history.latest_run_info(track.track_id, reference_mode)
             latest_severity = self.history.latest_severity(track.track_id)
@@ -187,14 +239,45 @@ class ValidationEngine:
                 run_mode: self.history.latest_run(track.track_id, mode=run_mode)
                 for run_mode in modes
             }
-            if compare_all_modes:
-                results = analyzer.analyze_modes(track.path, modes=modes, track_id=track.track_id)
-            else:
-                result = analyzer.analyze(
-                    track.path, analysis_mode=mode, track_id=track.track_id
+            try:
+                if compare_all_modes:
+                    results = analyzer.analyze_modes(
+                        track.path,
+                        modes=modes,
+                        track_id=track.track_id,
+                        cancel_check=cancel_check,
+                    )
+                else:
+                    result = analyzer.analyze(
+                        track.path,
+                        analysis_mode=mode,
+                        track_id=track.track_id,
+                        cancel_check=cancel_check,
+                    )
+                    results = {mode: result}
+            except AnalysisCancelled:
+                cancelled = True
+                break
+            except Exception as exc:  # noqa: BLE001
+                detail = traceback.format_exc()
+                errors.append(
+                    ValidationFileError(
+                        track_id=track.track_id,
+                        path=str(track.path),
+                        error_type=type(exc).__name__,
+                        message=str(exc),
+                    )
                 )
-                results = {mode: result}
+                append_log(f"Validation file failed, skipped: {track.path}\n{detail}")
+                if progress:
+                    progress(
+                        index,
+                        len(tracks),
+                        f"Ошибка чтения, файл пропущен: {track.path.name}",
+                    )
+                continue
 
+            # Commit a track only after all requested modes for that track completed.
             for result in results.values():
                 write_json(result, self.out_dir / "runs")
                 self.history.record_result(result, session_id=session_id)
@@ -256,6 +339,7 @@ class ValidationEngine:
         for outcome in outcomes:
             severity_counts[outcome.severity] += 1
 
+        remaining = max(0, len(tracks) - len(outcomes) - skipped - len(errors))
         provisional = ValidationSessionResult(
             session_id=session_id,
             scanned_tracks=len(tracks),
@@ -264,13 +348,22 @@ class ValidationEngine:
             duplicate_paths=duplicate_paths,
             severity_counts=severity_counts,
             outcomes=outcomes,
+            errors=errors,
+            cancelled=cancelled,
+            remaining_tracks=remaining,
         )
         summary = provisional.summary_dict()
         rows = [outcome.report_row() for outcome in outcomes]
+        rows.extend(error.report_row() for error in errors)
         json_report, csv_report = write_validation_report(summary, rows, self.out_dir)
         self.history.finish_session(
             session_id,
             {**summary, "json_report": str(json_report), "csv_report": str(csv_report)},
+        )
+        append_log(
+            f"Validation {'stopped' if cancelled else 'complete'}: session={session_id}; "
+            f"analyzed={len(outcomes)}; skipped={skipped}; errors={len(errors)}; "
+            f"remaining={remaining}"
         )
         return ValidationSessionResult(
             session_id=session_id,
@@ -280,6 +373,9 @@ class ValidationEngine:
             duplicate_paths=duplicate_paths,
             severity_counts=severity_counts,
             outcomes=outcomes,
+            errors=errors,
+            cancelled=cancelled,
+            remaining_tracks=remaining,
             json_report=str(json_report),
             csv_report=str(csv_report),
         )
@@ -296,7 +392,9 @@ class ValidationEngine:
                     if key not in seen:
                         seen.add(key)
                         json_paths.append(path.resolve())
-        return self.history.import_result_jsons(json_paths)
+        imported, skipped = self.history.import_result_jsons(json_paths)
+        append_log(f"History JSON import: imported={imported}; skipped={skipped}")
+        return imported, skipped
 
     def compare_versions(
         self,
@@ -379,9 +477,12 @@ def format_validation_session(result: ValidationSessionResult) -> str:
     counts = result.severity_counts
     lines = [
         f"Session: {result.session_id}",
+        f"Status: {'STOPPED BY USER' if result.cancelled else 'COMPLETE'}",
         f"Scanned: {result.scanned_tracks}",
         f"Analyzed: {result.analyzed_tracks}",
-        f"Skipped: {result.skipped_tracks}",
+        f"Skipped by filter: {result.skipped_tracks}",
+        f"File errors skipped: {len(result.errors)}",
+        f"Remaining: {result.remaining_tracks}",
         f"Duplicate paths: {result.duplicate_paths}",
         "",
         "Drift / convergence:",
@@ -404,6 +505,10 @@ def format_validation_session(result: ValidationSessionResult) -> str:
         lines.append(
             f"\n[{outcome.severity}] {Path(outcome.path).name}{convergence}\n  {genres}"
         )
+    if result.errors:
+        lines.append("\nФайлы с ошибками (прогон продолжен):")
+        for item in result.errors:
+            lines.append(f"[ERROR] {item.path}\n  {item.error_type}: {item.message}")
     return "\n".join(lines)
 
 

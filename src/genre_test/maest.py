@@ -1,6 +1,14 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
+
+from .runtime_meta import default_hf_home
+
+# Keep model/cache data inside the project checkout unless the user explicitly overrides HF_HOME.
+_hf_home = default_hf_home()
+_hf_home.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("HF_HOME", str(_hf_home))
 
 import numpy as np
 import torch
