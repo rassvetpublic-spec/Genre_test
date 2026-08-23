@@ -6,7 +6,7 @@ from pathlib import Path
 from .analysis_policy import INSUFFICIENT_AUDIO_SECONDS
 from .analyzer import GenreAnalyzer
 from .audio import load_audio, select_windows
-from .cancellation import CancelCheck, check_cancel
+from .cancellation import AnalysisCancelled, CancelCheck, check_cancel
 from .logging_utils import append_log
 from .model_config import (
     DEFAULT_MODEL,
@@ -129,6 +129,8 @@ class ProfileAnalyzer:
                 elapsed_ms=milliseconds(elapsed_seconds(started)),
             )
             return evidence
+        except AnalysisCancelled:
+            raise
         except Exception as exc:
             if self.semantic_mode == "on":
                 raise
