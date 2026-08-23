@@ -36,11 +36,11 @@ FILTER_LABELS = {
 }
 
 VERSION_MODE_LABELS = {
-    "Любой последний": "any",
     "Auto": "auto",
     "Fast": "fast",
     "Accurate": "accurate",
     "Expert": "expert",
+    "Любой последний (диагностика)": "any",
 }
 
 
@@ -56,7 +56,7 @@ class ValidationTab(ttk.Frame):
         self.status_var = tk.StringVar(value="Готов")
         self.version_a_var = tk.StringVar()
         self.version_b_var = tk.StringVar()
-        self.version_mode_var = tk.StringVar(value="Любой последний")
+        self.version_mode_var = tk.StringVar(value="Auto")
         self._queue: queue.Queue[tuple[str, object]] = queue.Queue()
         self._cancel_event = threading.Event()
         self._busy = False
@@ -203,7 +203,7 @@ class ValidationTab(ttk.Frame):
             textvariable=self.version_mode_var,
             values=tuple(VERSION_MODE_LABELS),
             state="readonly",
-            width=18,
+            width=31,
         ).pack(side="left", padx=(6, 12))
         ttk.Button(compare_frame, text="Обновить", command=self._refresh_versions).pack(
             side="left"
@@ -233,10 +233,7 @@ class ValidationTab(ttk.Frame):
         return [Path(self.sources.get(index)) for index in range(self.sources.size())]
 
     def _append_source(self, path: str) -> None:
-        current = {
-            self.sources.get(index).casefold()
-            for index in range(self.sources.size())
-        }
+        current = {self.sources.get(index).casefold() for index in range(self.sources.size())}
         resolved = str(Path(path).resolve())
         if resolved.casefold() not in current:
             self.sources.insert("end", resolved)
@@ -470,9 +467,7 @@ class ValidationTab(ttk.Frame):
         self.version_b_combo.configure(values=versions)
         if versions:
             if self.version_a_var.get() not in versions:
-                self.version_a_var.set(
-                    versions[-2] if len(versions) > 1 else versions[0]
-                )
+                self.version_a_var.set(versions[-2] if len(versions) > 1 else versions[0])
             if self.version_b_var.get() not in versions:
                 self.version_b_var.set(versions[-1])
 
