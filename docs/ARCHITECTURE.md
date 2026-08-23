@@ -1,33 +1,36 @@
-# Architecture v0.1
+# ARCHITECTURE
 
-## Pipeline
+## v0.2 data flow
 
 ```text
-Audio file
-  -> decode/resample mono 16 kHz
-  -> full-track deterministic features
-  -> representative 30 s windows
-  -> MAEST Discogs519 classification per window
-  -> mean aggregation
-  -> broad genre hierarchy
-  -> JSON / CSV report
+Windows GUI / CLI
+      |
+      v
+file or recursive folder input
+      |
+      v
+audio decode -> representative windows -> MAEST Discogs 519
+      |                                  |
+      |                                  v
+      |                         raw style probabilities
+      v                                  |
+BPM / key / spectral features            v
+      |                          broad family aggregation
+      |                                  |
+      +-------------------------+--------+
+                                v
+                         genre resolver
+                     primary/hybrid/confidence
+                                |
+                                v
+                      JSON / summary CSV / GUI
 ```
 
-## Why MAEST first
+## Design rules
 
-MVP intentionally avoids `musicnn` because its original runtime is tied to TensorFlow 1.x, and common Keras ports are tied to very old TensorFlow. MAEST is exposed through current Hugging Face Transformers and gives a much richer Discogs-style taxonomy.
-
-## Window strategy
-
-A full song can change style between intro/verse/chorus/bridge. One arbitrary 30-second crop is fragile, therefore the default is five uniformly spaced windows. Scores are averaged across windows.
-
-Later versions should support:
-
-- energy-aware window selection;
-- chorus/section detection;
-- separate intro/verse/chorus genre estimates;
-- multi-model calibration.
-
-## Interpretation
-
-`primary_genre` is the highest aggregate broad family inferred from hierarchical labels. `top_styles` keeps finer labels. The tool must not pretend that a probabilistic classifier supplies an objective genre truth.
+- preserve raw classifier outputs separately from resolved human labels
+- do not claim a single definitive genre when top broad families are nearly tied
+- GUI is a presentation/input layer; analysis logic remains shared with CLI
+- long ML work runs outside the Tk main thread
+- no model weights are stored in Git
+- raw audio/video and generated `results/` are ignored by Git

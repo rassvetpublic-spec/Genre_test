@@ -1,5 +1,7 @@
 # Genre_test
 
+**Current version: 0.2.0**
+
 Локальный анализатор музыкального жанра для Windows/Linux.
 
 ## Что делает MVP
@@ -14,6 +16,44 @@
 - умеет анализировать один файл или каталог пакетно.
 
 > Жанровая классификация вероятностная. Итог — подсказка для редактора/дистрибьютора, а не абсолютная истина.
+
+## Windows GUI
+
+После установки можно запускать без ручного ввода путей:
+
+```powershell
+.\scripts\gui.ps1
+```
+
+или двойным кликом:
+
+```text
+scripts\Genre_test_GUI.cmd
+```
+
+GUI позволяет:
+
+- выбрать аудиофайл стандартным Windows-окном;
+- выбрать целую папку для batch-анализа;
+- выбрать папку результатов;
+- переключить `auto / cuda / cpu`;
+- задать число окон и Top-K;
+- видеть итоговый `resolved genre`, confidence, hybrid/primary, BPM/key и Top styles;
+- открыть папку результатов одной кнопкой.
+
+CLI остаётся полностью доступным.
+
+## Genre resolver v0.2
+
+Помимо сырого `primary_genre`, JSON теперь содержит:
+
+- `resolved_genre` — человекочитаемый основной стиль;
+- `classification` — `primary` или `hybrid`;
+- `confidence`;
+- `family_margin`;
+- `secondary_genre`.
+
+Raw `top_styles` и `broad_genres` сохраняются без потери.
 
 ## Модель
 
@@ -65,9 +105,11 @@ CUDA:
 - `primary_genre_score`
 - `top_styles`
 - `broad_genres`
-- `bpm`
-- `key`
-- `mode`
+- `resolved_genre`
+- `classification`
+- `confidence`
+- `family_margin`
+- `secondary_genre`
 - `audio_features`
 - технической информацией о модели и окнах
 
@@ -84,3 +126,15 @@ CUDA:
 ## Состояние
 
 См. `docs/ACTIVE_CURRENT.md` и `docs/ROADMAP.md`.
+
+## Python prerequisite
+
+Genre_test requires **Python 3.11 or 3.12 x64**. On Windows the recommended version is Python 3.12.
+
+If Python is not installed, run:
+
+```powershell
+.\scripts\setup.ps1 -InstallPython
+```
+
+The setup script can install Python 3.12 through `winget`, recovers from an incomplete `.venv`, and then installs the project dependencies.

@@ -36,6 +36,11 @@ class AnalysisResult:
     model_revision: str | None
     windows_analyzed: int
     device: str
+    resolved_genre: str | None = None
+    classification: str = "unknown"
+    confidence: str = "low"
+    family_margin: float | None = None
+    secondary_genre: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

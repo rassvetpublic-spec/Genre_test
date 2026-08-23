@@ -1,39 +1,33 @@
-# Roadmap
+# ROADMAP
 
-## v0.1 — MVP
+## v0.2 — implemented
 
-- [x] project skeleton
-- [x] MAEST classifier adapter
-- [x] multi-window aggregation
-- [x] BPM/key/spectral features
-- [x] JSON report
-- [x] batch CSV
-- [x] unit tests for aggregation/windowing/report
-- [x] Windows PowerShell setup
-- [ ] first real Windows/CUDA run
-- [ ] pin tested package versions after P0
-- [ ] pin reviewed MAEST model revision
+- [x] Windows GUI / native input file dialog
+- [x] batch folder selection
+- [x] resolved genre
+- [x] broad-family hybrid detection
+- [x] confidence / family margin
+- [x] half/double tempo candidates in presentation
+- [x] raw MAEST data retained
+- [x] Windows CUDA P0 run on RTX 5070 Ti
 
-## v0.2 — Better evidence
+## P1 — validation
 
-- [ ] energy/section-aware windows
-- [ ] confidence calibration
-- [ ] broad genre cross-check model
-- [ ] mood/instrument/vocal classifiers
-- [ ] per-section disagreement metric
+- [ ] benchmark on 10–20 known tracks across intentionally different genres
+- [ ] tune hybrid/confidence thresholds from observed errors
+- [ ] pin the MAEST Hugging Face revision for reproducibility
+- [ ] improve key/BPM validation
+- [ ] add HF authentication status to `doctor`
 
-## v0.3 — Rassvet resolver
+## P2 — ensemble
 
-- [ ] mapping to Rassvet/Suno genre vocabulary
-- [ ] mapping to distributor genre/subgenre vocabulary
-- [ ] `Style of Music` draft generator from evidence
-- [ ] compare mode for multiple tracks
-- [ ] XLSX report
+- [ ] add an independent tagger/classifier
+- [ ] calibrate ensemble scores
+- [ ] map model taxonomies into a stable internal genre ontology
 
-## v1.0 — Production tool
+## P3 — product modes
 
-- [ ] frozen reproducible environment
-- [ ] model/license registry
-- [ ] benchmark set with manually reviewed Rassvet tracks
-- [ ] thresholds calibrated against benchmark set
-- [ ] optional GUI
+- [ ] distributor-oriented broad genre/subgenre
+- [ ] Suno Style handoff
+- [ ] catalog comparison / similarity
+- [ ] optional XLSX/HTML report

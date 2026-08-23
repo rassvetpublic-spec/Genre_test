@@ -18,6 +18,9 @@ models/
 *.m4a
 *.aac
 *.ogg
+*.mp4
+*.mov
+*.webm
 
 # IDE / OS
 .vscode/

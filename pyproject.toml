@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "genre-test"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local music genre analyzer for Rassvetmsk: MAEST/Discogs classification plus audio features and reports."
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
@@ -32,6 +32,7 @@ dev = [
 
 [project.scripts]
 genre-test = "genre_test.cli:app"
+genre-test-gui = "genre_test.gui:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/genre_test"]

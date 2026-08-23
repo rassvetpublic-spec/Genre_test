@@ -21,8 +21,9 @@ console = Console()
 def _print_result(result: AnalysisResult) -> None:
     console.print(f"\n[bold]{Path(result.path).name}[/bold]")
     console.print(
-        f"Primary: [bold cyan]{result.primary_genre}[/bold cyan] "
-        f"({(result.primary_genre_score or 0.0):.3f}) | "
+        f"Resolved: [bold cyan]{result.resolved_genre or result.primary_genre}[/bold cyan] | "
+        f"Family: {result.primary_genre} ({(result.primary_genre_score or 0.0):.3f}) | "
+        f"{result.classification}, confidence={result.confidence} | "
         f"BPM: {result.audio_features.bpm} | "
         f"Key: {result.audio_features.key} {result.audio_features.mode or ''}"
     )

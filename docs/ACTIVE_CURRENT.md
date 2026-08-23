@@ -1,28 +1,32 @@
 # ACTIVE / CURRENT
 
-Status: MVP v0.1 scaffolded
+Version: **0.2.0**
 
-## Current objective
+## Current implementation
 
-Get a reproducible local genre report from one WAV/MP3 on Windows.
+- Windows-first local genre analyzer
+- MAEST Discogs 519 via Transformers/PyTorch
+- CUDA auto-detection; tested on Windows with NVIDIA GeForce RTX 5070 Ti
+- 5 representative 30-second windows by default
+- broad family aggregation plus human-readable genre resolver
+- hybrid detection from top-family margin
+- confidence label and raw MAEST preservation
+- BPM/key/basic spectral features
+- JSON per track, CSV for batch
+- CLI and Windows GUI
 
-## Current engine
+## Windows GUI
 
-- primary: `mtg-upf/discogs-maest-30s-pw-129e-519l`
-- inference: PyTorch / Transformers
-- segmentation: five uniform 30 s windows
-- features: librosa BPM/key/spectral summary
-- output: JSON + batch CSV
+Launch with `scripts\gui.ps1` or double-click `scripts\Genre_test_GUI.cmd` after setup.
+The GUI supports native file/folder selection, output directory selection, device, windows, Top-K, progress/status and result preview.
 
-## P0 gate
+## Validated runtime
 
-Before adding more ML models, verify on real tracks:
+- Python 3.12.10
+- PyTorch 2.11.0+cu128
+- CUDA runtime 12.8
+- NVIDIA GeForce RTX 5070 Ti
 
-1. environment installs on the target Windows machine;
-2. CUDA is detected when expected;
-3. one full WAV completes without crash;
-4. output labels are plausible;
-5. same file produces stable scores across repeated runs;
-6. CPU fallback works.
+## Next validation gate
 
-Only after P0: add ensemble/calibration.
+Run a deliberately diverse test set (rock, blues, gothic/industrial, trap/pop, acoustic) and compare resolved labels against human classification before adding a second independent model.
