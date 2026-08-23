@@ -4,7 +4,8 @@ import importlib
 import platform
 import sys
 from dataclasses import dataclass
-from importlib.metadata import PackageNotFoundError, version as package_version
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as package_version
 
 from .model_config import DEFAULT_CUDA_BATCH_SIZE, DEFAULT_MODEL_REVISION
 from .runtime_diagnostics import collect_runtime_diagnostics
@@ -126,7 +127,7 @@ def _torch_runtime_components(torch_package: RuntimeComponent) -> tuple[RuntimeC
 
     try:
         torch = importlib.import_module("torch")
-    except Exception as exc:
+    except (ImportError, OSError, RuntimeError) as exc:
         return (
             RuntimeComponent(
                 name="CUDA",
@@ -160,7 +161,7 @@ def _torch_runtime_components(torch_package: RuntimeComponent) -> tuple[RuntimeC
     if cuda_available:
         try:
             gpu_name = str(torch.cuda.get_device_name(0))
-        except Exception as exc:
+        except (OSError, RuntimeError) as exc:
             gpu_name = f"query failed: {type(exc).__name__}"
             gpu_status = "WARN"
         else:
