@@ -69,6 +69,8 @@ class AnalysisResult:
     report_top_k: int = 15
     git_commit: str | None = None
     source_file_size: int | None = None
+    input_quality: str = "NORMAL"
+    quality_notes: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -93,6 +95,7 @@ class AnalysisResult:
             if isinstance(audio_data, AudioFeatures)
             else AudioFeatures.from_dict(audio_data)
         )
+        notes = data.get("quality_notes") or ()
         return cls(
             path=str(data.get("path", "")),
             primary_genre=data.get("primary_genre"),
@@ -137,6 +140,8 @@ class AnalysisResult:
                 if data.get("source_file_size") is not None
                 else None
             ),
+            input_quality=str(data.get("input_quality", "NORMAL")),
+            quality_notes=tuple(str(item) for item in notes),
         )
 
     @property

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import platform
+import shutil
 from pathlib import Path
 
+import soundfile as sf
 import torch
 import typer
 from rich.console import Console
@@ -13,7 +15,7 @@ from .analysis_policy import ANALYSIS_MODES
 from .analyzer import GenreAnalyzer
 from .audio import iter_audio_files
 from .history import HistoryDB
-from .maest import DEFAULT_MODEL
+from .maest import DEFAULT_MODEL, DEFAULT_MODEL_REVISION
 from .models import AnalysisResult
 from .report import write_json, write_summary_csv
 from .runtime_meta import default_history_path
@@ -37,6 +39,7 @@ def _print_result(result: AnalysisResult) -> None:
         f"Resolved: [bold cyan]{result.resolved_genre or result.primary_genre}[/bold cyan] | "
         f"Family: {result.primary_genre} ({(result.primary_genre_score or 0.0):.3f}) | "
         f"{result.classification}, confidence={result.confidence} | "
+        f"quality={result.input_quality} | "
         f"mode={result.analysis_mode}, windows={result.windows_analyzed} | "
         f"BPM: {result.audio_features.bpm} | "
         f"Key: {result.audio_features.key} {result.audio_features.mode or ''}"
@@ -45,6 +48,8 @@ def _print_result(result: AnalysisResult) -> None:
         f"Version: {result.analyzer_version} | run={result.run_id} | "
         f"track={result.track_id}"
     )
+    if result.quality_notes:
+        console.print("QC: " + "; ".join(result.quality_notes))
     table = Table("#", "Style", "Score")
     for idx, item in enumerate(result.top_styles[:10], 1):
         table.add_row(str(idx), item.label, f"{item.score:.4f}")
@@ -88,7 +93,7 @@ def _store_result(
 
 @app.command()
 def doctor() -> None:
-    """Show runtime, version, history path and CUDA status."""
+    """Show runtime, decoder, pinned model and CUDA status."""
     console.print(f"Genre_test: {__version__}")
     console.print(f"Python: {platform.python_version()}")
     console.print(f"Platform: {platform.platform()}")
@@ -97,6 +102,15 @@ def doctor() -> None:
     if torch.cuda.is_available():
         console.print(f"CUDA runtime: {torch.version.cuda}")
         console.print(f"GPU: {torch.cuda.get_device_name(0)}")
+    console.print(f"SoundFile: {sf.__version__}")
+    ffmpeg = shutil.which("ffmpeg")
+    console.print(f"FFmpeg: {ffmpeg or 'MISSING'}")
+    console.print(
+        "AAC/extended decode fallback: "
+        + ("available via FFmpeg" if ffmpeg else "unavailable without FFmpeg")
+    )
+    console.print(f"Default MAEST: {DEFAULT_MODEL}")
+    console.print(f"Pinned MAEST revision: {DEFAULT_MODEL_REVISION}")
     console.print(f"History DB: {default_history_path()}")
 
 
@@ -107,7 +121,7 @@ def analyze(
     model: str = typer.Option(DEFAULT_MODEL, help="Hugging Face model id"),
     revision: str | None = typer.Option(
         None,
-        help="Optional fixed model revision/commit",
+        help="Optional fixed model revision/commit; default MAEST is pinned automatically",
     ),
     device: str = typer.Option("auto", help="auto|cpu|cuda"),
     mode: str = typer.Option("auto", help="auto|fast|accurate|expert"),
@@ -153,9 +167,14 @@ def batch(
         "--no-history",
         help="Do not store runs in history",
     ),
+    include_service_dirs: bool = typer.Option(
+        False,
+        "--include-service-dirs",
+        help="Also scan .git/.venv/.genre_test/results/Resources/audioAlg",
+    ),
 ) -> None:
     """Analyze all supported audio files in a directory recursively."""
-    files = iter_audio_files(source)
+    files = iter_audio_files(source, include_service_dirs=include_service_dirs)
     if not files:
         raise typer.BadParameter("No supported audio files found")
 
@@ -207,6 +226,11 @@ def validate_command(
         "--import-json",
         help="Import existing *.genre*.json under the sources first",
     ),
+    include_service_dirs: bool = typer.Option(
+        False,
+        "--include-service-dirs",
+        help="Include normally ignored service/cache audio directories",
+    ),
 ) -> None:
     """Recheck scattered tracks, compare modes and automatically analyze drift."""
     if filter_mode not in RECHECK_FILTERS:
@@ -219,6 +243,7 @@ def validate_command(
         history_path=history_db,
         out_dir=out,
         device=device,
+        include_service_dirs=include_service_dirs,
     )
     if import_json:
         imported, skipped = engine.import_history_sources(sources)

@@ -15,6 +15,7 @@ import torch
 from transformers import pipeline
 
 DEFAULT_MODEL = "mtg-upf/discogs-maest-30s-pw-129e-519l"
+DEFAULT_MODEL_REVISION = "6c35f32a350f74351870937d5ae0bae1d898d1df"
 
 
 @dataclass
@@ -24,6 +25,9 @@ class MaestClassifier:
     device: str = "auto"
 
     def __post_init__(self) -> None:
+        if self.revision is None and self.model_id == DEFAULT_MODEL:
+            self.revision = DEFAULT_MODEL_REVISION
+
         resolved = self._resolve_device(self.device)
         device_arg: int | str = 0 if resolved == "cuda" else "cpu"
         kwargs: dict[str, object] = {

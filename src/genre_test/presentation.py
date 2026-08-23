@@ -17,13 +17,17 @@ def format_result_text(result: AnalysisResult, top_n: int = 10) -> str:
     lines = [
         Path(result.path).name,
         "",
+        f"Input quality: {result.input_quality}",
         f"Resolved genre: {result.resolved_genre or 'n/a'}",
         f"Broad family: {result.primary_genre or 'n/a'}",
         f"Classification: {result.classification}",
         f"Confidence: {result.confidence}",
         f"Analysis: {result.analysis_mode} | Windows analyzed: {result.windows_analyzed}",
         f"Analyzer version: {result.analyzer_version} | Schema: {result.schema_version}",
+        f"Model revision: {result.model_revision or 'un-pinned'}",
     ]
+    if result.quality_notes:
+        lines.append("QC: " + "; ".join(result.quality_notes))
     if result.run_id:
         lines.append(f"Run ID: {result.run_id}")
     if result.track_id:

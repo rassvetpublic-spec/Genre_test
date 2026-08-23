@@ -44,6 +44,7 @@ class ValidationTab(ttk.Frame):
         self.device_var = tk.StringVar(value="auto")
         self.mode_var = tk.StringVar(value="Fast + Auto + Accurate")
         self.filter_var = tk.StringVar(value="Только результаты старых версий")
+        self.ignore_service_var = tk.BooleanVar(value=True)
         self.status_var = tk.StringVar(value="Готов")
         self.version_a_var = tk.StringVar()
         self.version_b_var = tk.StringVar()
@@ -130,7 +131,12 @@ class ValidationTab(ttk.Frame):
             values=tuple(VALIDATION_MODE_LABELS),
             state="readonly",
             width=23,
-        ).pack(side="left", padx=(6, 0))
+        ).pack(side="left", padx=(6, 18))
+        ttk.Checkbutton(
+            settings,
+            text="Игнорировать служебные каталоги",
+            variable=self.ignore_service_var,
+        ).pack(side="left")
 
         actions = ttk.Frame(self)
         actions.grid(row=4, column=0, sticky="ew", pady=(4, 8))
@@ -310,16 +316,18 @@ class ValidationTab(ttk.Frame):
             return
         mode, compare_all = VALIDATION_MODE_LABELS[self.mode_var.get()]
         filter_mode = FILTER_LABELS[self.filter_var.get()]
+        include_service_dirs = not self.ignore_service_var.get()
         self.output.delete("1.0", "end")
         self._cancel_event.clear()
         self._set_busy(True, "Подготовка validation…", stoppable=True)
         append_log(
             f"Validation started: sources={len(sources)}; mode={mode}; "
-            f"compare_all={compare_all}; filter={filter_mode}"
+            f"compare_all={compare_all}; filter={filter_mode}; "
+            f"include_service_dirs={include_service_dirs}"
         )
         threading.Thread(
             target=self._validation_worker,
-            args=(sources, mode, compare_all, filter_mode),
+            args=(sources, mode, compare_all, filter_mode, include_service_dirs),
             daemon=True,
         ).start()
 
@@ -329,12 +337,14 @@ class ValidationTab(ttk.Frame):
         mode: str,
         compare_all: bool,
         filter_mode: str,
+        include_service_dirs: bool,
     ) -> None:
         try:
             engine = ValidationEngine(
                 history_path=Path(self.history_var.get()),
                 out_dir=Path(self.out_var.get()),
                 device=self.device_var.get(),
+                include_service_dirs=include_service_dirs,
             )
 
             def progress(current: int, total: int, message: str) -> None:

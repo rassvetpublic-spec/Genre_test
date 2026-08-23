@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 ANALYSIS_MODES = {"auto", "fast", "accurate", "expert"}
+INSUFFICIENT_AUDIO_SECONDS = 10.0
+SHORT_AUDIO_SECONDS = 30.0
 
 
 def duration_window_target(duration_s: float) -> int:
@@ -16,6 +18,23 @@ def duration_window_target(duration_s: float) -> int:
     if duration_s < 420:
         return 9
     return 11
+
+
+def input_quality_for_duration(duration_s: float) -> tuple[str, tuple[str, ...]]:
+    """Return the input QC class and user-facing evidence for short material."""
+    if duration_s < INSUFFICIENT_AUDIO_SECONDS:
+        note = (
+            f"duration {duration_s:.2f}s is below the "
+            f"{INSUFFICIENT_AUDIO_SECONDS:.0f}s minimum for a genre verdict"
+        )
+        return "INSUFFICIENT_AUDIO", (note,)
+    if duration_s < SHORT_AUDIO_SECONDS:
+        note = (
+            f"duration {duration_s:.2f}s is shorter than one full "
+            f"{SHORT_AUDIO_SECONDS:.0f}s MAEST window; confidence is capped at medium"
+        )
+        return "SHORT_INPUT", (note,)
+    return "NORMAL", ()
 
 
 def spread_indices(total: int, count: int) -> list[int]:
