@@ -28,6 +28,18 @@ class ScannedTrack:
     duplicate_paths: tuple[Path, ...]
 
 
+def _worst_comparison(
+    comparisons: dict[str, ComparisonResult],
+) -> tuple[str, str, tuple[str, ...]]:
+    if not comparisons:
+        return "", "", ()
+    name, comparison = max(
+        comparisons.items(),
+        key=lambda item: SEVERITY_ORDER[item[1].severity],
+    )
+    return comparison.severity, name, tuple(comparison.reasons)
+
+
 @dataclass(frozen=True)
 class ValidationOutcome:
     track_id: str
@@ -38,12 +50,43 @@ class ValidationOutcome:
     convergence: ModeConvergence | None
     previous_comparisons: dict[str, ComparisonResult]
 
+    def mode_details(self) -> tuple[str, str, tuple[str, ...]]:
+        if not self.convergence:
+            return "", "", ()
+        return _worst_comparison(self.convergence.comparisons)
+
+    def history_details(self) -> tuple[str, str, tuple[str, ...]]:
+        return _worst_comparison(self.previous_comparisons)
+
     def report_row(self) -> dict[str, object]:
+        mode_severity, mode_pair, mode_reasons = self.mode_details()
+        history_severity, history_mode, history_reasons = self.history_details()
+        fast = self.results.get("fast")
+        auto = self.results.get("auto")
+        accurate = self.results.get("accurate")
+        auto_saved = ""
+        if auto and accurate and accurate.windows_analyzed > 0:
+            auto_saved = round(
+                100.0
+                * max(0, accurate.windows_analyzed - auto.windows_analyzed)
+                / accurate.windows_analyzed,
+                2,
+            )
+        note_parts: list[str] = []
+        if mode_reasons:
+            note_parts.append(f"mode[{mode_pair}]: {'; '.join(mode_reasons)}")
+        if history_reasons:
+            note_parts.append(f"history[{history_mode}]: {'; '.join(history_reasons)}")
         return {
             "track_id": self.track_id,
             "path": self.path,
             "status": self.status,
             "severity": self.severity,
+            "mode_severity": mode_severity,
+            "mode_worst_pair": mode_pair,
+            "mode_reasons": "; ".join(mode_reasons),
+            "history_severity": history_severity,
+            "history_reasons": "; ".join(history_reasons),
             "modes": ",".join(self.results),
             "convergence": self.convergence.level if self.convergence else "",
             "resolved_genres": "; ".join(
@@ -52,11 +95,14 @@ class ValidationOutcome:
             "versions": "; ".join(
                 f"{mode}:{result.analyzer_version}" for mode, result in self.results.items()
             ),
-            "notes": "; ".join(
-                reason
-                for comparison in self.previous_comparisons.values()
-                for reason in comparison.reasons
+            "input_quality": "; ".join(
+                f"{mode}:{result.input_quality}" for mode, result in self.results.items()
             ),
+            "fast_windows": fast.windows_analyzed if fast else "",
+            "auto_windows": auto.windows_analyzed if auto else "",
+            "accurate_windows": accurate.windows_analyzed if accurate else "",
+            "auto_saved_windows_pct": auto_saved,
+            "notes": " | ".join(note_parts),
         }
 
 
@@ -73,10 +119,20 @@ class ValidationFileError:
             "path": self.path,
             "status": "ERROR",
             "severity": "",
+            "mode_severity": "",
+            "mode_worst_pair": "",
+            "mode_reasons": "",
+            "history_severity": "",
+            "history_reasons": "",
             "modes": "",
             "convergence": "",
             "resolved_genres": "",
             "versions": "",
+            "input_quality": "",
+            "fast_windows": "",
+            "auto_windows": "",
+            "accurate_windows": "",
+            "auto_saved_windows_pct": "",
             "notes": f"{self.error_type}: {self.message}",
         }
 
@@ -93,10 +149,59 @@ class ValidationSessionResult:
     errors: list[ValidationFileError]
     cancelled: bool = False
     remaining_tracks: int = 0
+    include_service_dirs: bool = False
     json_report: str | None = None
     csv_report: str | None = None
 
     def summary_dict(self) -> dict[str, object]:
+        mode_counts = {name: 0 for name in SEVERITY_ORDER}
+        history_counts = {name: 0 for name in SEVERITY_ORDER}
+        mode_tracks = 0
+        history_tracks = 0
+        auto_accurate_total = 0
+        auto_accurate_matches = 0
+        fast_accurate_total = 0
+        fast_accurate_matches = 0
+        accurate_windows_total = 0
+        auto_windows_total = 0
+        auto_early_stop_tracks = 0
+        quality_counts: dict[str, int] = {}
+
+        for outcome in self.outcomes:
+            if outcome.convergence:
+                mode_tracks += 1
+                mode_counts[outcome.convergence.worst_severity] += 1
+            history_severity, _, _ = outcome.history_details()
+            if history_severity:
+                history_tracks += 1
+                history_counts[history_severity] += 1
+
+            fast = outcome.results.get("fast")
+            auto = outcome.results.get("auto")
+            accurate = outcome.results.get("accurate")
+            if auto and accurate:
+                auto_accurate_total += 1
+                auto_accurate_matches += int(auto.resolved_genre == accurate.resolved_genre)
+                if accurate.windows_analyzed > 0:
+                    accurate_windows_total += accurate.windows_analyzed
+                    auto_windows_total += auto.windows_analyzed
+                    auto_early_stop_tracks += int(
+                        auto.windows_analyzed < accurate.windows_analyzed
+                    )
+            if fast and accurate:
+                fast_accurate_total += 1
+                fast_accurate_matches += int(fast.resolved_genre == accurate.resolved_genre)
+
+            reference = auto or accurate or fast or next(iter(outcome.results.values()), None)
+            if reference:
+                quality_counts[reference.input_quality] = (
+                    quality_counts.get(reference.input_quality, 0) + 1
+                )
+
+        def pct(value: int, total: int) -> float:
+            return round(100.0 * value / total, 2) if total else 0.0
+
+        saved_windows = max(0, accurate_windows_total - auto_windows_total)
         return {
             "session_id": self.session_id,
             "analyzer_version": __version__,
@@ -108,7 +213,26 @@ class ValidationSessionResult:
             "error_tracks": len(self.errors),
             "remaining_tracks": self.remaining_tracks,
             "duplicate_paths": self.duplicate_paths,
+            "service_dirs_included": self.include_service_dirs,
             "severity_counts": self.severity_counts,
+            "mode_comparison_tracks": mode_tracks,
+            "mode_severity_counts": mode_counts,
+            "history_comparison_tracks": history_tracks,
+            "history_severity_counts": history_counts,
+            "auto_vs_accurate_total": auto_accurate_total,
+            "auto_vs_accurate_genre_match_pct": pct(
+                auto_accurate_matches, auto_accurate_total
+            ),
+            "fast_vs_accurate_total": fast_accurate_total,
+            "fast_vs_accurate_genre_match_pct": pct(
+                fast_accurate_matches, fast_accurate_total
+            ),
+            "accurate_windows_total": accurate_windows_total,
+            "auto_windows_total": auto_windows_total,
+            "auto_saved_windows": saved_windows,
+            "auto_saved_windows_pct": pct(saved_windows, accurate_windows_total),
+            "auto_early_stop_tracks": auto_early_stop_tracks,
+            "input_quality_counts": quality_counts,
         }
 
 
@@ -129,6 +253,7 @@ class ValidationEngine:
         model_id: str = DEFAULT_MODEL,
         revision: str | None = None,
         top_k: int = 15,
+        include_service_dirs: bool = False,
     ) -> None:
         self.history = HistoryDB(history_path)
         self.out_dir = out_dir.expanduser().resolve()
@@ -136,6 +261,7 @@ class ValidationEngine:
         self.model_id = model_id
         self.revision = revision
         self.top_k = top_k
+        self.include_service_dirs = include_service_dirs
         self._analyzer: GenreAnalyzer | None = None
 
     def _get_analyzer(self) -> GenreAnalyzer:
@@ -159,7 +285,10 @@ class ValidationEngine:
         seen_paths: set[str] = set()
         for source in sources:
             check_cancel(cancel_check)
-            for path in iter_audio_files(source.expanduser()):
+            for path in iter_audio_files(
+                source.expanduser(),
+                include_service_dirs=self.include_service_dirs,
+            ):
                 check_cancel(cancel_check)
                 resolved = path.resolve()
                 key = str(resolved).casefold()
@@ -351,6 +480,7 @@ class ValidationEngine:
             errors=errors,
             cancelled=cancelled,
             remaining_tracks=remaining,
+            include_service_dirs=self.include_service_dirs,
         )
         summary = provisional.summary_dict()
         rows = [outcome.report_row() for outcome in outcomes]
@@ -376,6 +506,7 @@ class ValidationEngine:
             errors=errors,
             cancelled=cancelled,
             remaining_tracks=remaining,
+            include_service_dirs=self.include_service_dirs,
             json_report=str(json_report),
             csv_report=str(csv_report),
         )
@@ -474,7 +605,11 @@ class ValidationEngine:
 
 
 def format_validation_session(result: ValidationSessionResult) -> str:
+    summary = result.summary_dict()
     counts = result.severity_counts
+    mode_counts = summary["mode_severity_counts"]
+    history_counts = summary["history_severity_counts"]
+    quality_counts = summary["input_quality_counts"]
     lines = [
         f"Session: {result.session_id}",
         f"Status: {'STOPPED BY USER' if result.cancelled else 'COMPLETE'}",
@@ -484,12 +619,36 @@ def format_validation_session(result: ValidationSessionResult) -> str:
         f"File errors skipped: {len(result.errors)}",
         f"Remaining: {result.remaining_tracks}",
         f"Duplicate paths: {result.duplicate_paths}",
+        f"Service directories: {'INCLUDED' if result.include_service_dirs else 'IGNORED'}",
         "",
-        "Drift / convergence:",
+        "Overall severity:",
         f"STABLE: {counts['STABLE']}",
         f"MINOR: {counts['MINOR']}",
         f"SIGNIFICANT: {counts['SIGNIFICANT']}",
         f"CRITICAL: {counts['CRITICAL']}",
+        "",
+        f"Mode convergence ({summary['mode_comparison_tracks']} tracks):",
+        f"STABLE: {mode_counts['STABLE']}",
+        f"MINOR: {mode_counts['MINOR']}",
+        f"SIGNIFICANT: {mode_counts['SIGNIFICANT']}",
+        f"CRITICAL: {mode_counts['CRITICAL']}",
+        f"Auto vs Accurate genre match: {summary['auto_vs_accurate_genre_match_pct']}% "
+        f"({summary['auto_vs_accurate_total']} tracks)",
+        f"Fast vs Accurate genre match: {summary['fast_vs_accurate_genre_match_pct']}% "
+        f"({summary['fast_vs_accurate_total']} tracks)",
+        f"Auto windows saved: {summary['auto_saved_windows']} / "
+        f"{summary['accurate_windows_total']} "
+        f"({summary['auto_saved_windows_pct']}%)",
+        f"Auto early-stop tracks: {summary['auto_early_stop_tracks']}",
+        "",
+        f"History drift ({summary['history_comparison_tracks']} tracks):",
+        f"STABLE: {history_counts['STABLE']}",
+        f"MINOR: {history_counts['MINOR']}",
+        f"SIGNIFICANT: {history_counts['SIGNIFICANT']}",
+        f"CRITICAL: {history_counts['CRITICAL']}",
+        "",
+        "Input QC: "
+        + (", ".join(f"{name}={count}" for name, count in sorted(quality_counts.items())) or "none"),
     ]
     if result.json_report:
         lines.append(f"JSON report: {result.json_report}")
@@ -500,11 +659,31 @@ def format_validation_session(result: ValidationSessionResult) -> str:
             f", convergence={outcome.convergence.level}" if outcome.convergence else ""
         )
         genres = ", ".join(
-            f"{mode}={item.resolved_genre}" for mode, item in outcome.results.items()
+            f"{mode}={item.resolved_genre or item.input_quality}"
+            for mode, item in outcome.results.items()
         )
         lines.append(
             f"\n[{outcome.severity}] {Path(outcome.path).name}{convergence}\n  {genres}"
         )
+        mode_severity, mode_pair, mode_reasons = outcome.mode_details()
+        history_severity, history_mode, history_reasons = outcome.history_details()
+        if mode_severity and mode_severity != "STABLE":
+            lines.append(
+                f"  mode: {mode_severity} [{mode_pair}] — {'; '.join(mode_reasons)}"
+            )
+        if history_severity and history_severity != "STABLE":
+            lines.append(
+                f"  history: {history_severity} [{history_mode}] — "
+                f"{'; '.join(history_reasons)}"
+            )
+        fast = outcome.results.get("fast")
+        auto = outcome.results.get("auto")
+        accurate = outcome.results.get("accurate")
+        if fast and auto and accurate:
+            lines.append(
+                f"  windows: fast={fast.windows_analyzed}, auto={auto.windows_analyzed}, "
+                f"accurate={accurate.windows_analyzed}"
+            )
     if result.errors:
         lines.append("\nФайлы с ошибками (прогон продолжен):")
         for item in result.errors:
