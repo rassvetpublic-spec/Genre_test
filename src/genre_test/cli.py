@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import platform
-import shutil
 from pathlib import Path
 
 import soundfile as sf
@@ -15,9 +14,10 @@ from .analysis_policy import ANALYSIS_MODES
 from .analyzer import GenreAnalyzer
 from .audio import iter_audio_files
 from .history import HistoryDB
-from .maest import DEFAULT_MODEL, DEFAULT_MODEL_REVISION
+from .maest import DEFAULT_CUDA_BATCH_SIZE, DEFAULT_MODEL, DEFAULT_MODEL_REVISION
 from .models import AnalysisResult
 from .report import write_json, write_summary_csv
+from .runtime_diagnostics import collect_runtime_diagnostics
 from .runtime_meta import default_history_path
 from .validation import (
     ValidationEngine,
@@ -33,6 +33,26 @@ app = typer.Typer(
 console = Console()
 
 
+def _version_callback(value: bool) -> None:
+    if value:
+        console.print(f"Genre_test {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def root_callback(
+    version: bool = typer.Option(
+        False,
+        "--version",
+        callback=_version_callback,
+        is_eager=True,
+        help="Show Genre_test version and exit",
+    ),
+) -> None:
+    """Genre_test command line interface."""
+    del version
+
+
 def _print_result(result: AnalysisResult) -> None:
     console.print(f"\n[bold]{Path(result.path).name}[/bold]")
     console.print(
@@ -45,9 +65,10 @@ def _print_result(result: AnalysisResult) -> None:
         f"Key: {result.audio_features.key} {result.audio_features.mode or ''}"
     )
     console.print(
-        f"Version: {result.analyzer_version} | run={result.run_id} | "
-        f"track={result.track_id}"
+        f"Version: {result.analyzer_version} | schema={result.schema_version} | "
+        f"MAEST revision={result.model_revision or 'un-pinned'}"
     )
+    console.print(f"run={result.run_id} | track={result.track_id}")
     if result.quality_notes:
         console.print("QC: " + "; ".join(result.quality_notes))
     table = Table("#", "Style", "Score")
@@ -93,7 +114,8 @@ def _store_result(
 
 @app.command()
 def doctor() -> None:
-    """Show runtime, decoder, pinned model and CUDA status."""
+    """Show runtime, decoder, authentication, pinned model and CUDA status."""
+    diagnostics = collect_runtime_diagnostics()
     console.print(f"Genre_test: {__version__}")
     console.print(f"Python: {platform.python_version()}")
     console.print(f"Platform: {platform.platform()}")
@@ -103,14 +125,18 @@ def doctor() -> None:
         console.print(f"CUDA runtime: {torch.version.cuda}")
         console.print(f"GPU: {torch.cuda.get_device_name(0)}")
     console.print(f"SoundFile: {sf.__version__}")
-    ffmpeg = shutil.which("ffmpeg")
-    console.print(f"FFmpeg: {ffmpeg or 'MISSING'}")
-    console.print(
-        "AAC/extended decode fallback: "
-        + ("available via FFmpeg" if ffmpeg else "unavailable without FFmpeg")
-    )
+    if diagnostics.ffmpeg_available:
+        console.print(f"FFmpeg: {diagnostics.ffmpeg_path}")
+        console.print("AAC/extended decode fallback: available via FFmpeg")
+    else:
+        console.print("[bold red]FFmpeg: MISSING[/bold red]")
+        console.print(
+            "[bold red]AAC/extended decode fallback: unavailable without FFmpeg[/bold red]"
+        )
+    console.print(f"HF authentication: {diagnostics.hf_auth_label}")
     console.print(f"Default MAEST: {DEFAULT_MODEL}")
     console.print(f"Pinned MAEST revision: {DEFAULT_MODEL_REVISION}")
+    console.print(f"Default CUDA inference batch: up to {DEFAULT_CUDA_BATCH_SIZE} windows")
     console.print(f"History DB: {default_history_path()}")
 
 
@@ -282,8 +308,8 @@ def compare_versions_command(
     version_a: str = typer.Argument(...),
     version_b: str = typer.Argument(...),
     mode: str = typer.Option(
-        "any",
-        help="auto|fast|accurate|expert|any",
+        "auto",
+        help="auto|fast|accurate|expert|any; 'any' is diagnostic and may compare different modes",
     ),
     out: Path = typer.Option(
         Path("results") / "validation",
