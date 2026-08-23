@@ -10,12 +10,21 @@ The button does not terminate the Python worker thread and does not interrupt a 
 
 Therefore a stop request may take until the current inference window finishes.
 
+Both result panes also expose `СКОПИРОВАТЬ СОДЕРЖИМОЕ`. The persistent log path is shown in the GUI and can be opened directly.
+
+Default development log:
+
+```text
+C:\GIT\Genre_test\.genre_test\logs\genre_test.log
+```
+
 ## Ordinary analysis
 
 - completed tracks are already written to JSON and SQLite history;
 - a partial batch also receives a partial `summary.csv`;
 - the currently incomplete track is not written to history;
-- the GUI ends in `Остановлено`, not `Ошибка`.
+- the GUI ends in `Остановлено`, not `Ошибка`;
+- an unreadable individual file in folder batch mode is logged and skipped instead of terminating the entire batch.
 
 ## Validation Lab
 
@@ -24,10 +33,13 @@ Therefore a stop request may take until the current inference window finishes.
 - the incomplete current track is not committed;
 - the validation session is finalized with `status=stopped` and `cancelled=true`;
 - partial JSON/CSV validation reports are still generated;
-- `remaining_tracks` records how many scanned tracks were left unprocessed.
+- `remaining_tracks` records how many scanned tracks were left unprocessed;
+- audio decode failures are listed as `status=ERROR`, written to the persistent log, and Validation continues with the next track.
 
 If cancellation is requested during the pre-session scan/identity phase, no validation session is created and history remains unchanged apart from safe file-location/hash cache entries that may already have completed.
 
 ## Non-cancellable short operations
 
 History JSON import and version-only comparison remain non-cancellable in v0.3.1 because they do not run MAEST inference and are normally short. The Stop button is disabled for those operations.
+
+See `docs/RUNTIME_DATA.md` for repo-local history, logs, reports and Hugging Face cache locations.
