@@ -64,7 +64,7 @@ def _make_analyzer(
     semantic_mode: str,
 ) -> ProfileAnalyzer:
     from .analysis_policy import ANALYSIS_MODES
-    from .profile_analyzer import ProfileAnalyzer, SEMANTIC_MODES
+    from .profile_analyzer import SEMANTIC_MODES, ProfileAnalyzer
 
     normalized_mode = mode.lower().strip()
     if normalized_mode not in ANALYSIS_MODES:
