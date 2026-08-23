@@ -11,6 +11,7 @@ from tkinter import filedialog, messagebox, ttk
 from . import __version__
 from .analyzer import GenreAnalyzer
 from .audio import iter_audio_files
+from .cancellation import AnalysisCancelled
 from .history import HistoryDB
 from .maest import DEFAULT_MODEL
 from .presentation import format_result_text
@@ -46,6 +47,7 @@ class GenreTestWindow(tk.Tk):
         self.top_k_var = tk.IntVar(value=15)
         self.status_var = tk.StringVar(value="Готов")
         self._queue: queue.Queue[tuple[str, object]] = queue.Queue()
+        self._cancel_event = threading.Event()
         self._busy = False
 
         self._build_ui()
@@ -129,6 +131,13 @@ class GenreTestWindow(tk.Tk):
         actions.grid(row=3, column=0, columnspan=4, sticky="ew", pady=(8, 6))
         self.run_button = ttk.Button(actions, text="АНАЛИЗИРОВАТЬ", command=self._start)
         self.run_button.pack(side="left")
+        self.stop_button = ttk.Button(
+            actions,
+            text="ОСТАНОВИТЬ",
+            command=self._request_stop,
+            state="disabled",
+        )
+        self.stop_button.pack(side="left", padx=(8, 0))
         self.progress = ttk.Progressbar(actions, mode="indeterminate", length=220)
         self.progress.pack(side="left", padx=14)
         ttk.Label(actions, textvariable=self.status_var).pack(side="left")
@@ -187,8 +196,10 @@ class GenreTestWindow(tk.Tk):
         out = Path(self.out_var.get().strip().strip('"')).expanduser()
         mode = MODE_LABELS.get(self.mode_var.get(), "auto")
         self.output.delete("1.0", "end")
+        self._cancel_event.clear()
         self._busy = True
         self.run_button.configure(state="disabled")
+        self.stop_button.configure(state="normal")
         self.progress.start(10)
         self.status_var.set("Загрузка модели / анализ…")
         threading.Thread(
@@ -204,6 +215,13 @@ class GenreTestWindow(tk.Tk):
             daemon=True,
         ).start()
 
+    def _request_stop(self) -> None:
+        if not self._busy or self._cancel_event.is_set():
+            return
+        self._cancel_event.set()
+        self.stop_button.configure(state="disabled")
+        self.status_var.set("Остановка после текущего безопасного шага…")
+
     def _worker(
         self,
         source: Path,
@@ -213,6 +231,8 @@ class GenreTestWindow(tk.Tk):
         windows: int,
         top_k: int,
     ) -> None:
+        results = []
+        blocks = []
         try:
             analyzer = GenreAnalyzer(
                 model_id=DEFAULT_MODEL,
@@ -223,7 +243,7 @@ class GenreTestWindow(tk.Tk):
             )
             history = HistoryDB()
             if source.is_file():
-                result = analyzer.analyze(source)
+                result = analyzer.analyze(source, cancel_check=self._cancel_event.is_set)
                 target = write_json(result, out)
                 history.record_result(result)
                 text = (
@@ -239,26 +259,35 @@ class GenreTestWindow(tk.Tk):
                 raise RuntimeError(
                     "В выбранной папке не найдено поддерживаемых аудиофайлов."
                 )
-            results = []
-            blocks = []
             for idx, path in enumerate(files, 1):
+                if self._cancel_event.is_set():
+                    raise AnalysisCancelled("Operation cancelled by user")
                 self._queue.put(("status", f"[{idx}/{len(files)}] {path.name}"))
-                result = analyzer.analyze(path)
+                result = analyzer.analyze(path, cancel_check=self._cancel_event.is_set)
                 results.append(result)
                 target = write_json(result, out)
                 history.record_result(result)
-                blocks.append(
-                    format_result_text(result, top_n=5) + f"\nJSON: {target}"
-                )
+                blocks.append(format_result_text(result, top_n=5) + f"\nJSON: {target}")
             csv_path = write_summary_csv(results, out)
             blocks.append(f"Summary CSV: {csv_path}\nHistory DB: {history.path}")
             self._queue.put(
                 (
                     "done",
-                    "\n\n"
-                    + ("\n\n" + "=" * 72 + "\n\n").join(blocks),
+                    "\n\n" + ("\n\n" + "=" * 72 + "\n\n").join(blocks),
                 )
             )
+        except AnalysisCancelled:
+            if results:
+                csv_path = write_summary_csv(results, out)
+                blocks.append(f"Partial summary CSV: {csv_path}")
+            message = (
+                "Остановлено пользователем безопасно.\n"
+                f"Полностью завершённых треков сохранено: {len(results)}.\n"
+                "Текущий незавершённый трек в историю не записан."
+            )
+            if blocks:
+                message += "\n\n" + ("\n\n" + "=" * 72 + "\n\n").join(blocks)
+            self._queue.put(("cancelled", message))
         except Exception:
             self._queue.put(("error", traceback.format_exc()))
 
@@ -272,6 +301,10 @@ class GenreTestWindow(tk.Tk):
                     self.output.insert("end", str(payload).lstrip())
                     self.output.see("1.0")
                     self._finish("Готово")
+                elif kind == "cancelled":
+                    self.output.insert("end", str(payload).lstrip())
+                    self.output.see("1.0")
+                    self._finish("Остановлено")
                 elif kind == "error":
                     self.output.insert("end", str(payload))
                     self._finish("Ошибка")
@@ -287,6 +320,7 @@ class GenreTestWindow(tk.Tk):
         self._busy = False
         self.progress.stop()
         self.run_button.configure(state="normal")
+        self.stop_button.configure(state="disabled")
         self.status_var.set(status)
 
 
