@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-import os
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 
+from .hf_runtime import configure_hf_runtime
 from .model_config import DEFAULT_CUDA_BATCH_SIZE, DEFAULT_MODEL, DEFAULT_MODEL_REVISION
-from .runtime_meta import default_hf_home
 
-# Keep model/cache data inside the project checkout unless the user explicitly overrides HF_HOME.
-_hf_home = default_hf_home()
-_hf_home.mkdir(parents=True, exist_ok=True)
-os.environ.setdefault("HF_HOME", str(_hf_home))
+# Configure repo-local model/Xet caches before importing Hugging Face libraries.
+# HF_HOME is intentionally left untouched so `hf auth login` remains visible.
+configure_hf_runtime()
 
 import numpy as np
 import torch
