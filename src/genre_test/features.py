@@ -3,6 +3,7 @@ from __future__ import annotations
 import librosa
 import numpy as np
 
+from .analysis_policy import INSUFFICIENT_AUDIO_SECONDS
 from .models import AudioFeatures
 
 PITCH_CLASSES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
@@ -81,6 +82,8 @@ def extract_lightweight_audio_features(audio: np.ndarray, sr: int) -> AudioFeatu
 
 def extract_audio_features(audio: np.ndarray, sr: int) -> AudioFeatures:
     duration = float(audio.size / sr)
+    if duration < INSUFFICIENT_AUDIO_SECONDS:
+        return extract_lightweight_audio_features(audio, sr)
 
     tempo, _ = librosa.beat.beat_track(y=audio, sr=sr)
     bpm = float(np.asarray(tempo).reshape(-1)[0]) if np.size(tempo) else None
