@@ -1,26 +1,76 @@
 # Genre_test
 
-**Current version: 0.3.4**
+**Current version: 0.4.0**
 
-Локальный анализатор музыкального жанра для Windows/Linux с **MAEST Discogs 519**, адаптивным Auto-анализом и Validation Lab для проверки сходимости, истории и регрессий между версиями.
+Локальный музыкальный анализатор для Windows/Linux. В v0.4 основной пользовательский профиль строится как ансамбль **MAEST Discogs519 + AudioSet AST**, а Validation Lab сохраняет стабильный raw-MAEST контур для сравнения с накопленной историей 0.3.x.
 
-## Основной анализ
+## Что выдаёт v0.4
 
-Genre_test:
+Обычный анализ формирует `AudioProfile`:
 
-- анализирует WAV/FLAC/MP3/OGG/M4A/AAC;
-- запускает MTG MAEST Discogs 519 через Hugging Face Transformers;
-- автоматически выбирает репрезентативные 30-секундные окна;
-- поддерживает `Auto / Fast / Accurate / Expert`;
-- на CUDA объединяет несколько MAEST-окон в GPU batch;
-- агрегирует detailed Discogs styles и broad families;
-- рассчитывает `resolved_genre`, hybrid/primary и evidence-aware confidence;
-- оценивает BPM, key/mode, RMS и базовые spectral features;
-- сохраняет raw MAEST probabilities и версионную metadata;
-- умеет безопасно остановить длительный анализ кнопкой `ОСТАНОВИТЬ`;
-- пишет структурированную performance telemetry в repo-local лог.
+- primary genre / broad family;
+- confidence;
+- secondary influence;
+- adjacent genres;
+- mood tags;
+- vocal tags;
+- instrumentation;
+- production/electronic tags;
+- BPM и key/mode;
+- distributor genre/subgenre;
+- SUNO Style of Music;
+- ensemble agreement и evidence metadata в JSON/CSV.
 
-> Жанровая классификация вероятностная. Validation измеряет устойчивость результатов, но не заменяет ручной ground truth.
+Жанровый fine-style эксперт — MAEST Discogs519. Независимый semantic слой — MIT Audio Spectrogram Transformer, fine-tuned on AudioSet. Semantic слой используется как дополнительное evidence, а не как безусловная замена MAEST.
+
+## Архитектура 0.4
+
+```text
+Audio
+  |
+  +--> MAEST Discogs519 --------------------+
+  |    fine styles / broad families         |
+  |                                         +--> Evidence fusion
+  +--> AudioSet AST ------------------------+       |
+  |    genre / vocal / instruments / mood           v
+  |                                             AudioProfile
+  +--> librosa / DSP                                 |
+       BPM / key / spectral features                 +--> Normal
+                                                     +--> SUNO
+                                                     +--> Distributor
+
+Raw MAEST -----------------------------------------> Validation Lab
+```
+
+### Ensemble policy
+
+MAEST остаётся главным источником detailed genre/style. AudioSet AST добавляет независимое broad-family и semantic evidence.
+
+- high-confidence MAEST family не переопределяется semantic-моделью;
+- при неоднозначном MAEST fused evidence может изменить broad family;
+- если family меняется, выбирается strongest MAEST fine style внутри новой family;
+- disagreement моделей понижает итоговую confidence;
+- если semantic-модель недоступна, режим `auto` продолжает работу как MAEST-only и фиксирует fallback в metadata/log.
+
+## Модели и воспроизводимость
+
+### MAEST Discogs519
+
+```text
+model:    mtg-upf/discogs-maest-30s-pw-129e-519l
+revision: 6c35f32a350f74351870937d5ae0bae1d898d1df
+```
+
+### AudioSet AST
+
+```text
+model:    MIT/ast-finetuned-audioset-10-10-0.4593
+revision: f826b80d28226b62986cc218e5cec390b1096902
+```
+
+Semantic profile использует до трёх распределённых 10-секундных окон. Модель загружается лениво при первом обычном анализе и использует тот же PyTorch/CUDA runtime.
+
+Result schema: **4**.
 
 ## Windows GUI
 
@@ -30,7 +80,7 @@ Genre_test:
 .\scripts\gui.ps1
 ```
 
-или двойным кликом:
+или:
 
 ```text
 scripts\Genre_test_GUI.cmd
@@ -43,11 +93,45 @@ GUI имеет две вкладки:
 Validation / Перепроверка
 ```
 
-Обе вкладки поддерживают безопасную остановку длительных операций и копирование всего текстового результата в буфер обмена. Постоянный лог можно открыть из интерфейса.
+Обычный Analysis выводит результат по мере обработки треков. В нём скрыты внутренние `run_id`, `track_id`, hashes и model revisions. Полная техническая информация остаётся в Validation и JSON/history.
 
-Над вкладками показываются текущая версия Genre_test и полный pinned MAEST revision. Если FFmpeg отсутствует, GUI выводит заметное красное предупреждение о недоступности AAC/M4A/extended decode fallback.
+Текст можно выделять мышью и копировать `Ctrl+C`, `Ctrl+Insert`; `Ctrl+A` выделяет всё. Поддерживается русская раскладка Windows. Кнопка `СКОПИРОВАТЬ СОДЕРЖИМОЕ` копирует весь отчёт.
 
-## Режимы анализа
+### Представления результата
+
+В обычном Analysis доступны:
+
+```text
+Обычный
+SUNO
+Дистрибьютор
+```
+
+`Обычный` показывает жанровый профиль, semantic tags, tempo/key и объединённую таблицу Top styles + Broad families.
+
+`SUNO` формирует компактный `Style of Music` из primary genre, influence, mood, vocal, instrumentation, BPM и key.
+
+`Дистрибьютор` выдаёт broad distributor genre, subgenre, primary genre и соседние влияния.
+
+## Runtime Health
+
+Верхняя строка GUI показывает компактный статус:
+
+```text
+Runtime: OK | Deps: 12/12 | CUDA: OK | FFmpeg: OK | HF: OK
+```
+
+Кнопка `Зависимости…` открывает полный список Python/packages/CUDA/GPU/FFmpeg/HF auth и pinned model revisions.
+
+Основная строка GUI показывает только:
+
+```text
+Genre_test 0.4.0 | Models: MAEST Discogs519 + AudioSet AST
+```
+
+Полные hashes/revisions находятся только в диагностическом окне.
+
+## Режимы MAEST
 
 | Режим | Поведение |
 |---|---|
@@ -58,7 +142,7 @@ Validation / Перепроверка
 
 Duration target:
 
-| Длительность | Максимум окон |
+| Длительность | Максимум MAEST-окон |
 |---:|---:|
 | < 60 с | 1 |
 | 60–120 с | 3 |
@@ -67,26 +151,16 @@ Duration target:
 | 300–420 с | 9 |
 | > 420 с | 11 |
 
-Для длинного трека Auto сначала анализирует 5 распределённых окон. Если получен стабильный `primary + high confidence`, он останавливается. Иначе анализ расширяется до полного target.
+Для длинного трека Auto сначала анализирует 5 распределённых окон. Если получен стабильный `primary + high confidence`, он останавливается. Иначе расширяется до полного target.
 
-## GPU batch inference — v0.3.3
+На CUDA MAEST объединяет независимые окна в GPU batch до 8 окон. При CUDA OOM batch автоматически уменьшается вдвое.
 
-На CUDA несколько независимых 30-секундных окон подаются в MAEST одним batch. Default batch size — до **8 окон** одновременно.
-
-- Fast: выбранные окна идут одним batch;
-- Accurate: весь duration target идёт одним batch;
-- Auto: первые 5 окон — один batch; если нужна расширенная проверка, вторым batch считаются только недостающие окна;
-- `Fast + Auto + Accurate`: Accurate требует полный target, поэтому все уникальные окна вычисляются один раз и затем переиспользуются Fast/Auto через shared cache.
-
-Если CUDA batch не помещается в VRAM и PyTorch сообщает OOM, batch автоматически уменьшается вдвое и повторяется. Safe Stop остаётся cooperative: текущий CUDA batch завершается целиком, затем операция прекращается на безопасной точке.
-
-## Input QC — v0.3.2+
-
-Очень короткий материал не получает обычный high-confidence genre verdict:
+## Input QC
 
 ```text
 < 10 s   -> INSUFFICIENT_AUDIO
-            genre verdict не выдаётся
+            genre verdict отсутствует
+            MAEST/semantic inference не выполняется
 
 10-30 s  -> SHORT_INPUT
             одно padded MAEST window
@@ -95,382 +169,94 @@ Duration target:
 >= 30 s  -> NORMAL
 ```
 
-В JSON/CSV сохраняются:
-
-```text
-input_quality
-quality_notes
-```
-
-Result schema: **3**.
-
-## Resolver v0.3.2+
-
-Если broad-family winner и strongest fine-style evidence противоречат друг другу, resolver больше не сохраняет более слабый fine style с отрицательным `style_margin`.
-
-Такой случай:
-
-- помечается как `hybrid`;
-- разрешается в strongest fine style из двух ведущих broad families;
-- получает `low-medium` confidence;
-- competing style сохраняется как `secondary_style`.
+Для `<10 s` используется warning-free lightweight DSP path без beat/chroma вычислений.
 
 ## Validation Lab
 
-Validation Lab отвечает на три вопроса:
+Validation специально остаётся raw-MAEST диагностическим контуром. Это сохраняет сопоставимость с историей 0.3.x и не смешивает изменение жанрового ядра с новым semantic-profile слоем.
 
-1. сходятся ли Fast / Auto / Accurate на одном треке;
-2. изменился ли результат после обновления Genre_test;
+Validation отвечает на три вопроса:
+
+1. сходятся ли Fast / Auto / Accurate;
+2. изменился ли raw жанровый результат между версиями;
 3. какие треки требуют ручной проверки.
 
-### Track ID
+В Validation доступны полные:
 
-Каждый трек получает content identity:
+- `run_id` / `track_id`;
+- analyzer/schema/version;
+- MAEST model/revision/device;
+- raw score vectors;
+- convergence/history drift;
+- NOT_COMPARABLE semantics;
+- если enriched result присутствует в истории — semantic/profile metadata.
+
+### Track identity и history
 
 ```text
-track_id = sha256:<hash>
+track_id = sha256:<content hash>
 ```
 
-Переименование или перенос не создаёт новый logical track. Идентичные копии в разных каталогах дедуплицируются.
-
-### Центральная история
-
-По умолчанию runtime data остаются внутри checkout:
+Переименование/перенос не создаёт новый logical track. SQLite хранится здесь:
 
 ```text
 C:\GIT\Genre_test\.genre_test\history.sqlite3
-C:\GIT\Genre_test\.genre_test\logs\genre_test.log
-C:\GIT\Genre_test\.genre_test\huggingface\
-C:\GIT\Genre_test\results\
 ```
 
-`.genre_test/` и `results/` gitignored.
-
-SQLite хранит:
-
-- logical tracks;
-- известные пути файлов;
-- все analysis runs;
-- raw detailed style scores;
-- broad-family scores;
-- validation sessions;
-- pairwise comparisons.
-
-## Performance telemetry — v0.3.3
-
-Обычный repo-local `genre_test.log` содержит UTC timestamp каждой строки и дополнительные machine-readable записи:
+Runtime data:
 
 ```text
-PERF {"event":"analyzer_init", ...}
-PERF {"event":"maest_batch", ...}
-PERF {"event":"track", ...}
-PERF {"event":"analysis_item", ...}
-PERF {"event":"analysis_session", ...}
-PERF {"event":"validation_session", ...}
+.genre_test\history.sqlite3
+.genre_test\logs\genre_test.log
+.genre_test\huggingface\
+results\
 ```
 
-После префикса `PERF ` находится валидный JSON, поэтому журнал можно автоматически разбирать и сравнивать между версиями.
+## Performance telemetry
 
-Per-track telemetry содержит:
+Лог содержит machine-readable `PERF {json}` события, включая:
 
 ```text
-total_ms
-load_ms
-features_ms
-identity_ms
-select_windows_ms
-auto_decision_ms
-build_result_ms
-inference_total_ms
-inference_batch_calls
-inference_avg_batch_ms
-inference_max_batch_ms
-inference_avg_window_ms
-windows_analyzed
-unique_inference_windows
-logical_window_uses
-cache_reused_window_uses
-batched_inference
-batch_size_config
-auto_expanded
-realtime_factor
-realtime_speed_x
+analyzer_init
+maest_batch
+track
+semantic_init
+semantic_batch
+semantic_track
+analysis_item
+analysis_session
+validation_session
 ```
 
-`realtime_factor` — время обработки / длительность аудио; меньше 1 означает быстрее realtime. `realtime_speed_x` — обратная величина: например `20.0` означает обработку примерно в 20 раз быстрее длительности трека.
+MAEST telemetry хранит load/features/inference timing, GPU batches, cache reuse и realtime speed. Semantic telemetry отдельно показывает загрузку AST и inference по semantic windows.
 
-Для batch дополнительно логируются end-to-end время с JSON/history persistence, среднее `s/track` и `tracks/min`. Для `Fast + Auto + Accurate` видны число уникальных MAEST inference, число logical window uses и экономия shared cache.
+## FFmpeg bootstrap
 
-## Fast / Auto / Accurate convergence
+На Windows `setup.ps1` и `upgrade.ps1`:
 
-Режим:
-
-```text
-Fast + Auto + Accurate
-```
-
-декодирует трек один раз и использует общий prediction cache. Одинаковые окна не прогоняются через MAEST повторно.
-
-Сравниваются:
-
-```text
-Fast vs Auto
-Fast vs Accurate
-Auto vs Accurate
-```
-
-Convergence:
-
-```text
-HIGH
-MEDIUM
-LOW
-FAIL
-```
-
-## Mode convergence и History drift
-
-**Mode convergence** сравнивает режимы текущего запуска.
-
-**History drift** сравнивает текущие результаты с предыдущими сохранёнными runs/версиями.
-
-Validation JSON/CSV содержит отдельно:
-
-```text
-severity
-mode_severity
-mode_worst_pair
-mode_reasons
-history_severity
-history_reasons
-history_not_comparable
-fast_windows
-auto_windows
-accurate_windows
-standalone_auto_saved_windows_pct
-```
-
-Summary дополнительно показывает:
-
-- Auto vs Accurate resolved-genre match %;
-- Fast vs Accurate resolved-genre match %;
-- теоретическую экономию окон одиночного Auto относительно Accurate;
-- число Auto early-stop tracks;
-- input QC counts;
-- число history-пар, которые нельзя корректно сравнивать.
-
-Важно: при triple-mode запуске `Standalone Auto theoretical windows saved` не означает реальную GPU-экономию этой сессии, потому что Accurate всё равно требует полного target. Реальная работа GPU отражается в `unique_inference_windows`, `inference_batch_calls` и session telemetry.
-
-## Version comparison и NOT_COMPARABLE — v0.3.3
-
-Официальное сравнение версий по умолчанию использует **Auto ↔ Auto**. Режим `any` оставлен только для диагностики и может сопоставить разные analysis modes.
-
-Если одна сторона имеет `INSUFFICIENT_AUDIO` или отсутствующий genre verdict, строка получает:
-
-```text
-NOT_COMPARABLE
-```
-
-а не `CRITICAL`. Такие строки исключаются из denominator для:
-
-- resolved genre match %;
-- broad family match %;
-- tempo equivalent %;
-- STABLE/MINOR/SIGNIFICANT/CRITICAL counts.
-
-Version CSV/JSON дополнительно содержит:
-
-```text
-left_mode
-right_mode
-left_quality
-right_quality
-comparable
-comparison_reason
-```
-
-## Drift comparator
-
-Для сопоставимых результатов учитываются:
-
-- broad family;
-- resolved fine style;
-- primary/hybrid;
-- Jensen-Shannon divergence;
-- cosine similarity;
-- weighted Top-N overlap;
-- BPM;
-- key/mode.
-
-BPM `x`, `x/2` и `x*2` считаются эквивалентными трактовками темпа.
-
-Severity:
-
-```text
-STABLE
-MINOR
-SIGNIFICANT
-CRITICAL
-```
-
-`NOT_COMPARABLE` является отдельным состоянием отчёта, а не уровнем severity.
-
-## Recursive scanner hygiene
-
-При выборе каталога по умолчанию игнорируются:
-
-```text
-.git
-.venv
-.genre_test
-results
-__pycache__
-Resources/audioAlg
-```
-
-Это не даёт внутренним cache/resource-фрагментам DAW/обработки загрязнять genre benchmark.
-
-Во вкладке Validation включён checkbox:
-
-```text
-Игнорировать служебные каталоги
-```
-
-CLI override:
-
-```text
---include-service-dirs
-```
-
-Если файл выбран явно, он анализируется даже внутри normally ignored directory.
-
-## Реальный validation baseline — 2026-08-23
-
-Полный v0.3.1 Fast + Auto + Accurate catalog run:
-
-```text
-291 найденных путей
-241 unique SHA-256 tracks
-225 analyzed successfully
-16 decode errors skipped
-50 duplicate paths
-0 remaining
-
-STABLE      173
-MINOR        25
-SIGNIFICANT  27
-CRITICAL      0
-
-Auto == Accurate resolved genre: 225 / 225 = 100.0%
-Fast == Accurate resolved genre: 181 / 225 = 80.4%
-```
-
-Повторный v0.3.2 validation после scanner/QC hardening:
-
-```text
-180 unique tracks
-180 analyzed
-0 decode errors
-175 verdict-bearing tracks
-5 INSUFFICIENT_AUDIO
-
-Auto == Accurate: 175 / 175 = 100.0%
-Fast == Accurate: 64.57%
-Standalone Auto theoretical windows saved: 100 / 1145 = 8.73%
-Auto early-stop tracks: 30
-```
-
-Поэтому **Auto принят как основной рабочий режим**.
-
-## Модель и воспроизводимость
-
-Default model:
-
-```text
-mtg-upf/discogs-maest-30s-pw-129e-519l
-```
-
-Pinned default revision:
-
-```text
-6c35f32a350f74351870937d5ae0bae1d898d1df
-```
-
-Полный revision показывается в GUI, CLI result и сохраняется в result metadata.
-
-Для custom model можно передать собственный:
-
-```text
---revision <commit>
-```
-
-## Runtime / decoder diagnostics
-
-```powershell
-.\.venv\Scripts\genre-test.exe doctor
-```
-
-показывает:
-
-- Genre_test/Python/Torch;
-- CUDA runtime/GPU;
-- SoundFile version;
-- FFmpeg path или заметный `MISSING`;
-- AAC/extended decode fallback status;
-- Hugging Face token status и источник локального token (без вывода самого token);
-- default MAEST model;
-- pinned model revision;
-- default CUDA inference batch;
-- History DB path.
-
-HF token status проверяется локально. `token available` означает, что token найден в environment/cache; это не сетевое подтверждение его валидности.
-
-## FFmpeg bootstrap — v0.3.4
-
-На Windows `setup.ps1` и `upgrade.ps1` теперь автоматически обеспечивают наличие FFmpeg.
-
-Порядок:
-
-1. поиск `ffmpeg` в текущем PATH;
-2. поиск WinGet Links, Scoop, Chocolatey и стандартного `Program Files\ffmpeg\bin`;
-3. если FFmpeg не найден — автоматическая установка `Gyan.FFmpeg` через WinGet;
-4. каталог найденного `ffmpeg.exe` сразу добавляется в PATH текущего процесса;
-5. `doctor` повторно показывает фактический путь и статус AAC/extended decode fallback.
-
-Отдельный helper:
+1. ищут FFmpeg в PATH, WinGet Links, Scoop, Chocolatey и стандартных каталогах;
+2. при отсутствии устанавливают `Gyan.FFmpeg` через WinGet;
+3. добавляют найденный путь в текущий процесс;
+4. `doctor` показывает фактический путь и AAC/M4A fallback status.
 
 ```powershell
 .\scripts\ensure_ffmpeg.ps1
 ```
 
-Явный отказ от автоматического bootstrap:
+Отключить auto-install:
 
 ```powershell
 .\scripts\setup.ps1 -SkipFFmpeg
 .\scripts\upgrade.ps1 -SkipFFmpeg
 ```
 
-Если `ffmpeg.exe` установлен через WinGet/Scoop/Chocolatey, но новая PowerShell-сессия получила устаревший PATH, Genre_test дополнительно обнаруживает известный путь и добавляет его в PATH текущего Python-процесса перед `librosa.load()`.
+## Hugging Face cache/auth
 
-## Перепроверка треков из разных каталогов
-
-Validation может одновременно принимать каталоги и отдельные файлы с разных дисков.
-
-Фильтры:
+Genre_test не переопределяет пользовательский `HF_HOME`, поэтому token из `hf auth login` остаётся доступен. Repo-local используются только model caches:
 
 ```text
-Все треки
-Только результаты старых версий
-Только нестабильные
-```
-
-Режимы:
-
-```text
-Auto
-Fast
-Accurate
-Fast + Auto + Accurate
+HF_HUB_CACHE -> .genre_test\huggingface\hub
+HF_XET_CACHE -> .genre_test\huggingface\xet
 ```
 
 ## CLI
@@ -481,18 +267,40 @@ Fast + Auto + Accurate
 .\.venv\Scripts\genre-test.exe --version
 ```
 
-`--version` является лёгкой командой: она не импортирует Torch/Transformers и проверяется отдельным CI smoke на Python 3.11/3.12.
+Runtime diagnostics:
 
-Обычный Auto:
+```powershell
+.\.venv\Scripts\genre-test.exe doctor
+```
+
+Обычный ensemble profile:
 
 ```powershell
 .\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav"
 ```
 
-Accurate:
+SUNO output:
 
 ```powershell
-.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --mode accurate
+.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --view suno
+```
+
+Distributor output:
+
+```powershell
+.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --view distributor
+```
+
+Отключить independent semantic model:
+
+```powershell
+.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --semantic off
+```
+
+Требовать semantic layer без fallback:
+
+```powershell
+.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --semantic on
 ```
 
 Batch:
@@ -501,91 +309,31 @@ Batch:
 .\.venv\Scripts\genre-test.exe batch "D:\Music\Album"
 ```
 
-Validation convergence:
+Raw MAEST Validation:
 
 ```powershell
-.\.venv\Scripts\genre-test.exe validate "D:\Music" "E:\Archive" --compare-modes
+.\.venv\Scripts\genre-test.exe validate "D:\Music" --compare-modes
 ```
 
-Только нестабильные:
+## Реальный baseline до 0.4
 
-```powershell
-.\.venv\Scripts\genre-test.exe validate "D:\Music" --filter unstable --compare-modes
+Последний полный v0.3.5 Auto catalog run:
+
+```text
+187 paths
+187 processed
+0 errors
+~24.3 tracks/min
 ```
 
-Включая служебные каталоги для специальной диагностики:
+На 180 сопоставленных unique tracks переход 0.3.4 -> 0.3.5 дал 180/180 совпадений resolved genre, broad family, classification, confidence и windows. Это raw-MAEST baseline, относительно которого проверяется 0.4.
 
-```powershell
-.\.venv\Scripts\genre-test.exe validate "D:\Music" --compare-modes --include-service-dirs
-```
+## Ограничения 0.4.0
 
-Импорт history JSON:
+- AudioSet semantic tags являются вероятностным independent evidence, а не ground truth.
+- `SUNO Style of Music` и distributor mapping — deterministic presentation layer, а не утверждение о требованиях конкретного дистрибьютора.
+- Validation 0.4.0 пока валидирует raw MAEST, а не calibration semantic-fusion layer.
+- Semantic analyzer сейчас повторно декодирует аудио после MAEST; shared-decode optimization запланирована в 0.4.x.
+- track-to-track musical similarity, XLSX catalog export и calibrated danceability/acoustic scores вынесены в roadmap.
 
-```powershell
-.\.venv\Scripts\genre-test.exe history-import ".\results" "D:\OldResults"
-```
-
-Основное сравнение версий:
-
-```powershell
-.\.venv\Scripts\genre-test.exe compare-versions 0.3.1 0.3.2 --mode auto
-```
-
-Диагностический any-mode:
-
-```powershell
-.\.venv\Scripts\genre-test.exe compare-versions 0.3.1 0.3.2 --mode any
-```
-
-## Установка / обновление
-
-Первичная установка:
-
-```powershell
-cd C:\GIT\Genre_test
-.\scripts\setup.ps1
-```
-
-На Windows `setup.ps1` автоматически проверяет и при необходимости устанавливает FFmpeg через WinGet.
-
-Обновление после `git pull`:
-
-```powershell
-.\scripts\upgrade.ps1
-```
-
-`upgrade.ps1` выполняет ту же проверку FFmpeg, поэтому существующая установка Genre_test автоматически дооснащается decoder dependency после обновления.
-
-Проверка:
-
-```powershell
-.\.venv\Scripts\genre-test.exe --version
-.\.venv\Scripts\genre-test.exe doctor
-```
-
-## Репозиторий / безопасность
-
-Не хранятся в Git:
-
-- model weights;
-- WAV/FLAC/MP3/M4A/AAC/OGG;
-- MP4/MOV/WEBM;
-- `results/`;
-- `.genre_test/`;
-- SQLite DB/WAL/SHM;
-- локальный runtime log/cache.
-
-Код проекта — MIT. Лицензия ML-модели определяется авторами модели отдельно.
-
-## Документация
-
-- `docs/ACTIVE_CURRENT.md`
-- `docs/ARCHITECTURE.md`
-- `docs/VALIDATION_LAB.md`
-- `docs/VALIDATION_BASELINE.md`
-- `docs/RUNTIME_DATA.md`
-- `docs/ROADMAP.md`
-
-## Python
-
-Поддерживается Python **3.11 / 3.12 x64**. На Windows рекомендуется Python 3.12.
+См. [ROADMAP.md](ROADMAP.md).
