@@ -299,7 +299,7 @@ class GenreTestWindow(tk.Tk):
                     result = analyzer.analyze(path, cancel_check=self._cancel_event.is_set)
                 except AnalysisCancelled:
                     raise
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     detail = traceback.format_exc()
                     summary = f"[ERROR] {path}: {type(exc).__name__}: {exc}"
                     file_errors.append(summary)
