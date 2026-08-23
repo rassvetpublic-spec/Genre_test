@@ -7,7 +7,11 @@ from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as package_version
 
-from .model_config import DEFAULT_CUDA_BATCH_SIZE, DEFAULT_MODEL_REVISION
+from .model_config import (
+    DEFAULT_CUDA_BATCH_SIZE,
+    DEFAULT_MODEL_REVISION,
+    DEFAULT_SEMANTIC_MODEL_REVISION,
+)
 from .runtime_diagnostics import collect_runtime_diagnostics
 
 RUNTIME_PACKAGES: tuple[tuple[str, str], ...] = (
@@ -152,7 +156,7 @@ def _torch_runtime_components(torch_package: RuntimeComponent) -> tuple[RuntimeC
         status="OK" if cuda_available else "WARN",
         value=cuda_runtime,
         details=(
-            f"Default inference batch: up to {DEFAULT_CUDA_BATCH_SIZE} windows"
+            f"Default MAEST inference batch: up to {DEFAULT_CUDA_BATCH_SIZE} windows"
             if cuda_available
             else "CPU fallback is available"
         ),
@@ -170,7 +174,7 @@ def _torch_runtime_components(torch_package: RuntimeComponent) -> tuple[RuntimeC
             name="GPU",
             status=gpu_status,
             value=gpu_name,
-            details="CUDA device 0",
+            details="CUDA device 0; shared by MAEST and AudioSet AST",
             category="Acceleration",
         )
     else:
@@ -220,7 +224,16 @@ def collect_runtime_health() -> RuntimeHealth:
             name="MAEST revision",
             status="OK" if DEFAULT_MODEL_REVISION else "FAIL",
             value=DEFAULT_MODEL_REVISION or "UNPINNED",
-            details="Pinned default model revision",
+            details="Pinned Discogs519 fine-style model",
+            category="Model",
+        )
+    )
+    components.append(
+        RuntimeComponent(
+            name="AudioSet AST revision",
+            status="OK" if DEFAULT_SEMANTIC_MODEL_REVISION else "FAIL",
+            value=DEFAULT_SEMANTIC_MODEL_REVISION or "UNPINNED",
+            details="Pinned independent semantic/audio-event model; downloaded lazily",
             category="Model",
         )
     )
