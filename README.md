@@ -454,6 +454,8 @@ Fast + Auto + Accurate
 .\.venv\Scripts\genre-test.exe --version
 ```
 
+`--version` является лёгкой командой: она не импортирует Torch/Transformers и проверяется отдельным CI smoke на Python 3.11/3.12.
+
 Обычный Auto:
 
 ```powershell
