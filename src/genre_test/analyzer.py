@@ -20,6 +20,9 @@ from .resolver import GenreResolution, resolve_genre
 from .runtime_meta import RESULT_SCHEMA_VERSION, current_git_commit, new_run_id, utc_now_iso
 from .track_identity import identify_track
 
+INSUFFICIENT_AUDIO_SECONDS = 10.0
+SHORT_AUDIO_SECONDS = 30.0
+
 
 class GenreAnalyzer:
     def __init__(
@@ -62,6 +65,26 @@ class GenreAnalyzer:
         check_cancel(cancel_check)
         return prediction
 
+    @staticmethod
+    def _input_quality(duration_s: float) -> tuple[str, tuple[str, ...]]:
+        if duration_s < INSUFFICIENT_AUDIO_SECONDS:
+            return (
+                "INSUFFICIENT_AUDIO",
+                (
+                    f"duration {duration_s:.2f}s is below the {INSUFFICIENT_AUDIO_SECONDS:.0f}s "
+                    "minimum for a genre verdict",
+                ),
+            )
+        if duration_s < SHORT_AUDIO_SECONDS:
+            return (
+                "SHORT_INPUT",
+                (
+                    f"duration {duration_s:.2f}s is shorter than one full "
+                    f"{SHORT_AUDIO_SECONDS:.0f}s MAEST window; confidence is capped at medium",
+                ),
+            )
+        return "NORMAL", ()
+
     def _resolve_predictions(
         self, predictions: list[list[dict[str, float | str]]]
     ) -> tuple[list[StyleScore], list[StyleScore], GenreResolution]:
@@ -76,16 +99,38 @@ class GenreAnalyzer:
         mode: str,
         track_id: str,
         source_file_size: int,
+        input_quality: str = "NORMAL",
+        quality_notes: tuple[str, ...] = (),
     ) -> AnalysisResult:
-        styles, genres, resolution = self._resolve_predictions(predictions)
+        if input_quality == "INSUFFICIENT_AUDIO":
+            styles: list[StyleScore] = []
+            genres: list[StyleScore] = []
+            resolution = GenreResolution(
+                resolved_genre=None,
+                classification="insufficient_audio",
+                confidence="low",
+                family_margin=None,
+                family_ratio=None,
+                style_margin=None,
+                primary_family=None,
+                secondary_family=None,
+                secondary_style=None,
+            )
+        else:
+            styles, genres, resolution = self._resolve_predictions(predictions)
+
         primary = genres[0] if genres else None
+        confidence = resolution.confidence
+        if input_quality == "SHORT_INPUT" and confidence == "high":
+            confidence = "medium"
+
         return AnalysisResult(
             path=str(path.resolve()),
             primary_genre=primary.label if primary else None,
             primary_genre_score=round(primary.score, 6) if primary else None,
             resolved_genre=resolution.resolved_genre,
             classification=resolution.classification,
-            confidence=resolution.confidence,
+            confidence=confidence,
             family_margin=resolution.family_margin,
             secondary_genre=resolution.secondary_family,
             family_ratio=resolution.family_ratio,
@@ -109,6 +154,8 @@ class GenreAnalyzer:
             report_top_k=self.top_k,
             git_commit=self.git_commit,
             source_file_size=source_file_size,
+            input_quality=input_quality,
+            quality_notes=quality_notes,
         )
 
     def _prediction_cache(
@@ -162,8 +209,21 @@ class GenreAnalyzer:
         check_cancel(cancel_check)
         resolved_track_id = track_id or identity.track_id
         source_file_size = identity.size_bytes if identity else resolved_path.stat().st_size
-        target = duration_window_target(features.duration_s)
+        input_quality, quality_notes = self._input_quality(features.duration_s)
 
+        if input_quality == "INSUFFICIENT_AUDIO":
+            return self._build_result(
+                resolved_path,
+                features,
+                [],
+                mode,
+                resolved_track_id,
+                source_file_size,
+                input_quality,
+                quality_notes,
+            )
+
+        target = duration_window_target(features.duration_s)
         if mode == "expert":
             windows = select_windows(audio, sr, self.window_seconds, self.window_count)
             predictions = self._predict_windows(windows, cancel_check)
@@ -194,6 +254,8 @@ class GenreAnalyzer:
             mode,
             resolved_track_id,
             source_file_size,
+            input_quality,
+            quality_notes,
         )
 
     def analyze_modes(
@@ -222,6 +284,23 @@ class GenreAnalyzer:
         check_cancel(cancel_check)
         resolved_track_id = track_id or identity.track_id
         source_file_size = identity.size_bytes if identity else resolved_path.stat().st_size
+        input_quality, quality_notes = self._input_quality(features.duration_s)
+
+        if input_quality == "INSUFFICIENT_AUDIO":
+            return {
+                mode: self._build_result(
+                    resolved_path,
+                    features,
+                    [],
+                    mode,
+                    resolved_track_id,
+                    source_file_size,
+                    input_quality,
+                    quality_notes,
+                )
+                for mode in requested
+            }
+
         target = duration_window_target(features.duration_s)
         windows = select_windows(audio, sr, self.window_seconds, target)
         cache, get = self._prediction_cache(windows, cancel_check)
@@ -257,6 +336,8 @@ class GenreAnalyzer:
                 mode,
                 resolved_track_id,
                 source_file_size,
+                input_quality,
+                quality_notes,
             )
             for mode in requested
         }
