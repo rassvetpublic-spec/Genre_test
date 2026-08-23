@@ -4,6 +4,7 @@ import os
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 
+from .model_config import DEFAULT_CUDA_BATCH_SIZE, DEFAULT_MODEL, DEFAULT_MODEL_REVISION
 from .runtime_meta import default_hf_home
 
 # Keep model/cache data inside the project checkout unless the user explicitly overrides HF_HOME.
@@ -14,10 +15,6 @@ os.environ.setdefault("HF_HOME", str(_hf_home))
 import numpy as np
 import torch
 from transformers import pipeline
-
-DEFAULT_MODEL = "mtg-upf/discogs-maest-30s-pw-129e-519l"
-DEFAULT_MODEL_REVISION = "6c35f32a350f74351870937d5ae0bae1d898d1df"
-DEFAULT_CUDA_BATCH_SIZE = 8
 
 Prediction = list[dict[str, float | str]]
 
