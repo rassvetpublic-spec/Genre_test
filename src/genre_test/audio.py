@@ -6,6 +6,13 @@ import librosa
 import numpy as np
 
 SUPPORTED_EXTENSIONS = {".wav", ".flac", ".mp3", ".ogg", ".m4a", ".aac"}
+DEFAULT_EXCLUDED_DIR_NAMES = {
+    ".git",
+    ".venv",
+    ".genre_test",
+    "results",
+    "__pycache__",
+}
 
 
 def load_audio(path: Path, sample_rate: int) -> tuple[np.ndarray, int]:
@@ -41,7 +48,22 @@ def select_windows(
     return [audio[int(s) : int(s) + width].astype(np.float32, copy=False) for s in starts]
 
 
-def iter_audio_files(path: Path) -> list[Path]:
+def _is_service_path(path: Path, root: Path) -> bool:
+    try:
+        relative = path.relative_to(root)
+    except ValueError:
+        relative = path
+    parts = [part.casefold() for part in relative.parts]
+    excluded = {name.casefold() for name in DEFAULT_EXCLUDED_DIR_NAMES}
+    if any(part in excluded for part in parts[:-1]):
+        return True
+    return any(
+        left == "resources" and right == "audioalg"
+        for left, right in zip(parts, parts[1:])
+    )
+
+
+def iter_audio_files(path: Path, include_service_dirs: bool = False) -> list[Path]:
     if path.is_file():
         if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
             raise ValueError(f"Unsupported audio extension: {path.suffix}")
@@ -49,5 +71,9 @@ def iter_audio_files(path: Path) -> list[Path]:
     if not path.is_dir():
         raise FileNotFoundError(path)
     return sorted(
-        p for p in path.rglob("*") if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS
+        candidate
+        for candidate in path.rglob("*")
+        if candidate.is_file()
+        and candidate.suffix.lower() in SUPPORTED_EXTENSIONS
+        and (include_service_dirs or not _is_service_path(candidate, path))
     )
