@@ -203,7 +203,6 @@ def batch(
     """Analyze all supported audio files in a directory recursively."""
     from .audio import iter_audio_files
     from .history import HistoryDB
-    from .models import AnalysisResult
     from .report import write_json, write_summary_csv
 
     files = iter_audio_files(source, include_service_dirs=include_service_dirs)
