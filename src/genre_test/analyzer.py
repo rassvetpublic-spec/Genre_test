@@ -3,47 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from .aggregate import aggregate_predictions
+from .analysis_policy import ANALYSIS_MODES, duration_window_target, needs_more_auto_windows, spread_indices
 from .audio import load_audio, select_windows
 from .features import extract_audio_features
 from .maest import DEFAULT_MODEL, MaestClassifier
 from .models import AnalysisResult, StyleScore
 from .resolver import GenreResolution, resolve_genre
-
-ANALYSIS_MODES = {"auto", "fast", "accurate", "expert"}
-
-
-def duration_window_target(duration_s: float) -> int:
-    """Choose the maximum representative-window count from track duration."""
-    if duration_s < 60:
-        return 1
-    if duration_s < 120:
-        return 3
-    if duration_s < 210:
-        return 5
-    if duration_s < 300:
-        return 7
-    if duration_s < 420:
-        return 9
-    return 11
-
-
-def spread_indices(total: int, count: int) -> list[int]:
-    """Return stable, approximately uniform indices including both ends."""
-    if total <= 0 or count <= 0:
-        return []
-    if count >= total:
-        return list(range(total))
-    if count == 1:
-        return [total // 2]
-
-    indices = [round(i * (total - 1) / (count - 1)) for i in range(count)]
-    # Rounding can only duplicate indices for very small grids; keep order if it happens.
-    return list(dict.fromkeys(indices))
-
-
-def needs_more_auto_windows(resolution: GenreResolution) -> bool:
-    """Expand Auto analysis when the current genre decision is not stable enough."""
-    return resolution.classification == "hybrid" or resolution.confidence != "high"
 
 
 class GenreAnalyzer:
@@ -104,14 +69,14 @@ class GenreAnalyzer:
         if self.analysis_mode == "accurate" or len(windows) <= 5:
             return [self._predict(window) for window in windows], len(windows)
 
-        # Auto: begin with five windows spread across the same final grid. If those already produce
-        # a high-confidence primary decision, stop. Otherwise analyze the remaining grid points.
+        # Auto starts with five windows spread across the same final grid. Stable high-confidence
+        # primary results stop there; ambiguous/hybrid results expand to the duration-based target.
         initial_indices = spread_indices(len(windows), 5)
         prediction_by_index = {index: self._predict(windows[index]) for index in initial_indices}
         initial_predictions = [prediction_by_index[index] for index in initial_indices]
         _, _, resolution = self._resolve_predictions(initial_predictions)
 
-        if not needs_more_auto_windows(resolution):
+        if not needs_more_auto_windows(resolution.classification, resolution.confidence):
             return initial_predictions, len(initial_predictions)
 
         for index, window in enumerate(windows):
