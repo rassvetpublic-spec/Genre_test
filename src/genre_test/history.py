@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 import sqlite3
 import uuid
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Iterable
 
 from .comparison import ComparisonResult
 from .models import AnalysisResult
@@ -454,7 +454,7 @@ class HistoryDB:
             track_id = self.resolve_track_id(source)
             result = replace(result, track_id=track_id, source_file_size=source.stat().st_size)
         if not result.analyzed_at:
-            mtime = datetime.fromtimestamp(json_path.stat().st_mtime, tz=timezone.utc)
+            mtime = datetime.fromtimestamp(json_path.stat().st_mtime, tz=UTC)
             result = replace(
                 result,
                 analyzed_at=mtime.isoformat(timespec="seconds").replace("+00:00", "Z"),
