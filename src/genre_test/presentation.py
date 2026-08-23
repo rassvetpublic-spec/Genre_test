@@ -218,12 +218,18 @@ def format_result_text(
             )
         if result.audio_profile is not None:
             profile = result.audio_profile
+            profile_primary_line = (
+                f"Profile primary/family: {profile.primary_genre or 'n/a'} / "
+                f"{profile.broad_family or 'n/a'}"
+            )
+            profile_confidence_line = (
+                f"Profile confidence/agreement: {profile.confidence} / "
+                f"{profile.ensemble_agreement}"
+            )
             lines.extend(
                 [
-                    f"Profile primary/family: {profile.primary_genre or 'n/a'} / "
-                    f"{profile.broad_family or 'n/a'}",
-                    f"Profile confidence/agreement: {profile.confidence} / "
-                    f"{profile.ensemble_agreement}",
+                    profile_primary_line,
+                    profile_confidence_line,
                     "Profile family evidence: " + _score_list(profile.family_evidence, 8),
                 ]
             )
@@ -286,11 +292,14 @@ def format_validation_run_metadata(result: ValidationSessionResult) -> str:
                 )
             if item.semantic_evidence is not None:
                 semantic = item.semantic_evidence
+                semantic_model_line = (
+                    f"    semantic={semantic.model_id} @ "
+                    f"{semantic.model_revision or 'un-pinned'}"
+                )
                 lines.extend(
                     [
                         f"    semantic_status={semantic.status}",
-                        f"    semantic={semantic.model_id} @ "
-                        f"{semantic.model_revision or 'un-pinned'}",
+                        semantic_model_line,
                         f"    semantic_genres: {_score_list(semantic.genre_tags, 8)}",
                         f"    semantic_vocals: {_score_list(semantic.vocal_tags, 5)}",
                         f"    semantic_instruments: {_score_list(semantic.instrument_tags, 8)}",
@@ -299,12 +308,18 @@ def format_validation_run_metadata(result: ValidationSessionResult) -> str:
                 )
             if item.audio_profile is not None:
                 profile = item.audio_profile
+                profile_line = (
+                    f"    profile={profile.primary_genre or 'n/a'} / "
+                    f"{profile.broad_family or 'n/a'} / {profile.confidence}"
+                )
+                ensemble_line = (
+                    f"    ensemble={profile.ensemble_agreement}; "
+                    f"sources={','.join(profile.ensemble_sources)}"
+                )
                 lines.extend(
                     [
-                        f"    profile={profile.primary_genre or 'n/a'} / "
-                        f"{profile.broad_family or 'n/a'} / {profile.confidence}",
-                        f"    ensemble={profile.ensemble_agreement}; "
-                        f"sources={','.join(profile.ensemble_sources)}",
+                        profile_line,
+                        ensemble_line,
                         f"    family_evidence: {_score_list(profile.family_evidence, 8)}",
                     ]
                 )
