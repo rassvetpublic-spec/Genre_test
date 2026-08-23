@@ -23,21 +23,17 @@ def duration_window_target(duration_s: float) -> int:
 def input_quality_for_duration(duration_s: float) -> tuple[str, tuple[str, ...]]:
     """Return the input QC class and user-facing evidence for short material."""
     if duration_s < INSUFFICIENT_AUDIO_SECONDS:
-        return (
-            "INSUFFICIENT_AUDIO",
-            (
-                f"duration {duration_s:.2f}s is below the {INSUFFICIENT_AUDIO_SECONDS:.0f}s "
-                "minimum for a genre verdict",
-            ),
+        note = (
+            f"duration {duration_s:.2f}s is below the "
+            f"{INSUFFICIENT_AUDIO_SECONDS:.0f}s minimum for a genre verdict"
         )
+        return "INSUFFICIENT_AUDIO", (note,)
     if duration_s < SHORT_AUDIO_SECONDS:
-        return (
-            "SHORT_INPUT",
-            (
-                f"duration {duration_s:.2f}s is shorter than one full "
-                f"{SHORT_AUDIO_SECONDS:.0f}s MAEST window; confidence is capped at medium",
-            ),
+        note = (
+            f"duration {duration_s:.2f}s is shorter than one full "
+            f"{SHORT_AUDIO_SECONDS:.0f}s MAEST window; confidence is capped at medium"
         )
+        return "SHORT_INPUT", (note,)
     return "NORMAL", ()
 
 
