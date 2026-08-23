@@ -254,9 +254,42 @@ class HistoryDB:
         sha256 = track_id.split(":", 1)[1] if track_id.startswith("sha256:") else track_id
         now = utc_now_iso()
         source = Path(result.path)
+        source_stat = source.stat() if source.exists() else None
         size = result.source_file_size
-        if size is None and source.exists():
-            size = source.stat().st_size
+        if size is None and source_stat is not None:
+            size = source_stat.st_size
+        result_json = json.dumps(result.to_dict(), ensure_ascii=False)
+        run_values = (
+            track_id,
+            session_id,
+            result.analyzed_at,
+            result.analyzer_version,
+            result.schema_version,
+            result.analysis_mode,
+            result.windows_analyzed,
+            result.window_seconds,
+            result.report_top_k,
+            result.internal_top_k,
+            result.model_id,
+            result.model_revision,
+            result.device,
+            result.git_commit,
+            result.path,
+            result.primary_genre,
+            result.primary_genre_score,
+            result.resolved_genre,
+            result.classification,
+            result.confidence,
+            result.family_margin,
+            result.family_ratio,
+            result.style_margin,
+            result.secondary_genre,
+            result.secondary_style,
+            result.audio_features.bpm,
+            result.audio_features.key,
+            result.audio_features.mode,
+            result_json,
+        )
 
         with self._connect() as conn:
             conn.execute(
@@ -270,50 +303,59 @@ class HistoryDB:
                 """,
                 (track_id, sha256, now, now, result.path, size),
             )
-            conn.execute(
-                """
-                INSERT OR REPLACE INTO runs(
-                    run_id, track_id, session_id, analyzed_at, analyzer_version, schema_version,
-                    analysis_mode, windows_analyzed, window_seconds, report_top_k, internal_top_k,
-                    model_id, model_revision, device, git_commit, source_path, primary_genre,
-                    primary_genre_score, resolved_genre, classification, confidence, family_margin,
-                    family_ratio, style_margin, secondary_genre, secondary_style, bpm, key_name,
-                    key_mode, result_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    result.run_id,
-                    track_id,
-                    session_id,
-                    result.analyzed_at,
-                    result.analyzer_version,
-                    result.schema_version,
-                    result.analysis_mode,
-                    result.windows_analyzed,
-                    result.window_seconds,
-                    result.report_top_k,
-                    result.internal_top_k,
-                    result.model_id,
-                    result.model_revision,
-                    result.device,
-                    result.git_commit,
-                    result.path,
-                    result.primary_genre,
-                    result.primary_genre_score,
-                    result.resolved_genre,
-                    result.classification,
-                    result.confidence,
-                    result.family_margin,
-                    result.family_ratio,
-                    result.style_margin,
-                    result.secondary_genre,
-                    result.secondary_style,
-                    result.audio_features.bpm,
-                    result.audio_features.key,
-                    result.audio_features.mode,
-                    json.dumps(result.to_dict(), ensure_ascii=False),
-                ),
-            )
+            if source_stat is not None:
+                conn.execute(
+                    """
+                    INSERT INTO file_locations(path, track_id, size_bytes, mtime_ns, last_seen_at)
+                    VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(path) DO UPDATE SET
+                        track_id = excluded.track_id,
+                        size_bytes = excluded.size_bytes,
+                        mtime_ns = excluded.mtime_ns,
+                        last_seen_at = excluded.last_seen_at
+                    """,
+                    (
+                        str(source.resolve()),
+                        track_id,
+                        source_stat.st_size,
+                        source_stat.st_mtime_ns,
+                        now,
+                    ),
+                )
+            existing = conn.execute(
+                "SELECT 1 FROM runs WHERE run_id = ?",
+                (result.run_id,),
+            ).fetchone()
+            if existing:
+                conn.execute(
+                    """
+                    UPDATE runs SET
+                        track_id = ?, session_id = ?, analyzed_at = ?, analyzer_version = ?,
+                        schema_version = ?, analysis_mode = ?, windows_analyzed = ?,
+                        window_seconds = ?, report_top_k = ?, internal_top_k = ?, model_id = ?,
+                        model_revision = ?, device = ?, git_commit = ?, source_path = ?,
+                        primary_genre = ?, primary_genre_score = ?, resolved_genre = ?,
+                        classification = ?, confidence = ?, family_margin = ?, family_ratio = ?,
+                        style_margin = ?, secondary_genre = ?, secondary_style = ?, bpm = ?,
+                        key_name = ?, key_mode = ?, result_json = ?
+                    WHERE run_id = ?
+                    """,
+                    (*run_values, result.run_id),
+                )
+            else:
+                conn.execute(
+                    """
+                    INSERT INTO runs(
+                        run_id, track_id, session_id, analyzed_at, analyzer_version, schema_version,
+                        analysis_mode, windows_analyzed, window_seconds, report_top_k, internal_top_k,
+                        model_id, model_revision, device, git_commit, source_path, primary_genre,
+                        primary_genre_score, resolved_genre, classification, confidence, family_margin,
+                        family_ratio, style_margin, secondary_genre, secondary_style, bpm, key_name,
+                        key_mode, result_json
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (result.run_id, *run_values),
+                )
             conn.execute("DELETE FROM style_scores WHERE run_id = ?", (result.run_id,))
             conn.execute("DELETE FROM broad_scores WHERE run_id = ?", (result.run_id,))
             conn.executemany(
