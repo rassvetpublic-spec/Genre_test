@@ -25,6 +25,9 @@ jobs:
           pip install -e . --no-deps
       - name: CLI version smoke
         run: genre-test --version
+      - name: FFmpeg bootstrap script smoke
+        shell: pwsh
+        run: ./scripts/ensure_ffmpeg.ps1 -NoInstall
       - name: Ruff
         run: ruff check src tests
       - name: Tests
