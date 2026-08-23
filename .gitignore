@@ -1,0 +1,26 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Results / audio / models
+results/
+audio/
+models/
+*.wav
+*.flac
+*.mp3
+*.m4a
+*.aac
+*.ogg
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

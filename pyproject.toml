@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "genre-test"
+version = "0.1.0"
+description = "Local music genre analyzer for Rassvetmsk: MAEST/Discogs classification plus audio features and reports."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = {text = "MIT"}
+authors = [{name = "rassvetpublic"}]
+dependencies = [
+  "numpy>=1.26,<3",
+  "scipy>=1.12,<2",
+  "soundfile>=0.12.1,<1",
+  "librosa>=0.10.2,<1",
+  "torch>=2.5,<3",
+  "transformers>=4.48,<6",
+  "accelerate>=1.2,<2",
+  "safetensors>=0.4.5,<1",
+  "typer>=0.15,<1",
+  "rich>=13.9,<15",
+  "pydantic>=2.10,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3,<10",
+  "ruff>=0.9,<1",
+]
+
+[project.scripts]
+genre-test = "genre_test.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/genre_test"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
