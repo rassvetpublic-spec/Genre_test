@@ -41,6 +41,9 @@ class AnalysisResult:
     confidence: str = "low"
     family_margin: float | None = None
     secondary_genre: str | None = None
+    family_ratio: float | None = None
+    style_margin: float | None = None
+    secondary_style: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
