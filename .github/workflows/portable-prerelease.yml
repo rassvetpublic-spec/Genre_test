@@ -9,6 +9,9 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   package:
     runs-on: ubuntu-24.04
@@ -78,6 +81,7 @@ jobs:
           )
           cd dist
           zip -9 -r Genre_test_0.3.6_portable.zip Genre_test_0.3.6_portable
+          sha256sum Genre_test_0.3.6_portable.zip > SHA256SUMS.txt
 
       - name: Inspect archive
         shell: bash
@@ -92,6 +96,27 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Genre_test_0.3.6_portable
-          path: dist/Genre_test_0.3.6_portable.zip
+          path: |
+            dist/Genre_test_0.3.6_portable.zip
+            dist/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish ready-to-share ZIP into repository releases folder
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p releases
+          cp dist/Genre_test_0.3.6_portable.zip releases/Genre_test_0.3.6_portable.zip
+          cp dist/SHA256SUMS.txt releases/SHA256SUMS.txt
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add releases/Genre_test_0.3.6_portable.zip releases/SHA256SUMS.txt
+          if git diff --cached --quiet; then
+            echo 'Release files already current.'
+            exit 0
+          fi
+          git commit -m 'release: refresh Genre_test 0.3.6 portable [skip ci]'
+          git push origin HEAD:v0-3-6-portable-prerelease
