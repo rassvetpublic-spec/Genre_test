@@ -50,9 +50,10 @@ ZIP нужно распаковать ПРЯМО В КОРЕНЬ ДИСКА C:\.
    - найдёт подходящий Python 3.11/3.12 x64
    - при отсутствии установит Python 3.12 через winget
    - создаст локальное окружение .venv внутри C:\Genre_test_0.3.6_portable
+   - заранее установит NumPy и базовые Python-пакеты, необходимые для корректной проверки PyTorch
    - определит наличие NVIDIA GPU
    - установит PyTorch CUDA 12.8 для NVIDIA либо CPU-версию PyTorch
-   - проверит реальный import PyTorch
+   - проверит реальный import PyTorch по отдельному маркеру успеха; предупреждения Python не считаются ошибкой импорта
    - найдёт FFmpeg
    - при отсутствии установит Gyan.FFmpeg через winget
    - установит зависимости Genre_test
@@ -69,7 +70,7 @@ ZIP нужно распаковать ПРЯМО В КОРЕНЬ ДИСКА C:\.
 
    C:\Genre_test_0.3.6_portable\Genre_test_START.cmd
 
-Уже установленный WinGet, VC++ Runtime, Python, .venv, PyTorch и FFmpeg будут переиспользованы после проверки, поэтому повторный запуск заметно быстрее.
+Уже установленный WinGet, VC++ Runtime, Python, .venv, NumPy, PyTorch и FFmpeg будут переиспользованы после проверки, поэтому повторный запуск заметно быстрее.
 
 СИСТЕМНЫЕ ТРЕБОВАНИЯ
 --------------------
@@ -97,12 +98,16 @@ Genre_test_START.cmd сначала пытается найти winget обыч�
 
 Только если официальный repair не сработал, скрипт открывает страницу App Installer в Microsoft Store.
 
-PYTORCH / DLL
--------------
+PYTORCH / DLL / NUMPY
+---------------------
 Перед установкой PyTorch скрипт проверяет Microsoft Visual C++ 2015–2022 x64 Runtime.
 Это системная зависимость PyTorch на Windows.
 
-Если import torch всё равно завершится ошибкой, launcher сохранит полный текст ошибки в:
+Также до первого import torch устанавливается NumPy. Это важно: PyTorch может успешно загрузиться без NumPy, но при этом вывести UserWarning. Такой warning не является ошибкой запуска.
+
+Проверка PyTorch использует отдельный маркер успешного импорта и отдельно сохраняет stderr. Поэтому предупреждения больше не должны ошибочно останавливать bootstrap.
+
+Если import torch действительно завершится ошибкой, launcher сохранит полный текст ошибки в:
 
    C:\Genre_test_0.3.6_portable\.genre_test\torch_import_diagnostic.txt
 
