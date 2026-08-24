@@ -44,6 +44,7 @@ jobs:
           ROOT="dist/Genre_test_0.3.6_portable"
           mkdir -p "$ROOT/src" "$ROOT/scripts" "$ROOT/config"
           cp Genre_test_START.cmd "$ROOT/"
+          cp README_RU.txt "$ROOT/"
           cp PORTABLE_README.txt "$ROOT/"
           cp pyproject.toml LICENSE README.md "$ROOT/"
           cp -R src/genre_test "$ROOT/src/"
@@ -61,6 +62,8 @@ jobs:
         shell: bash
         run: |
           unzip -l dist/Genre_test_0.3.6_portable_prerelease.zip
+          unzip -l dist/Genre_test_0.3.6_portable_prerelease.zip | grep -q 'README_RU.txt'
+          unzip -l dist/Genre_test_0.3.6_portable_prerelease.zip | grep -q 'Genre_test_START.cmd'
           test -s dist/Genre_test_0.3.6_portable_prerelease.zip
 
       - uses: actions/upload-artifact@v4
