@@ -118,6 +118,22 @@ def doctor() -> None:
     if torch.cuda.is_available():
         console.print(f"CUDA runtime: {torch.version.cuda}")
         console.print(f"GPU: {torch.cuda.get_device_name(0)}")
+        capability = torch.cuda.get_device_capability(0)
+        architecture = f"sm_{capability[0]}{capability[1]}"
+        compiled_arches = tuple(torch.cuda.get_arch_list())
+        native = architecture in compiled_arches
+        if capability[0] >= 10:
+            architecture_label = (
+                f"Blackwell native ({architecture})"
+                if native
+                else f"Blackwell non-native ({architecture})"
+            )
+        else:
+            architecture_label = (
+                f"native ({architecture})" if native else f"non-native ({architecture})"
+            )
+        console.print(f"GPU architecture: {architecture_label}")
+        console.print(f"Compiled CUDA arch list: {', '.join(compiled_arches)}")
     console.print(f"SoundFile: {sf.__version__}")
     if diagnostics.ffmpeg_available:
         console.print(f"FFmpeg: {diagnostics.ffmpeg_path}")
