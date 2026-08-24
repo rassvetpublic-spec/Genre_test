@@ -6,9 +6,12 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$expectedRoot = 'C:\Genre_test_0.3.6_portable'
 Set-Location $repoRoot
 $stateDir = Join-Path $repoRoot '.genre_test'
 $logPath = Join-Path $stateDir 'bootstrap.log'
+$torchStdoutPath = Join-Path $stateDir 'torch_probe_stdout.txt'
+$torchDiagnosticPath = Join-Path $stateDir 'torch_import_diagnostic.txt'
 New-Item -ItemType Directory -Force -Path $stateDir | Out-Null
 
 function Write-BootstrapLog {
@@ -33,11 +36,14 @@ function Refresh-ProcessPath {
 }
 
 function Find-Winget {
+    Refresh-ProcessPath
     $command = Get-Command winget.exe -ErrorAction SilentlyContinue
     if (-not $command) { $command = Get-Command winget -ErrorAction SilentlyContinue }
     if ($command) { return $command.Source }
-    $candidate = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\winget.exe'
-    if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
+    if ($env:LOCALAPPDATA) {
+        $candidate = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\winget.exe'
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
+    }
     return $null
 }
 
@@ -46,9 +52,10 @@ function Require-Winget {
     if ($winget) { return $winget }
     Write-Host ''
     Write-Host '[FAIL] Windows Package Manager (winget) is missing.' -ForegroundColor Red
-    Write-Host 'Install/update "App Installer" from Microsoft Store, then run Genre_test_START.cmd again.'
+    Write-Host 'Automatic WinGet repair already ran but winget is still unavailable.'
+    Write-Host 'Install/update App Installer from Microsoft Store and run Genre_test_START.cmd again.'
     try { Start-Process 'ms-windows-store://pdp/?ProductId=9NBLGGH4NNS1' | Out-Null } catch {}
-    throw 'winget is required for automatic first-run installation.'
+    throw 'winget is required because a missing component must be installed.'
 }
 
 function Invoke-WingetInstall {
@@ -177,6 +184,21 @@ function Ensure-Venv {
     return $venvPython
 }
 
+function Ensure-PythonBootstrapPackages {
+    param([Parameter(Mandatory=$true)][string]$Python)
+    Write-Step 'Preparing Python runtime packages'
+    & $Python -m pip install --upgrade pip wheel 'setuptools<82' 'numpy>=1.26,<3'
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Failed to prepare pip/wheel/setuptools/NumPy.'
+    }
+    $numpyVersion = (& $Python -c "import numpy; print(numpy.__version__)" 2>$null | Select-Object -Last 1)
+    if ($LASTEXITCODE -ne 0 -or -not $numpyVersion) {
+        throw 'NumPy cannot be imported after installation.'
+    }
+    Write-Host "NumPy OK: $numpyVersion"
+    Write-BootstrapLog "NumPy=$numpyVersion"
+}
+
 function Test-NvidiaGpu {
     $nvidia = Get-Command nvidia-smi.exe -ErrorAction SilentlyContinue
     if (-not $nvidia) { $nvidia = Get-Command nvidia-smi -ErrorAction SilentlyContinue }
@@ -187,12 +209,44 @@ function Test-NvidiaGpu {
 
 function Get-TorchState {
     param([Parameter(Mandatory=$true)][string]$Python)
+
+    Remove-Item -LiteralPath $torchStdoutPath -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $torchDiagnosticPath -Force -ErrorAction SilentlyContinue
+
+    $marker = '__GENRE_TEST_TORCH_OK__'
+    $probeCode = "import torch; print('$marker|'+str(torch.__version__)+'|'+str(torch.version.cuda or 'none')+'|'+str(bool(torch.cuda.is_available())))"
+
     try {
-        $code = "import torch; print(str(torch.__version__)+'|'+str(torch.version.cuda or 'none')+'|'+str(bool(torch.cuda.is_available())))"
-        $text = (& $Python -c $code 2>$null | Select-Object -Last 1)
-        if ($LASTEXITCODE -ne 0 -or -not $text) { return $null }
-        return [string]$text
-    } catch { return $null }
+        & $Python -c $probeCode 1> $torchStdoutPath 2> $torchDiagnosticPath
+        $exitCode = $LASTEXITCODE
+    } catch {
+        $exitCode = 1
+        Add-Content -LiteralPath $torchDiagnosticPath -Encoding UTF8 -Value $_.Exception.ToString()
+    }
+
+    $stdoutLines = @()
+    if (Test-Path -LiteralPath $torchStdoutPath) {
+        $stdoutLines = @(Get-Content -LiteralPath $torchStdoutPath -ErrorAction SilentlyContinue)
+    }
+    $markerLine = $stdoutLines | Where-Object { $_ -like "$marker|*" } | Select-Object -Last 1
+
+    if ($exitCode -eq 0 -and $markerLine) {
+        $state = [string]$markerLine
+        $state = $state.Substring($marker.Length + 1)
+        if (Test-Path -LiteralPath $torchDiagnosticPath) {
+            $warningText = (Get-Content -LiteralPath $torchDiagnosticPath -Raw -ErrorAction SilentlyContinue)
+            if ($warningText) {
+                Write-BootstrapLog "PyTorch probe warnings: $($warningText.Trim())"
+            }
+        }
+        return $state
+    }
+
+    if (Test-Path -LiteralPath $torchDiagnosticPath) {
+        $diagnostic = Get-Content -LiteralPath $torchDiagnosticPath -Raw -ErrorAction SilentlyContinue
+        if ($diagnostic) { Write-BootstrapLog "PyTorch import failure: $($diagnostic.Trim())" }
+    }
+    return $null
 }
 
 function Ensure-Torch {
@@ -207,8 +261,6 @@ function Ensure-Torch {
     }
 
     if ($needsInstall) {
-        & $Python -m pip install --upgrade pip wheel setuptools
-        if ($LASTEXITCODE -ne 0) { throw 'pip bootstrap failed.' }
         if ($hasNvidia) {
             Write-Host 'NVIDIA GPU detected. Installing PyTorch CUDA 12.8 build...'
             & $Python -m pip install --upgrade torch --index-url https://download.pytorch.org/whl/cu128
@@ -220,7 +272,10 @@ function Ensure-Torch {
         $state = Get-TorchState -Python $Python
     }
 
-    if (-not $state) { throw 'PyTorch cannot be imported after installation.' }
+    if (-not $state) {
+        throw "PyTorch import failed. See $torchDiagnosticPath"
+    }
+
     Write-Host "PyTorch OK: $state"
     Write-BootstrapLog "Torch=$state; nvidia_detected=$hasNvidia"
 }
@@ -274,8 +329,6 @@ function Install-GenreTest {
 
     if ($needsInstall) {
         Write-Host 'Installing Genre_test runtime dependencies...'
-        & $Python -m pip install --upgrade pip wheel setuptools
-        if ($LASTEXITCODE -ne 0) { throw 'pip bootstrap failed.' }
         & $Python -m pip install -e $repoRoot
         if ($LASTEXITCODE -ne 0) { throw 'Genre_test dependency installation failed.' }
     } else {
@@ -307,7 +360,7 @@ function Run-Diagnostics {
 try {
     Write-BootstrapLog '============================================================'
     Write-BootstrapLog 'Portable startup begin'
-    Write-Host "Package: Genre_test 0.3.6 Portable"
+    Write-Host 'Package: Genre_test 0.3.6 Portable'
     Write-Host "Folder : $repoRoot"
     Write-Host "Log    : $logPath"
 
@@ -315,15 +368,18 @@ try {
         throw '64-bit Windows is required.'
     }
 
-    $driveRoot = [System.IO.Path]::GetPathRoot($repoRoot)
-    $driveName = if ($driveRoot) { $driveRoot.Substring(0, 1) } else { $null }
-    $systemDrive = if ($driveName) { Get-PSDrive -Name $driveName -ErrorAction SilentlyContinue } else { $null }
-    if ($systemDrive -and $systemDrive.Free -lt 8GB) {
+    if (-not [string]::Equals($repoRoot.TrimEnd('\'), $expectedRoot.TrimEnd('\'), [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Wrong installation folder. Extract the ZIP so the package is exactly at $expectedRoot"
+    }
+
+    $drive = Get-PSDrive -Name C -ErrorAction SilentlyContinue
+    if ($drive -and $drive.Free -lt 8GB) {
         Write-Host '[WARN] Less than 8 GB free space is available. First setup/model download may fail.' -ForegroundColor Yellow
     }
 
     $runtime = Ensure-Python
     $venvPython = Ensure-Venv -Runtime $runtime
+    Ensure-PythonBootstrapPackages -Python $venvPython
     Ensure-Torch -Python $venvPython
     Ensure-FFmpeg
     $genreExe = Install-GenreTest -Python $venvPython
