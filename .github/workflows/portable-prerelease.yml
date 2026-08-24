@@ -59,7 +59,7 @@ jobs:
           grep -Fq "'numpy>=1.26,<3'" scripts/portable_bootstrap_v2.ps1
           grep -q '__GENRE_TEST_TORCH_OK__' scripts/portable_bootstrap_v2.ps1
           grep -q 'pip install -e .*| Out-Host' scripts/portable_bootstrap_v2.ps1
-          grep -q 'Runtime Health:.*| Out-Host' scripts/portable_bootstrap_v2.ps1
+          grep -Fq '& $Python -c $healthCode | Out-Host' scripts/portable_bootstrap_v2.ps1
 
       - name: Build portable folder
         shell: bash
