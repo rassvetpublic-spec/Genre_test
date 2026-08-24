@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import platform
+import re
 import sys
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError
@@ -29,6 +30,9 @@ RUNTIME_PACKAGES: tuple[tuple[str, str], ...] = (
     ("huggingface-hub", "Hugging Face Hub"),
 )
 
+MIN_TORCH_VERSION = (2, 12, 1)
+TARGET_CUDA_PREFIX = "13.0"
+BLACKWELL_MAJOR_CAPABILITIES = {10, 11, 12}
 STATUS_ORDER = {"OK": 0, "WARN": 1, "FAIL": 2}
 
 
@@ -74,8 +78,8 @@ class RuntimeHealth:
 
         return (
             f"Deps: {self.package_ok_count}/{self.package_count} | "
-            f"CUDA: {state('CUDA')} | FFmpeg: {state('FFmpeg')} | "
-            f"HF: {state('HF auth')}"
+            f"CUDA: {state('CUDA')} | GPU: {state('GPU architecture')} | "
+            f"FFmpeg: {state('FFmpeg')} | HF: {state('HF auth')}"
         )
 
 
@@ -110,6 +114,14 @@ def _python_component() -> RuntimeComponent:
     )
 
 
+def _numeric_version(value: str) -> tuple[int, int, int]:
+    base = value.split("+", 1)[0]
+    numbers = [int(item) for item in re.findall(r"\d+", base)[:3]]
+    while len(numbers) < 3:
+        numbers.append(0)
+    return tuple(numbers[:3])  # type: ignore[return-value]
+
+
 def _torch_runtime_components(torch_package: RuntimeComponent) -> tuple[RuntimeComponent, ...]:
     if torch_package.status != "OK":
         return (
@@ -122,6 +134,13 @@ def _torch_runtime_components(torch_package: RuntimeComponent) -> tuple[RuntimeC
             ),
             RuntimeComponent(
                 name="GPU",
+                status="FAIL",
+                value="unavailable",
+                details="PyTorch is missing",
+                category="Acceleration",
+            ),
+            RuntimeComponent(
+                name="GPU architecture",
                 status="FAIL",
                 value="unavailable",
                 details="PyTorch is missing",
@@ -147,45 +166,114 @@ def _torch_runtime_components(torch_package: RuntimeComponent) -> tuple[RuntimeC
                 details="PyTorch runtime could not be imported",
                 category="Acceleration",
             ),
+            RuntimeComponent(
+                name="GPU architecture",
+                status="FAIL",
+                value="unavailable",
+                details="PyTorch runtime could not be imported",
+                category="Acceleration",
+            ),
         )
 
+    torch_version = str(getattr(torch, "__version__", torch_package.value))
+    torch_version_ok = _numeric_version(torch_version) >= MIN_TORCH_VERSION
     cuda_available = bool(torch.cuda.is_available())
-    cuda_runtime = str(torch.version.cuda or "unknown") if cuda_available else "unavailable"
+
+    if not cuda_available:
+        return (
+            RuntimeComponent(
+                name="CUDA",
+                status="WARN" if torch_version_ok else "FAIL",
+                value="unavailable",
+                details=(
+                    "CPU fallback available; GPU baseline is PyTorch >=2.12.1 + CUDA 13.0"
+                    if torch_version_ok
+                    else f"PyTorch {torch_version} is below required 2.12.1"
+                ),
+                category="Acceleration",
+            ),
+            RuntimeComponent(
+                name="GPU",
+                status="WARN",
+                value="CPU mode",
+                details="No CUDA GPU available to PyTorch",
+                category="Acceleration",
+            ),
+            RuntimeComponent(
+                name="GPU architecture",
+                status="WARN",
+                value="CPU mode",
+                details="Native CUDA architecture check skipped",
+                category="Acceleration",
+            ),
+        )
+
+    cuda_runtime = str(torch.version.cuda or "unknown")
+    cuda_target_ok = cuda_runtime.startswith(TARGET_CUDA_PREFIX)
+    cuda_status = "OK" if torch_version_ok and cuda_target_ok else "FAIL"
     cuda_component = RuntimeComponent(
         name="CUDA",
-        status="OK" if cuda_available else "WARN",
+        status=cuda_status,
         value=cuda_runtime,
         details=(
-            f"Default MAEST inference batch: up to {DEFAULT_CUDA_BATCH_SIZE} windows"
-            if cuda_available
-            else "CPU fallback is available"
+            f"PyTorch {torch_version}; target >=2.12.1 / CUDA 13.0; "
+            f"MAEST batch up to {DEFAULT_CUDA_BATCH_SIZE} windows"
         ),
         category="Acceleration",
     )
-    if cuda_available:
-        try:
-            gpu_name = str(torch.cuda.get_device_name(0))
-        except (OSError, RuntimeError) as exc:
-            gpu_name = f"query failed: {type(exc).__name__}"
-            gpu_status = "WARN"
-        else:
-            gpu_status = "OK"
-        gpu_component = RuntimeComponent(
-            name="GPU",
-            status=gpu_status,
-            value=gpu_name,
-            details="CUDA device 0; shared by MAEST and AudioSet AST",
+
+    try:
+        gpu_name = str(torch.cuda.get_device_name(0))
+    except (OSError, RuntimeError) as exc:
+        gpu_name = f"query failed: {type(exc).__name__}"
+        gpu_status = "WARN"
+    else:
+        gpu_status = "OK"
+    gpu_component = RuntimeComponent(
+        name="GPU",
+        status=gpu_status,
+        value=gpu_name,
+        details="CUDA device 0; shared by MAEST and AudioSet AST",
+        category="Acceleration",
+    )
+
+    try:
+        major, minor = torch.cuda.get_device_capability(0)
+        architecture = f"sm_{major}{minor}"
+        compiled_arches = tuple(str(item) for item in torch.cuda.get_arch_list())
+    except (AttributeError, OSError, RuntimeError, TypeError, ValueError) as exc:
+        architecture_component = RuntimeComponent(
+            name="GPU architecture",
+            status="WARN",
+            value="query unavailable",
+            details=f"{type(exc).__name__}: {exc}",
             category="Acceleration",
         )
     else:
-        gpu_component = RuntimeComponent(
-            name="GPU",
-            status="WARN",
-            value="CPU mode",
-            details="No CUDA GPU available to PyTorch",
+        native = architecture in compiled_arches
+        blackwell = major in BLACKWELL_MAJOR_CAPABILITIES
+        if blackwell and native and cuda_target_ok and torch_version_ok:
+            arch_status = "OK"
+            arch_value = f"Blackwell native ({architecture})"
+        elif blackwell:
+            arch_status = "FAIL"
+            arch_value = f"Blackwell fallback ({architecture})"
+        else:
+            arch_status = "OK" if native else "WARN"
+            arch_value = f"native ({architecture})" if native else f"fallback ({architecture})"
+        architecture_component = RuntimeComponent(
+            name="GPU architecture",
+            status=arch_status,
+            value=arch_value,
+            details=(
+                "Compiled CUDA arches: " + ", ".join(compiled_arches)
+                if compiled_arches
+                else "PyTorch did not report compiled CUDA architectures"
+            ),
             category="Acceleration",
         )
-    return cuda_component, gpu_component
+
+    return cuda_component, gpu_component, architecture_component
 
 
 def collect_runtime_health() -> RuntimeHealth:
