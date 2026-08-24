@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - v0-3-6-portable-prerelease
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
