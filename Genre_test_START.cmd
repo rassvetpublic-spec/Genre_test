@@ -34,8 +34,6 @@ if not exist "%WINPS%" (
     exit /b 1
 )
 
-rem WinGet is not required to already exist. If missing, try Microsoft's
-rem official Microsoft.WinGet.Client repair path before the main bootstrap.
 "%WINPS%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\ensure_winget.ps1"
 set "WINGET_RC=%ERRORLEVEL%"
 if not "%WINGET_RC%"=="0" (
@@ -46,7 +44,6 @@ if not "%WINGET_RC%"=="0" (
     echo.
 )
 
-rem PyTorch on Windows depends on the Microsoft Visual C++ x64 Runtime.
 "%WINPS%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\ensure_vcredist.ps1"
 set "VC_RC=%ERRORLEVEL%"
 if not "%VC_RC%"=="0" (
@@ -57,7 +54,7 @@ if not "%VC_RC%"=="0" (
     exit /b %VC_RC%
 )
 
-"%WINPS%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\portable_bootstrap.ps1"
+"%WINPS%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\portable_bootstrap_v2.ps1"
 set "RC=%ERRORLEVEL%"
 
 if not "%RC%"=="0" (
@@ -66,19 +63,10 @@ if not "%RC%"=="0" (
     echo [FAIL] Genre_test could not be started.
     echo ============================================================
     echo.
-
-    if exist "%~dp0.venv\Scripts\python.exe" (
-        echo PyTorch import diagnostic:
-        echo ------------------------------------------------------------
-        "%~dp0.venv\Scripts\python.exe" -c "import torch; print('torch='+str(torch.__version__)+' cuda='+str(torch.version.cuda)+' available='+str(torch.cuda.is_available()))" > "%~dp0.genre_test\torch_import_diagnostic.txt" 2>&1
-        type "%~dp0.genre_test\torch_import_diagnostic.txt"
-        echo ------------------------------------------------------------
-        type "%~dp0.genre_test\torch_import_diagnostic.txt" >> "%~dp0.genre_test\bootstrap.log"
-    )
-
     echo See these files for details:
     echo   C:\Genre_test_0.3.6_portable\.genre_test\bootstrap.log
     echo   C:\Genre_test_0.3.6_portable\.genre_test\torch_import_diagnostic.txt
+    echo   C:\Genre_test_0.3.6_portable\.genre_test\torch_probe_stdout.txt
     echo.
     pause
     exit /b %RC%
