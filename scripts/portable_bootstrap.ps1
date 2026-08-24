@@ -77,8 +77,9 @@ function Test-PythonCandidate {
         [string[]]$PrefixArgs = @()
     )
     try {
-        $args = @($PrefixArgs) + @('-c', "import sys,struct; print(f'{sys.version_info.major}.{sys.version_info.minor}|{struct.calcsize('P')*8}')")
-        $text = (& $Exe @args 2>$null | Select-Object -Last 1)
+        $pythonCode = "import sys,struct; print(str(sys.version_info.major)+'.'+str(sys.version_info.minor)+'|'+str(struct.calcsize('P')*8))"
+        $invokeArgs = @($PrefixArgs) + @('-c', $pythonCode)
+        $text = (& $Exe @invokeArgs 2>$null | Select-Object -Last 1)
         if ($LASTEXITCODE -ne 0 -or -not $text) { return $null }
         $pieces = [string]$text -split '\|'
         if ($pieces.Count -ne 2) { return $null }
@@ -165,8 +166,8 @@ function Ensure-Venv {
 
     if (-not (Test-Path -LiteralPath $venvPython)) {
         Write-Step 'Creating private virtual environment (.venv)'
-        $args = @($Runtime.PrefixArgs) + @('-m', 'venv', $venvDir)
-        & $Runtime.Exe @args
+        $invokeArgs = @($Runtime.PrefixArgs) + @('-m', 'venv', $venvDir)
+        & $Runtime.Exe @invokeArgs
         if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $venvPython)) {
             throw 'Virtual environment creation failed.'
         }
@@ -281,7 +282,6 @@ function Install-GenreTest {
         Write-Host 'Genre_test 0.3.6 package OK'
     }
 
-    # Runtime Health is stricter than --version. If it reports FAIL, repair once.
     $healthCode = "from genre_test.runtime_health import collect_runtime_health; h=collect_runtime_health(); print('Runtime Health: '+h.overall_status+' | '+h.compact_summary); raise SystemExit(1 if h.overall_status == 'FAIL' else 0)"
     & $Python -c $healthCode
     if ($LASTEXITCODE -ne 0) {
@@ -315,12 +315,13 @@ try {
         throw '64-bit Windows is required.'
     }
 
-    $systemDrive = Get-PSDrive -Name ([System.IO.Path]::GetPathRoot($repoRoot).TrimEnd(':\')) -ErrorAction SilentlyContinue
+    $driveRoot = [System.IO.Path]::GetPathRoot($repoRoot)
+    $driveName = if ($driveRoot) { $driveRoot.Substring(0, 1) } else { $null }
+    $systemDrive = if ($driveName) { Get-PSDrive -Name $driveName -ErrorAction SilentlyContinue } else { $null }
     if ($systemDrive -and $systemDrive.Free -lt 8GB) {
         Write-Host '[WARN] Less than 8 GB free space is available. First setup/model download may fail.' -ForegroundColor Yellow
     }
 
-    # Only require winget when something actually needs installation.
     $runtime = Ensure-Python
     $venvPython = Ensure-Venv -Runtime $runtime
     Ensure-Torch -Python $venvPython
