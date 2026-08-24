@@ -9,6 +9,22 @@ echo   Genre_test 0.3.6 Portable - Setup / Diagnostics / GUI
 echo ============================================================
 echo.
 
+set "EXPECTED=C:\Genre_test_0.3.6_portable\"
+if /I not "%~dp0"=="%EXPECTED%" (
+    echo [FAIL] Wrong installation folder.
+    echo.
+    echo Extract the ZIP directly to C:\ so that this file is located at:
+    echo   C:\Genre_test_0.3.6_portable\Genre_test_START.cmd
+    echo.
+    echo Current folder:
+    echo   %~dp0
+    echo.
+    echo Do not run the package from Downloads, Desktop, D:\ or inside the ZIP.
+    echo.
+    pause
+    exit /b 2
+)
+
 set "WINPS=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 if not exist "%WINPS%" (
     echo [FAIL] Windows PowerShell was not found.
@@ -26,8 +42,19 @@ if not "%WINGET_RC%"=="0" (
     echo.
     echo [WARN] WinGet could not be restored automatically.
     echo The main bootstrap will continue and only require WinGet if
-    echo Python or FFmpeg actually needs installation.
+    echo Python, VC++ Runtime or FFmpeg actually needs installation.
     echo.
+)
+
+rem PyTorch on Windows depends on the Microsoft Visual C++ x64 Runtime.
+"%WINPS%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\ensure_vcredist.ps1"
+set "VC_RC=%ERRORLEVEL%"
+if not "%VC_RC%"=="0" (
+    echo.
+    echo [FAIL] Microsoft Visual C++ x64 Runtime could not be prepared.
+    echo.
+    pause
+    exit /b %VC_RC%
 )
 
 "%WINPS%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\portable_bootstrap.ps1"
@@ -37,8 +64,21 @@ if not "%RC%"=="0" (
     echo.
     echo ============================================================
     echo [FAIL] Genre_test could not be started.
-    echo See .genre_test\bootstrap.log for details.
     echo ============================================================
+    echo.
+
+    if exist "%~dp0.venv\Scripts\python.exe" (
+        echo PyTorch import diagnostic:
+        echo ------------------------------------------------------------
+        "%~dp0.venv\Scripts\python.exe" -c "import torch; print('torch='+str(torch.__version__)+' cuda='+str(torch.version.cuda)+' available='+str(torch.cuda.is_available()))" > "%~dp0.genre_test\torch_import_diagnostic.txt" 2>&1
+        type "%~dp0.genre_test\torch_import_diagnostic.txt"
+        echo ------------------------------------------------------------
+        type "%~dp0.genre_test\torch_import_diagnostic.txt" >> "%~dp0.genre_test\bootstrap.log"
+    )
+
+    echo See these files for details:
+    echo   C:\Genre_test_0.3.6_portable\.genre_test\bootstrap.log
+    echo   C:\Genre_test_0.3.6_portable\.genre_test\torch_import_diagnostic.txt
     echo.
     pause
     exit /b %RC%
