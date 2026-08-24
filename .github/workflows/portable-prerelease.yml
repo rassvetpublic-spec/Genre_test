@@ -1,0 +1,68 @@
+name: Portable prerelease 0.3.6
+
+on:
+  push:
+    branches:
+      - v0-3-6-portable-prerelease
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify frozen prerelease version
+        shell: bash
+        run: |
+          grep -q '__version__ = "0.3.6"' src/genre_test/__init__.py
+          grep -q 'version = "0.3.6"' pyproject.toml
+
+      - name: Parse portable PowerShell bootstrap
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path './scripts/portable_bootstrap.ps1'),
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | Format-List | Out-String | Write-Error
+            exit 1
+          }
+          Write-Host 'PowerShell parser: PASS'
+
+      - name: Build portable folder
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="dist/Genre_test_0.3.6_portable"
+          mkdir -p "$ROOT/src" "$ROOT/scripts" "$ROOT/config"
+          cp Genre_test_START.cmd "$ROOT/"
+          cp PORTABLE_README.txt "$ROOT/"
+          cp pyproject.toml LICENSE README.md "$ROOT/"
+          cp -R src/genre_test "$ROOT/src/"
+          cp scripts/portable_bootstrap.ps1 "$ROOT/scripts/"
+          cp -R config/. "$ROOT/config/"
+          printf 'Genre_test 0.3.6 portable prerelease\nSource main: 06afdc5cb4d940797e514873e34b737ef0250540\nPackage commit: %s\n' "$GITHUB_SHA" > "$ROOT/VERSION.txt"
+          (
+            cd "$ROOT"
+            find . -type f -print0 | sort -z | xargs -0 sha256sum > MANIFEST_SHA256.txt
+          )
+          cd dist
+          zip -9 -r Genre_test_0.3.6_portable_prerelease.zip Genre_test_0.3.6_portable
+
+      - name: Inspect archive
+        shell: bash
+        run: |
+          unzip -l dist/Genre_test_0.3.6_portable_prerelease.zip
+          test -s dist/Genre_test_0.3.6_portable_prerelease.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Genre_test_0.3.6_portable_prerelease
+          path: dist/Genre_test_0.3.6_portable_prerelease.zip
+          if-no-files-found: error
+          retention-days: 30
