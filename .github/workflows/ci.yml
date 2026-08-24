@@ -25,6 +25,25 @@ jobs:
           pip install -e . --no-deps
       - name: CLI version smoke
         run: genre-test --version
+      - name: PowerShell setup parser and CUDA 13 gate
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path './scripts/setup.ps1'),
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | Format-List | Out-String | Write-Error
+            exit 1
+          }
+          $setup = Get-Content './scripts/setup.ps1' -Raw
+          if ($setup -notmatch 'torch==\$TorchVersion' -or $setup -notmatch 'whl/cu130') {
+            throw 'v0.4 setup does not pin the CUDA 13.0 PyTorch path.'
+          }
+          Write-Host 'setup.ps1 parser/CUDA13 gate PASS'
       - name: FFmpeg bootstrap script smoke
         shell: pwsh
         run: ./scripts/ensure_ffmpeg.ps1 -NoInstall
