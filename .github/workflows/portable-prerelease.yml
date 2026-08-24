@@ -24,18 +24,27 @@ jobs:
       - name: Parse portable PowerShell bootstrap
         shell: pwsh
         run: |
-          $tokens = $null
-          $errors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile(
-            (Resolve-Path './scripts/portable_bootstrap.ps1'),
-            [ref]$tokens,
-            [ref]$errors
-          ) | Out-Null
-          if ($errors.Count -gt 0) {
-            $errors | Format-List | Out-String | Write-Error
-            exit 1
+          foreach ($script in @('./scripts/ensure_winget.ps1', './scripts/portable_bootstrap.ps1')) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $script),
+              [ref]$tokens,
+              [ref]$errors
+            ) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | Format-List | Out-String | Write-Error
+              exit 1
+            }
+            Write-Host "PowerShell parser PASS: $script"
           }
-          Write-Host 'PowerShell parser: PASS'
+
+      - name: Verify WinGet recovery path
+        shell: bash
+        run: |
+          grep -q 'Microsoft.WinGet.Client' scripts/ensure_winget.ps1
+          grep -q 'Repair-WinGetPackageManager' scripts/ensure_winget.ps1
+          grep -q 'ensure_winget.ps1' Genre_test_START.cmd
 
       - name: Build portable folder
         shell: bash
@@ -48,6 +57,7 @@ jobs:
           cp PORTABLE_README.txt "$ROOT/"
           cp pyproject.toml LICENSE README.md "$ROOT/"
           cp -R src/genre_test "$ROOT/src/"
+          cp scripts/ensure_winget.ps1 "$ROOT/scripts/"
           cp scripts/portable_bootstrap.ps1 "$ROOT/scripts/"
           cp -R config/. "$ROOT/config/"
           printf 'Genre_test 0.3.6 portable prerelease\nSource main: 06afdc5cb4d940797e514873e34b737ef0250540\nPackage commit: %s\n' "$GITHUB_SHA" > "$ROOT/VERSION.txt"
@@ -64,6 +74,7 @@ jobs:
           unzip -l dist/Genre_test_0.3.6_portable_prerelease.zip
           unzip -l dist/Genre_test_0.3.6_portable_prerelease.zip | grep -q 'README_RU.txt'
           unzip -l dist/Genre_test_0.3.6_portable_prerelease.zip | grep -q 'Genre_test_START.cmd'
+          unzip -l dist/Genre_test_0.3.6_portable_prerelease.zip | grep -q 'scripts/ensure_winget.ps1'
           test -s dist/Genre_test_0.3.6_portable_prerelease.zip
 
       - uses: actions/upload-artifact@v4

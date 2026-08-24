@@ -18,6 +18,18 @@ if not exist "%WINPS%" (
     exit /b 1
 )
 
+rem WinGet is not required to already exist. If missing, try Microsoft's
+rem official Microsoft.WinGet.Client repair path before the main bootstrap.
+"%WINPS%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\ensure_winget.ps1"
+set "WINGET_RC=%ERRORLEVEL%"
+if not "%WINGET_RC%"=="0" (
+    echo.
+    echo [WARN] WinGet could not be restored automatically.
+    echo The main bootstrap will continue and only require WinGet if
+    echo Python or FFmpeg actually needs installation.
+    echo.
+)
+
 "%WINPS%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\portable_bootstrap.ps1"
 set "RC=%ERRORLEVEL%"
 
