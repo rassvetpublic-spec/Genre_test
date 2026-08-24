@@ -30,7 +30,7 @@ jobs:
           foreach ($script in @(
             './scripts/ensure_winget.ps1',
             './scripts/ensure_vcredist.ps1',
-            './scripts/portable_bootstrap.ps1'
+            './scripts/portable_bootstrap_v2.ps1'
           )) {
             $tokens = $null
             $errors = $null
@@ -55,9 +55,11 @@ jobs:
           grep -Fq 'C:\Genre_test_0.3.6_portable\' Genre_test_START.cmd
           grep -q 'ensure_winget.ps1' Genre_test_START.cmd
           grep -q 'ensure_vcredist.ps1' Genre_test_START.cmd
-          grep -q 'torch_import_diagnostic.txt' Genre_test_START.cmd
-          grep -Fq "'numpy>=1.26,<3'" scripts/portable_bootstrap.ps1
-          grep -q '__GENRE_TEST_TORCH_OK__' scripts/portable_bootstrap.ps1
+          grep -q 'portable_bootstrap_v2.ps1' Genre_test_START.cmd
+          grep -Fq "'numpy>=1.26,<3'" scripts/portable_bootstrap_v2.ps1
+          grep -q '__GENRE_TEST_TORCH_OK__' scripts/portable_bootstrap_v2.ps1
+          grep -q 'pip install -e .*| Out-Host' scripts/portable_bootstrap_v2.ps1
+          grep -q 'Runtime Health:.*| Out-Host' scripts/portable_bootstrap_v2.ps1
 
       - name: Build portable folder
         shell: bash
@@ -72,7 +74,7 @@ jobs:
           cp -R src/genre_test "$ROOT/src/"
           cp scripts/ensure_winget.ps1 "$ROOT/scripts/"
           cp scripts/ensure_vcredist.ps1 "$ROOT/scripts/"
-          cp scripts/portable_bootstrap.ps1 "$ROOT/scripts/"
+          cp scripts/portable_bootstrap_v2.ps1 "$ROOT/scripts/"
           cp -R config/. "$ROOT/config/"
           printf 'Genre_test 0.3.6 portable prerelease\nRequired path: C:\\Genre_test_0.3.6_portable\nSource main: 06afdc5cb4d940797e514873e34b737ef0250540\nPackage commit: %s\n' "$GITHUB_SHA" > "$ROOT/VERSION.txt"
           (
@@ -86,11 +88,12 @@ jobs:
       - name: Inspect archive
         shell: bash
         run: |
-          unzip -l dist/Genre_test_0.3.6_portable.zip
+          unzip -t dist/Genre_test_0.3.6_portable.zip
           unzip -l dist/Genre_test_0.3.6_portable.zip | grep -q 'README_RU.txt'
           unzip -l dist/Genre_test_0.3.6_portable.zip | grep -q 'Genre_test_START.cmd'
           unzip -l dist/Genre_test_0.3.6_portable.zip | grep -q 'scripts/ensure_winget.ps1'
           unzip -l dist/Genre_test_0.3.6_portable.zip | grep -q 'scripts/ensure_vcredist.ps1'
+          unzip -l dist/Genre_test_0.3.6_portable.zip | grep -q 'scripts/portable_bootstrap_v2.ps1'
           test -s dist/Genre_test_0.3.6_portable.zip
 
       - uses: actions/upload-artifact@v4
