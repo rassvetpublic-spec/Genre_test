@@ -91,6 +91,22 @@ def test_semantic_family_mapping_normalizes_audioset_evidence() -> None:
     assert abs(sum(item.score for item in families) - 1.0) < 1e-5
 
 
+def test_weak_absolute_ast_evidence_cannot_override_maest_family() -> None:
+    maest = [
+        StyleScore("Pop", 0.40),
+        StyleScore("Rock", 0.35),
+        StyleScore("Electronic", 0.25),
+    ]
+    weak_semantic = replace(_semantic(), genre_tags=[StyleScore("Rock music", 0.03)])
+
+    evidence, agreement = fuse_family_evidence(maest, weak_semantic)
+
+    assert agreement == "mixed"
+    assert evidence[0].label == "Pop"
+    scores = {item.label: item.score for item in evidence}
+    assert scores["Pop"] > scores["Rock"]
+
+
 def test_fusion_can_switch_low_confidence_family_with_independent_evidence() -> None:
     result = _base_result()
     evidence, agreement = fuse_family_evidence(result.broad_genres, _semantic())
