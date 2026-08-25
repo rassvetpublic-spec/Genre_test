@@ -58,6 +58,28 @@ def _find_bound_combobox(root: tk.Misc, variable: tk.Variable) -> ttk.Combobox |
     return None
 
 
+def _is_device_selector_values(values: tuple[str, ...]) -> bool:
+    normalized = set(values)
+    return {"auto", "cpu"}.issubset(normalized) and normalized.issubset(
+        {"auto", "cuda", "cpu"}
+    )
+
+
+def _find_device_comboboxes(root: tk.Misc) -> list[ttk.Combobox]:
+    matches: list[ttk.Combobox] = []
+    stack: list[tk.Misc] = [root]
+    while stack:
+        parent = stack.pop()
+        for child in parent.winfo_children():
+            stack.append(child)
+            if not isinstance(child, ttk.Combobox):
+                continue
+            values = tuple(str(value) for value in child.cget("values"))
+            if _is_device_selector_values(values):
+                matches.append(child)
+    return matches
+
+
 def _fill_tree(tree: ttk.Treeview, health: RuntimeHealth) -> None:
     for item_id in tree.get_children():
         tree.delete(item_id)
@@ -165,9 +187,11 @@ def main() -> None:
             super()._publish_live_settings(notify=notify)
 
         def _sync_device_capability(self) -> None:
-            combo = _find_bound_combobox(self, self.device_var)
-            if combo is not None:
-                combo.configure(values=_device_options(self.runtime_health))
+            options = _device_options(self.runtime_health)
+            for combo in _find_device_comboboxes(self):
+                combo.configure(values=options)
+                if combo.get() not in options:
+                    combo.set("auto")
             if self.device_var.get() == "cuda" and not _cuda_usable(self.runtime_health):
                 self.device_var.set("auto")
                 super()._publish_live_settings(notify=False)
