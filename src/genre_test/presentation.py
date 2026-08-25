@@ -9,7 +9,7 @@ from .source_audio import format_source_audio
 if TYPE_CHECKING:
     from .validation import ValidationSessionResult
 
-PROFILE_VIEWS = {"normal", "suno", "distributor"}
+PROFILE_VIEWS = {"all", "normal", "suno", "distributor"}
 
 
 def tempo_candidates(bpm: float | None) -> str:
@@ -60,6 +60,24 @@ def _append_source_audio(lines: list[str], result: AnalysisResult) -> None:
     source_audio = format_source_audio(result.path)
     if source_audio:
         lines.append(f"Source audio: {source_audio}")
+
+
+def _with_optional_path(text: str, result: AnalysisResult, include_path: bool) -> str:
+    if not include_path:
+        return text
+    lines = text.splitlines()
+    if not lines:
+        return f"Full path: {result.path}"
+    return "\n".join([lines[0], f"Full path: {result.path}", *lines[1:]])
+
+
+def _without_file_header(text: str, result: AnalysisResult) -> str:
+    lines = text.splitlines()
+    if lines and lines[0] == Path(result.path).name:
+        lines = lines[1:]
+        if lines and not lines[0]:
+            lines = lines[1:]
+    return "\n".join(lines)
 
 
 def _format_profile_normal(result: AnalysisResult, top_n: int) -> str:
@@ -143,23 +161,49 @@ def _format_profile_distributor(result: AnalysisResult) -> str:
     return "\n".join(lines)
 
 
+def _format_profile_all(result: AnalysisResult, top_n: int) -> str:
+    filename = Path(result.path).name
+    normal = _without_file_header(_format_profile_normal(result, top_n), result)
+    suno = _without_file_header(_format_profile_suno(result), result)
+    distributor = _without_file_header(_format_profile_distributor(result), result)
+    return "\n".join(
+        [
+            filename,
+            "",
+            "[ОБЫЧНЫЙ]",
+            normal,
+            "",
+            "[SUNO]",
+            suno,
+            "",
+            "[ДИСТРИБЬЮТОР]",
+            distributor,
+        ]
+    )
+
+
 def format_result_text(
     result: AnalysisResult,
     top_n: int = 10,
     *,
     detailed: bool = False,
-    view: str = "normal",
+    view: str = "all",
+    include_path: bool = False,
 ) -> str:
     normalized_view = view.lower().strip()
     if normalized_view not in PROFILE_VIEWS:
         raise ValueError(f"Unknown presentation view: {view}")
 
     if result.audio_profile is not None and not detailed:
-        if normalized_view == "suno":
-            return _format_profile_suno(result)
-        if normalized_view == "distributor":
-            return _format_profile_distributor(result)
-        return _format_profile_normal(result, top_n)
+        if normalized_view == "all":
+            text = _format_profile_all(result, top_n)
+        elif normalized_view == "suno":
+            text = _format_profile_suno(result)
+        elif normalized_view == "distributor":
+            text = _format_profile_distributor(result)
+        else:
+            text = _format_profile_normal(result, top_n)
+        return _with_optional_path(text, result, include_path)
 
     genre = result.resolved_genre or "n/a"
     family = result.primary_genre or "n/a"
@@ -248,7 +292,7 @@ def format_result_text(
             )
 
     lines.extend(["", "Scores:", *_score_table(result, top_n=top_n)])
-    return "\n".join(lines)
+    return _with_optional_path("\n".join(lines), result, include_path)
 
 
 def _score_list(items, limit: int) -> str:
