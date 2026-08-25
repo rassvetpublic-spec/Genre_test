@@ -272,15 +272,7 @@ class ThemeController:
         bar = _find_health_bar(self.root)
         if bar is None:
             return
-        ttk.Combobox(
-            bar,
-            textvariable=self.theme_var,
-            values=THEME_LABELS,
-            state="readonly",
-            width=9,
-        ).pack(side="right", padx=(5, 0))
-        ttk.Label(bar, text="Тема:").pack(side="right", padx=(10, 0))
-        combo = next(
+        existing = next(
             (
                 child
                 for child in bar.winfo_children()
@@ -289,8 +281,19 @@ class ThemeController:
             ),
             None,
         )
-        if combo is not None:
-            combo.bind("<<ComboboxSelected>>", self._on_selected)
+        if existing is not None:
+            return
+
+        combo = ttk.Combobox(
+            bar,
+            textvariable=self.theme_var,
+            values=THEME_LABELS,
+            state="readonly",
+            width=9,
+        )
+        combo.pack(side="right", padx=(5, 0))
+        ttk.Label(bar, text="Тема:").pack(side="right", padx=(10, 0))
+        combo.bind("<<ComboboxSelected>>", self._on_selected)
 
     def _on_selected(self, _event=None) -> None:
         self.apply(self.theme_var.get())
@@ -302,6 +305,7 @@ class ThemeController:
 
     def _apply_current_after_map(self) -> None:
         self._map_after_id = None
+        self._install_switch()
         apply_theme(self.root, self.theme_var.get())
 
     def apply(self, theme_label: str, *, log_change: bool = True) -> None:
