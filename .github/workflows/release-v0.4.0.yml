@@ -156,7 +156,7 @@ jobs:
             git push origin HEAD:main
           fi
 
-      - name: Prune merged legacy branches
+      - name: Prune merged and retired branches
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -169,7 +169,9 @@ jobs:
             'realise/15-release-blockers' \
             'realise/17-v0-4-release' \
             'realise/19-repo-cleanup-docs' \
-            'realise/19-v0-4-legacy-cleanup'
+            'realise/19-repo-cleanup-final' \
+            'realise/19-v0-4-legacy-cleanup' \
+            'chore/final-branch-prune'
           do
             echo "Deleting merged/retired branch: $ref"
             gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$ref" >/dev/null 2>&1 || true
