@@ -496,13 +496,11 @@ class GenreTestWindow(tk.Tk):
                         f"mode={analysis_settings.mode}"
                     )
 
-                self._queue.put(
-                    (
-                        "status",
-                        f"[{idx}/{len(files)}] {path.name} | "
-                        f"{analysis_settings.device} | {analysis_settings.mode}",
-                    )
+                status_text = (
+                    f"[{idx}/{len(files)}] {path.name} | "
+                    f"{analysis_settings.device} | {analysis_settings.mode}"
                 )
+                self._queue.put(("status", status_text))
                 item_started = clock()
                 try:
                     result = analyzer.analyze(
