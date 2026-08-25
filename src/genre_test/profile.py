@@ -80,6 +80,30 @@ def _style_family(label: str) -> str | None:
     return label.split("---", 1)[0].strip()
 
 
+def _style_matches_resolved(item: StyleScore, resolved_style: str) -> bool:
+    family = _style_family(item.label)
+    clean = _clean_style(item.label)
+    expected = resolved_style.casefold().strip()
+    aliases = {clean.casefold()}
+    if family:
+        aliases.add(f"{family} {clean}".casefold())
+        aliases.add(f"{clean} {family}".casefold())
+    return expected in aliases
+
+
+def _resolved_style_family(items: list[StyleScore], resolved_style: str | None) -> str | None:
+    if not resolved_style:
+        return None
+    match = next((item for item in items if _style_matches_resolved(item, resolved_style)), None)
+    return _style_family(match.label) if match is not None else None
+
+
+def _best_style_for_family(items: list[StyleScore], family: str | None) -> StyleScore | None:
+    if not family:
+        return None
+    return next((item for item in items if _style_family(item.label) == family), None)
+
+
 def _normalize_scores(items: list[StyleScore]) -> dict[str, float]:
     total = sum(max(0.0, item.score) for item in items)
     if total <= 0.0:
@@ -204,16 +228,26 @@ def build_audio_profile(
     if family_evidence and result.confidence != "high":
         final_family = family_evidence[0].label
 
-    primary_style = result.resolved_genre
-    if final_family and final_family != maest_family:
-        candidate = next(
-            (item for item in result.top_styles if _style_family(item.label) == final_family),
-            None,
-        )
+    original_primary_style = result.resolved_genre
+    primary_style = original_primary_style
+    resolved_family = _resolved_style_family(result.top_styles, primary_style)
+
+    if final_family and resolved_family and final_family != resolved_family:
+        candidate = _best_style_for_family(result.top_styles, final_family)
+        if candidate is not None:
+            primary_style = _clean_style(candidate.label)
+        else:
+            # Never publish a family that contradicts a resolved style when no
+            # same-family candidate exists in the MAEST evidence.
+            final_family = resolved_family
+    elif final_family and final_family != maest_family:
+        candidate = _best_style_for_family(result.top_styles, final_family)
         if candidate is not None:
             primary_style = _clean_style(candidate.label)
 
-    if final_family != maest_family and result.resolved_genre:
+    if primary_style != original_primary_style and original_primary_style:
+        secondary = original_primary_style
+    elif final_family != maest_family and result.resolved_genre:
         secondary = result.resolved_genre
     else:
         secondary = result.secondary_style or result.secondary_genre

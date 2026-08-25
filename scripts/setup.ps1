@@ -14,14 +14,26 @@ $TorchVersion = '2.12.1'
 $CudaIndex = 'https://download.pytorch.org/whl/cu130'
 $CpuIndex = 'https://download.pytorch.org/whl/cpu'
 
+function Refresh-ProcessPath {
+    $machine = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+    $user = [Environment]::GetEnvironmentVariable('Path', 'User')
+    $parts = @()
+    if ($machine) { $parts += $machine }
+    if ($user) { $parts += $user }
+    if ($parts.Count -gt 0) { $env:Path = ($parts -join ';') }
+}
+
 function Get-CompatiblePython {
+    Refresh-ProcessPath
+
     $py = Get-Command py -ErrorAction SilentlyContinue
     if ($py) {
-        foreach ($selector in @('-3.12', '-3.11')) {
+        foreach ($selector in @('-3.13', '-3.12', '-3.11')) {
             try {
-                $v = (& $py.Source $selector -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null | Select-Object -Last 1)
-                if ($LASTEXITCODE -eq 0 -and $v -match '^3\.(11|12)$') {
-                    return [pscustomobject]@{ Exe=$py.Source; Prefix=@($selector); Version=$v; Display="py $selector" }
+                $v = (& $py.Source $selector -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}|{64 if sys.maxsize > 2**32 else 32}')" 2>$null | Select-Object -Last 1)
+                if ($LASTEXITCODE -eq 0 -and $v -match '^3\.(11|12|13)\|64$') {
+                    $version = ($v -split '\|')[0]
+                    return [pscustomobject]@{ Exe=$py.Source; Prefix=@($selector); Version=$version; Display="py $selector" }
                 }
             } catch {}
         }
@@ -30,13 +42,52 @@ function Get-CompatiblePython {
     $python = Get-Command python -ErrorAction SilentlyContinue
     if ($python) {
         try {
-            $v = (& $python.Source -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null | Select-Object -Last 1)
-            if ($LASTEXITCODE -eq 0 -and $v -match '^3\.(11|12)$') {
-                return [pscustomobject]@{ Exe=$python.Source; Prefix=@(); Version=$v; Display=$python.Source }
+            $v = (& $python.Source -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}|{64 if sys.maxsize > 2**32 else 32}')" 2>$null | Select-Object -Last 1)
+            if ($LASTEXITCODE -eq 0 -and $v -match '^3\.(11|12|13)\|64$') {
+                $version = ($v -split '\|')[0]
+                return [pscustomobject]@{ Exe=$python.Source; Prefix=@(); Version=$version; Display=$python.Source }
             }
         } catch {}
     }
     return $null
+}
+
+function Get-WingetPath {
+    Refresh-ProcessPath
+    $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
+    if (-not $winget) { $winget = Get-Command winget -ErrorAction SilentlyContinue }
+    if ($winget) { return $winget.Source }
+
+    if ($env:LOCALAPPDATA) {
+        $alias = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\winget.exe'
+        if (Test-Path -LiteralPath $alias -PathType Leaf) { return $alias }
+    }
+    return $null
+}
+
+function Test-NvidiaHardware {
+    Refresh-ProcessPath
+    if (Get-Command nvidia-smi -ErrorAction SilentlyContinue) { return $true }
+    if (-not $IsWindows) { return $false }
+
+    try {
+        $controllers = Get-CimInstance -ClassName Win32_VideoController -ErrorAction Stop
+        foreach ($controller in $controllers) {
+            $name = [string]$controller.Name
+            $pnp = [string]$controller.PNPDeviceID
+            if ($name -match 'NVIDIA' -or $pnp -match 'VEN_10DE') { return $true }
+        }
+    } catch {}
+
+    try {
+        $displayDevices = Get-CimInstance -ClassName Win32_PnPEntity -ErrorAction Stop |
+            Where-Object { [string]$_.PNPClass -eq 'Display' }
+        foreach ($device in $displayDevices) {
+            if ([string]$device.PNPDeviceID -match 'VEN_10DE') { return $true }
+        }
+    } catch {}
+
+    return $false
 }
 
 function Get-TorchProbe {
@@ -88,15 +139,23 @@ except Exception as exc:
 
 $runtime = Get-CompatiblePython
 if (-not $runtime -and $InstallPython) {
-    $winget = Get-Command winget -ErrorAction SilentlyContinue
-    if (-not $winget) { throw 'Python is missing and winget is unavailable.' }
-    Write-Host 'Installing Python 3.12 x64...'
-    & $winget.Source install --id Python.Python.3.12 --exact --accept-package-agreements --accept-source-agreements
+    $wingetPath = Get-WingetPath
+    if (-not $wingetPath -and $IsWindows) {
+        $ensureWinget = Join-Path $PSScriptRoot 'ensure_winget.ps1'
+        if (Test-Path $ensureWinget) {
+            Write-Host 'WinGet not found. Attempting automatic repair...'
+            & $ensureWinget
+            $wingetPath = Get-WingetPath
+        }
+    }
+    if (-not $wingetPath) { throw 'Python is missing and winget is unavailable.' }
+    Write-Host 'No compatible Python 3.11/3.12/3.13 x64 found. Installing Python 3.12 x64...'
+    & $wingetPath install --id Python.Python.3.12 --exact --architecture x64 --accept-package-agreements --accept-source-agreements
     if ($LASTEXITCODE -ne 0) { throw 'Python 3.12 installation failed.' }
     $runtime = Get-CompatiblePython
 }
 if (-not $runtime) {
-    throw 'Compatible Python 3.11/3.12 x64 not found. Run .\scripts\setup.ps1 -InstallPython.'
+    throw 'Compatible Python 3.11/3.12/3.13 x64 not found. Run .\scripts\setup.ps1 -InstallPython.'
 }
 Write-Host "Using Python $($runtime.Version): $($runtime.Display)"
 
@@ -121,7 +180,8 @@ try {
 } catch {}
 
 $existing = Get-TorchProbe -Python $venvPython
-$hasNvidia = [bool](Get-Command nvidia-smi -ErrorAction SilentlyContinue)
+$hasNvidia = Test-NvidiaHardware
+Write-Host "NVIDIA hardware detected: $hasNvidia"
 
 if ($Cpu) {
     $cpuOK = $existing -and -not $existing.Available -and ([version]($existing.Version.Split('+')[0]) -ge [version]'2.12.1')
@@ -138,7 +198,7 @@ elseif ($hasNvidia) {
         Write-Host "PyTorch already compatible: $($existing.Version), CUDA $($existing.Cuda), $($existing.Architecture), native=$($existing.Native)."
         Write-Host 'Skipping the multi-GB PyTorch reinstall.'
     } else {
-        Write-Host "Installing PyTorch $TorchVersion / CUDA 13.0..."
+        Write-Host "NVIDIA hardware detected. Installing PyTorch $TorchVersion / CUDA 13.0..."
         & $venvPython -m pip install --upgrade "torch==$TorchVersion" --index-url $CudaIndex
         if ($LASTEXITCODE -ne 0) { throw 'CUDA 13.0 PyTorch installation failed.' }
     }
@@ -155,8 +215,8 @@ else {
 
 $probe = Get-TorchProbe -Python $venvPython
 if (-not $probe) { throw 'PyTorch cannot be imported after installation.' }
-if ($hasNvidia -and -not $Cpu -and -not $probe.TargetOK) {
-    throw "GPU runtime target failed: torch=$($probe.Version), CUDA=$($probe.Cuda), arch=$($probe.Architecture), native=$($probe.Native)."
+if ($hasNvidia -and -not $Cpu -and (-not $probe.Available -or -not $probe.TargetOK)) {
+    throw "NVIDIA hardware is present but CUDA runtime is unavailable/incompatible: torch=$($probe.Version), CUDA=$($probe.Cuda), arch=$($probe.Architecture), native=$($probe.Native). Update the NVIDIA driver or run setup.ps1 -Cpu explicitly."
 }
 Write-Host "PyTorch: $($probe.Version) | CUDA $($probe.Cuda) | $($probe.Gpu) | $($probe.Architecture) | native=$($probe.Native)"
 
@@ -177,5 +237,5 @@ Write-Host "`nRuntime check:"
 & $genreExe doctor
 if ($LASTEXITCODE -ne 0) { throw 'genre-test doctor failed.' }
 
-Write-Host "`nSetup complete: PyTorch >=2.12.1 / CUDA 13.0 / native Blackwell when applicable."
+Write-Host "`nSetup complete: Python 3.11-3.13 x64 / PyTorch >=2.12.1 / CUDA 13.0 / native Blackwell when applicable."
 Write-Host "GUI: .\scripts\gui.ps1"

@@ -13,24 +13,46 @@ def test_compact_summary_reports_key_capabilities() -> None:
         (
             RuntimeComponent("NumPy", "OK", "2.5.2", category="Package"),
             RuntimeComponent("PyTorch", "OK", "2.12.1", category="Package"),
-            RuntimeComponent("CUDA", "OK", "13.0", category="Acceleration"),
+            RuntimeComponent("CUDA", "N/A", "not applicable", category="Acceleration"),
             RuntimeComponent(
                 "GPU architecture",
-                "OK",
-                "Blackwell native (sm_120)",
+                "N/A",
+                "CPU-only",
                 category="Acceleration",
             ),
             RuntimeComponent("FFmpeg", "OK", "ffmpeg.exe", category="External"),
-            RuntimeComponent("HF auth", "WARN", "anonymous", category="External"),
+            RuntimeComponent("HF auth", "OK", "anonymous", category="External"),
         )
     )
 
-    assert health.overall_status == "WARN"
+    assert health.overall_status == "OK"
     assert health.package_ok_count == 2
     assert health.package_count == 2
     assert health.compact_summary == (
-        "Deps: 2/2 | CUDA: OK | GPU: OK | FFmpeg: OK | HF: WARN"
+        "Deps: 2/2 | CUDA: N/A | GPU: N/A | FFmpeg: OK | HF: OK"
     )
+
+
+@pytest.mark.parametrize(
+    ("version_info", "expected_status"),
+    [
+        ((3, 11, 0), "OK"),
+        ((3, 12, 0), "OK"),
+        ((3, 13, 0), "OK"),
+        ((3, 14, 0), "FAIL"),
+    ],
+)
+def test_python_component_supports_311_through_313(
+    monkeypatch: pytest.MonkeyPatch,
+    version_info: tuple[int, int, int],
+    expected_status: str,
+) -> None:
+    monkeypatch.setattr(runtime_health.sys, "version_info", version_info)
+
+    component = runtime_health._python_component()
+
+    assert component.status == expected_status
+    assert component.details == "Supported: >=3.11,<3.14"
 
 
 def _blackwell_cuda(*, native: bool = True, cuda_version: str = "13.0") -> SimpleNamespace:
@@ -46,12 +68,12 @@ def _blackwell_cuda(*, native: bool = True, cuda_version: str = "13.0") -> Simpl
     )
 
 
-def _diagnostics() -> SimpleNamespace:
+def _diagnostics(*, token: bool = True) -> SimpleNamespace:
     return SimpleNamespace(
         ffmpeg_available=True,
         ffmpeg_path="C:/ffmpeg.exe",
-        hf_token_available=True,
-        hf_auth_label="token available (test)",
+        hf_token_available=token,
+        hf_auth_label=("token available (test)" if token else "anonymous (no token found)"),
     )
 
 
@@ -71,6 +93,7 @@ def test_collect_runtime_health_detects_missing_package(monkeypatch: pytest.Monk
     monkeypatch.setattr(runtime_health, "package_version", fake_version)
     monkeypatch.setattr(runtime_health.importlib, "import_module", lambda _name: fake_torch)
     monkeypatch.setattr(runtime_health, "collect_runtime_diagnostics", _diagnostics)
+    monkeypatch.setattr(runtime_health, "_nvidia_hardware_present", lambda: True)
 
     health = runtime_health.collect_runtime_health()
 
@@ -85,12 +108,12 @@ def test_collect_runtime_health_detects_missing_package(monkeypatch: pytest.Monk
     assert health.overall_status == "FAIL"
 
 
-def test_collect_runtime_health_marks_cpu_fallback_as_warning(
+def test_collect_runtime_health_marks_cpu_only_as_not_applicable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     fake_cuda = SimpleNamespace(is_available=lambda: False)
     fake_torch = SimpleNamespace(
-        __version__="2.12.1",
+        __version__="2.12.1+cpu",
         cuda=fake_cuda,
         version=SimpleNamespace(cuda=None),
     )
@@ -98,13 +121,66 @@ def test_collect_runtime_health_marks_cpu_fallback_as_warning(
     monkeypatch.setattr(runtime_health, "package_version", lambda _name: "2.12.1")
     monkeypatch.setattr(runtime_health.importlib, "import_module", lambda _name: fake_torch)
     monkeypatch.setattr(runtime_health, "collect_runtime_diagnostics", _diagnostics)
+    monkeypatch.setattr(runtime_health, "_nvidia_hardware_present", lambda: False)
 
     health = runtime_health.collect_runtime_health()
 
-    assert health.by_name("CUDA").status == "WARN"  # type: ignore[union-attr]
-    assert health.by_name("GPU").value == "CPU mode"  # type: ignore[union-attr]
-    assert health.by_name("GPU architecture").value == "CPU mode"  # type: ignore[union-attr]
-    assert health.overall_status == "WARN"
+    assert health.by_name("CUDA").status == "N/A"  # type: ignore[union-attr]
+    assert health.by_name("GPU").status == "N/A"  # type: ignore[union-attr]
+    assert health.by_name("GPU").value == "CPU-only"  # type: ignore[union-attr]
+    assert health.by_name("GPU architecture").status == "N/A"  # type: ignore[union-attr]
+    assert health.overall_status == "OK"
+    assert "CUDA: N/A" in health.compact_summary
+    assert "GPU: N/A" in health.compact_summary
+
+
+def test_nvidia_hardware_without_cuda_is_runtime_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_cuda = SimpleNamespace(is_available=lambda: False)
+    fake_torch = SimpleNamespace(
+        __version__="2.12.1+cpu",
+        cuda=fake_cuda,
+        version=SimpleNamespace(cuda=None),
+    )
+
+    monkeypatch.setattr(runtime_health, "package_version", lambda _name: "2.12.1")
+    monkeypatch.setattr(runtime_health.importlib, "import_module", lambda _name: fake_torch)
+    monkeypatch.setattr(runtime_health, "collect_runtime_diagnostics", _diagnostics)
+    monkeypatch.setattr(runtime_health, "_nvidia_hardware_present", lambda: True)
+
+    health = runtime_health.collect_runtime_health()
+
+    assert health.by_name("CUDA").status == "FAIL"  # type: ignore[union-attr]
+    assert health.by_name("GPU").status == "FAIL"  # type: ignore[union-attr]
+    assert health.overall_status == "FAIL"
+
+
+def test_anonymous_hf_access_is_not_a_warning(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_cuda = SimpleNamespace(is_available=lambda: False)
+    fake_torch = SimpleNamespace(
+        __version__="2.12.1+cpu",
+        cuda=fake_cuda,
+        version=SimpleNamespace(cuda=None),
+    )
+
+    monkeypatch.setattr(runtime_health, "package_version", lambda _name: "2.12.1")
+    monkeypatch.setattr(runtime_health.importlib, "import_module", lambda _name: fake_torch)
+    monkeypatch.setattr(
+        runtime_health,
+        "collect_runtime_diagnostics",
+        lambda: _diagnostics(token=False),
+    )
+    monkeypatch.setattr(runtime_health, "_nvidia_hardware_present", lambda: False)
+
+    health = runtime_health.collect_runtime_health()
+
+    hf = health.by_name("HF auth")
+    assert hf is not None
+    assert hf.status == "OK"
+    assert hf.value == "anonymous"
+    assert "token is optional" in hf.details
+    assert health.overall_status == "OK"
 
 
 def test_blackwell_without_native_sm120_is_failure(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -116,6 +192,7 @@ def test_blackwell_without_native_sm120_is_failure(monkeypatch: pytest.MonkeyPat
     monkeypatch.setattr(runtime_health, "package_version", lambda _name: "2.12.1")
     monkeypatch.setattr(runtime_health.importlib, "import_module", lambda _name: fake_torch)
     monkeypatch.setattr(runtime_health, "collect_runtime_diagnostics", _diagnostics)
+    monkeypatch.setattr(runtime_health, "_nvidia_hardware_present", lambda: True)
 
     health = runtime_health.collect_runtime_health()
 
@@ -135,6 +212,7 @@ def test_cuda_128_is_rejected_for_v04_gpu_baseline(monkeypatch: pytest.MonkeyPat
     monkeypatch.setattr(runtime_health, "package_version", lambda _name: "2.12.1")
     monkeypatch.setattr(runtime_health.importlib, "import_module", lambda _name: fake_torch)
     monkeypatch.setattr(runtime_health, "collect_runtime_diagnostics", _diagnostics)
+    monkeypatch.setattr(runtime_health, "_nvidia_hardware_present", lambda: True)
 
     health = runtime_health.collect_runtime_health()
 

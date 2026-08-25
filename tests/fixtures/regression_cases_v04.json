@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "purpose": "Known real-world Genre_test v0.4 regression cases. Audio files stay external; this manifest records expected invariants and unresolved ground truth.",
+  "cases": [
+    {
+      "id": "tempo-short-3to2-ambiguous",
+      "basename": "2_5217805607263838693.mp3",
+      "category": "tempo",
+      "status": "ground_truth_required",
+      "observed": {
+        "duration_seconds": 22.584,
+        "selected_bpm": 170.03,
+        "alternate_two_thirds_bpm": 113.35,
+        "key": "F# minor",
+        "input_quality": "SHORT_INPUT"
+      },
+      "expected": {
+        "bpm": null,
+        "key": "F# minor"
+      },
+      "note": "User reports the selected BPM is wrong. Do not promote 170.03 to ground truth until the true musical BPM is supplied/verified."
+    },
+    {
+      "id": "mode-convergence-xlaunge",
+      "basename": "Rassvetmsk-xLaunge.mp3",
+      "category": "mode_convergence",
+      "status": "known_instability",
+      "observed": {
+        "fast_genre": "Reggaeton",
+        "auto_genre": "Drum n Bass",
+        "accurate_genre": "Reggaeton"
+      },
+      "expected": {
+        "resolved_genre_stable_across_modes": true
+      },
+      "note": "Auto diverged from Fast/Accurate in the real regression corpus."
+    },
+    {
+      "id": "family-consistency-za-hutorom",
+      "basename": "За хутором.mp3",
+      "category": "family_consistency",
+      "status": "known_instability",
+      "observed": {
+        "resolved_genre": "Pop Rock",
+        "resolved_genre_stable_across_modes": true,
+        "broad_family_stable_across_modes": false
+      },
+      "expected": {
+        "resolved_genre_stable_across_modes": true,
+        "broad_family_consistent_with_resolved_genre": true
+      },
+      "note": "Primary style stayed Pop Rock while broad-family resolution changed."
+    },
+    {
+      "id": "family-consistency-live-acoustic",
+      "basename": "Сашенька ¹⁸⁺ (Live Acoustic).mp3",
+      "category": "family_consistency",
+      "status": "known_instability",
+      "observed": {
+        "resolved_genre": "Pop Ballad",
+        "resolved_genre_stable_across_modes": true,
+        "broad_family_stable_across_modes": false
+      },
+      "expected": {
+        "resolved_genre_stable_across_modes": true,
+        "broad_family_consistent_with_resolved_genre": true
+      },
+      "note": "Useful resolver regression: primary style is stable while broad family drifts."
+    }
+  ]
+}
