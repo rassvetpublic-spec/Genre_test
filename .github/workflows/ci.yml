@@ -57,19 +57,22 @@ jobs:
             exit 1
           fi
           echo 'universal root launcher + first-run bootstrap gate PASS'
-      - name: PowerShell setup parser and CUDA 13 gate
+      - name: PowerShell setup/release parser and CUDA 13 gate
         shell: pwsh
         run: |
-          $tokens = $null
-          $errors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile(
-            (Resolve-Path './scripts/setup.ps1'),
-            [ref]$tokens,
-            [ref]$errors
-          ) | Out-Null
-          if ($errors.Count -gt 0) {
-            $errors | Format-List | Out-String | Write-Error
-            exit 1
+          foreach ($script in @('./scripts/setup.ps1', './scripts/release_bootstrap.ps1')) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $script),
+              [ref]$tokens,
+              [ref]$errors
+            ) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | Format-List | Out-String | Write-Error
+              exit 1
+            }
+            Write-Host "PowerShell parser PASS: $script"
           }
           $setup = Get-Content './scripts/setup.ps1' -Raw
           if ($setup -notmatch 'torch==\$TorchVersion' -or $setup -notmatch 'whl/cu130') {
@@ -84,7 +87,14 @@ jobs:
           if ($setup -notmatch 'Python\.Python\.3\.12' -or $setup -notmatch '--architecture x64') {
             throw 'First-run fallback does not enforce automatic Python 3.12 x64 installation.'
           }
-          Write-Host 'setup.ps1 parser/CUDA13/Python3.13/first-run gate PASS'
+          $release = Get-Content './scripts/release_bootstrap.ps1' -Raw
+          if ($release -notmatch "torchVersion = '2\.12\.1'" -or $release -notmatch 'whl/cu130' -or $release -notmatch 'whl/cpu') {
+            throw 'v0.4 release bootstrap does not pin Torch 2.12.1 / cu130 / CPU routes.'
+          }
+          if ($release -notmatch 'Win32_VideoController' -or $release -notmatch 'VEN_10DE' -or $release -notmatch 'torch\.cuda\.get_arch_list') {
+            throw 'v0.4 release bootstrap is missing NVIDIA PnP/native architecture gates.'
+          }
+          Write-Host 'setup/release parser/CUDA13/Python3.13 gate PASS'
       - name: FFmpeg bootstrap script smoke
         shell: pwsh
         run: ./scripts/ensure_ffmpeg.ps1 -NoInstall
