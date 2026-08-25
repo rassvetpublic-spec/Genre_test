@@ -2,338 +2,237 @@
 
 **Current version: 0.4.0**
 
-Локальный музыкальный анализатор для Windows/Linux. В v0.4 основной пользовательский профиль строится как ансамбль **MAEST Discogs519 + AudioSet AST**, а Validation Lab сохраняет стабильный raw-MAEST контур для сравнения с накопленной историей 0.3.x.
+Genre_test is a local Windows-first music profiler and regression lab. Ordinary analysis combines **MAEST Discogs519 + pinned AudioSet AST + DSP** into an `AudioProfile`; Validation remains a dedicated reproducibility/drift workflow.
 
-## Что выдаёт v0.4
+## What v0.4.0 outputs
 
-Обычный анализ формирует `AudioProfile`:
+Ordinary analysis can produce all three views from one inference pass:
 
-- primary genre / broad family;
-- confidence;
-- secondary influence;
-- adjacent genres;
-- mood tags;
-- vocal tags;
-- instrumentation;
-- production/electronic tags;
-- BPM и key/mode;
-- distributor genre/subgenre;
-- SUNO Style of Music;
-- ensemble agreement и evidence metadata в JSON/CSV.
+- **Normal** — genre, family, confidence, influences, semantic tags, source metadata, BPM/key and score evidence;
+- **SUNO** — compact Style of Music handoff;
+- **Distributor** — broad genre/subgenre-oriented mapping.
 
-Жанровый fine-style эксперт — MAEST Discogs519. Независимый semantic слой — MIT Audio Spectrogram Transformer, fine-tuned on AudioSet. Semantic слой используется как дополнительное evidence, а не как безусловная замена MAEST.
+Default GUI/CLI view is `all`.
 
-## Архитектура 0.4
+## Architecture
 
 ```text
 Audio
-  |
-  +--> MAEST Discogs519 --------------------+
-  |    fine styles / broad families         |
-  |                                         +--> Evidence fusion
-  +--> AudioSet AST ------------------------+       |
-  |    genre / vocal / instruments / mood           v
-  |                                             AudioProfile
-  +--> librosa / DSP                                 |
-       BPM / key / spectral features                 +--> Normal
-                                                     +--> SUNO
-                                                     +--> Distributor
+  +--> MAEST Discogs519 fine-style evidence ----+
+  +--> AudioSet AST semantic evidence ----------+--> deterministic fusion --> AudioProfile
+  +--> DSP / source metadata -------------------+                           |
+                                                                            +--> Normal
+                                                                            +--> SUNO
+                                                                            +--> Distributor
 
-Raw MAEST -----------------------------------------> Validation Lab
+Raw MAEST evidence ---------------------------------------------------------> Validation
 ```
 
-### Ensemble policy
+### Pinned models
 
-MAEST остаётся главным источником detailed genre/style. AudioSet AST добавляет независимое broad-family и semantic evidence.
-
-- high-confidence MAEST family не переопределяется semantic-моделью;
-- при неоднозначном MAEST fused evidence может изменить broad family;
-- если family меняется, выбирается strongest MAEST fine style внутри новой family;
-- disagreement моделей понижает итоговую confidence;
-- если semantic-модель недоступна, режим `auto` продолжает работу как MAEST-only и фиксирует fallback в metadata/log.
-
-## Модели и воспроизводимость
-
-### MAEST Discogs519
+MAEST:
 
 ```text
-model:    mtg-upf/discogs-maest-30s-pw-129e-519l
-revision: 6c35f32a350f74351870937d5ae0bae1d898d1df
+mtg-upf/discogs-maest-30s-pw-129e-519l
+revision 6c35f32a350f74351870937d5ae0bae1d898d1df
 ```
 
-### AudioSet AST
+AudioSet AST:
 
 ```text
-model:    MIT/ast-finetuned-audioset-10-10-0.4593
-revision: f826b80d28226b62986cc218e5cec390b1096902
+MIT/ast-finetuned-audioset-10-10-0.4593
+revision f826b80d28226b62986cc218e5cec390b1096902
 ```
-
-Semantic profile использует до трёх распределённых 10-секундных окон. Модель загружается лениво при первом обычном анализе и использует тот же PyTorch/CUDA runtime.
 
 Result schema: **4**.
 
-## Windows GUI
+## Runtime
 
-Запуск:
+Supported Windows runtime:
 
-```powershell
-.\scripts\gui.ps1
-```
+- Python 3.11 / 3.12 / 3.13 x64;
+- PyTorch 2.12.1;
+- NVIDIA: CUDA 13.0 / cu130;
+- Blackwell requires native active architecture; RTX 5070 Ti `sm_120` verified;
+- CPU-only mode supported;
+- FFmpeg required for extended decode fallback.
 
-или:
-
-```text
-scripts\Genre_test_GUI.cmd
-```
-
-GUI имеет две вкладки:
+Runtime Health examples:
 
 ```text
-Анализ
-Validation / Перепроверка
+GPU system: Runtime OK | Deps 12/12 | CUDA OK | GPU OK | FFmpeg OK | HF OK
+CPU-only:   Runtime OK | Deps 12/12 | CUDA N/A | GPU N/A | FFmpeg OK | HF OK
 ```
 
-Обычный Analysis выводит результат по мере обработки треков. В нём скрыты внутренние `run_id`, `track_id`, hashes и model revisions. Полная техническая информация остаётся в Validation и JSON/history.
+If NVIDIA hardware exists but PyTorch CUDA is unusable, Runtime Health reports failure instead of silently treating the machine as CPU-only.
 
-Текст можно выделять мышью и копировать `Ctrl+C`, `Ctrl+Insert`; `Ctrl+A` выделяет всё. Поддерживается русская раскладка Windows. Кнопка `СКОПИРОВАТЬ СОДЕРЖИМОЕ` копирует весь отчёт.
+## Windows startup
 
-### Представления результата
+### Git working copy
 
-В обычном Analysis доступны:
+Clone/pull the repository and run:
 
 ```text
-Обычный
-SUNO
-Дистрибьютор
+Genre_test_START.cmd
 ```
 
-`Обычный` показывает жанровый профиль, semantic tags, tempo/key и объединённую таблицу Top styles + Broad families.
+The launcher prepares/updates the private project `.venv`, reuses compatible Python/PyTorch when possible and starts the GUI.
 
-`SUNO` формирует компактный `Style of Music` из primary genre, influence, mood, vocal, instrumentation, BPM и key.
+### Portable release
 
-`Дистрибьютор` выдаёт broad distributor genre, subgenre, primary genre и соседние влияния.
-
-## Runtime Health
-
-Верхняя строка GUI показывает компактный статус:
+Current supported package:
 
 ```text
-Runtime: OK | Deps: 12/12 | CUDA: OK | FFmpeg: OK | HF: OK
+releases/Genre_test_0.4.0_portable.zip
 ```
 
-Кнопка `Зависимости…` открывает полный список Python/packages/CUDA/GPU/FFmpeg/HF auth и pinned model revisions.
+The same archive is attached to GitHub Release `v0.4.0` together with `SHA256SUMS.txt`.
 
-Основная строка GUI показывает только:
+The package does not contain Python, PyTorch or model weights. First launch prepares them automatically and uses normal user pip/Hugging Face caches while keeping the project `.venv` isolated.
+
+## GUI
+
+The Runtime Health window has three tabs:
 
 ```text
-Genre_test 0.4.0 | Models: MAEST Discogs519 + AudioSet AST
+Анализ | Validation | Проверка
 ```
 
-Полные hashes/revisions находятся только в диагностическом окне.
+### Анализ
 
-## Режимы MAEST
+- source file/folder selection;
+- Device `auto/cpu/cuda` when CUDA is actually available;
+- Auto / Fast / Accurate / Expert modes;
+- Normal / SUNO / Distributor / all views;
+- optional full source path;
+- Expert MAEST window count and Top-K;
+- Safe Stop;
+- dark theme by default with live Dark / Light switch;
+- clickable History/log locations.
 
-| Режим | Поведение |
+Live mode/view/path/device changes are applied safely at track boundaries.
+
+### Validation
+
+Re-analyzes selected sources to measure convergence and history drift.
+
+- Fast / Auto / Accurate or full Fast+Auto+Accurate comparison;
+- all / stale-or-missing-build / unstable filters;
+- explicit `DRIFT: STABLE/MINOR/SIGNIFICANT/CRITICAL` terminology;
+- Safe Stop preserves completed results.
+
+### Проверка
+
+Compares saved builds without re-analyzing audio.
+
+Build identity includes analyzer version + Git commit + schema + model revision. A preflight reports Build A coverage, Build B coverage and common tracks; 0-common-track comparisons are refused instead of emitting meaningless 0% metrics. Repeatability mode compares two runs of the same build.
+
+## Analysis modes
+
+| Mode | Behavior |
 |---|---|
-| Auto | основной режим; начинает с достаточного минимума и расширяется при неоднозначности |
-| Fast | максимум 3 репрезентативных окна |
-| Accurate | полный duration-based target |
-| Expert | ручные окна и Top-K |
+| Auto | default adaptive analysis; expands when evidence is ambiguous |
+| Fast | up to 3 representative MAEST windows |
+| Accurate | full duration-based target |
+| Expert | manual window count and Top-K |
 
 Duration target:
 
-| Длительность | Максимум MAEST-окон |
+| Duration | Maximum MAEST windows |
 |---:|---:|
-| < 60 с | 1 |
-| 60–120 с | 3 |
-| 120–210 с | 5 |
-| 210–300 с | 7 |
-| 300–420 с | 9 |
-| > 420 с | 11 |
-
-Для длинного трека Auto сначала анализирует 5 распределённых окон. Если получен стабильный `primary + high confidence`, он останавливается. Иначе расширяется до полного target.
-
-На CUDA MAEST объединяет независимые окна в GPU batch до 8 окон. При CUDA OOM batch автоматически уменьшается вдвое.
+| < 60 s | 1 |
+| 60–120 s | 3 |
+| 120–210 s | 5 |
+| 210–300 s | 7 |
+| 300–420 s | 9 |
+| > 420 s | 11 |
 
 ## Input QC
 
 ```text
-< 10 s   -> INSUFFICIENT_AUDIO
-            genre verdict отсутствует
-            MAEST/semantic inference не выполняется
-
-10-30 s  -> SHORT_INPUT
-            одно padded MAEST window
-            confidence не выше medium
-
+< 10 s   -> INSUFFICIENT_AUDIO, no genre verdict
+10-30 s  -> SHORT_INPUT, one padded MAEST window, confidence <= medium
 >= 30 s  -> NORMAL
 ```
 
-Для `<10 s` используется warning-free lightweight DSP path без beat/chroma вычислений.
+## Tempo and source metadata
 
-## Validation Lab
+Tempo-v2 handles:
 
-Validation специально остаётся raw-MAEST диагностическим контуром. Это сохраняет сопоставимость с историей 0.3.x и не смешивает изменение жанрового ядра с новым semantic-profile слоем.
+- normal BPM candidate;
+- half/double-time relationships;
+- short-loop 3:2 ambiguity.
 
-Validation отвечает на три вопроса:
+The report exposes alternate tempo candidates, but stable repeated output is not treated as independent BPM ground truth.
 
-1. сходятся ли Fast / Auto / Accurate;
-2. изменился ли raw жанровый результат между версиями;
-3. какие треки требуют ручной проверки.
+Source sample rate, bit depth, channels and bitrate come from the original audio file and are not confused with the internal 16 kHz MAEST stream.
 
-В Validation доступны полные:
+## History paths
 
-- `run_id` / `track_id`;
-- analyzer/schema/version;
-- MAEST model/revision/device;
-- raw score vectors;
-- convergence/history drift;
-- NOT_COMPARABLE semantics;
-- если enriched result присутствует в истории — semantic/profile metadata.
-
-### Track identity и history
-
-```text
-track_id = sha256:<content hash>
-```
-
-Переименование/перенос не создаёт новый logical track. SQLite хранится здесь:
+Default working-copy runtime data:
 
 ```text
 C:\GIT\Genre_test\.genre_test\history.sqlite3
+C:\GIT\Genre_test\.genre_test\logs\genre_test.log
+C:\GIT\Genre_test\results\
 ```
 
-Runtime data:
-
-```text
-.genre_test\history.sqlite3
-.genre_test\logs\genre_test.log
-.genre_test\huggingface\
-results\
-```
-
-## Performance telemetry
-
-Лог содержит machine-readable `PERF {json}` события, включая:
-
-```text
-analyzer_init
-maest_batch
-track
-semantic_init
-semantic_batch
-semantic_track
-analysis_item
-analysis_session
-validation_session
-```
-
-MAEST telemetry хранит load/features/inference timing, GPU batches, cache reuse и realtime speed. Semantic telemetry отдельно показывает загрузку AST и inference по semantic windows.
-
-## FFmpeg bootstrap
-
-На Windows `setup.ps1` и `upgrade.ps1`:
-
-1. ищут FFmpeg в PATH, WinGet Links, Scoop, Chocolatey и стандартных каталогах;
-2. при отсутствии устанавливают `Gyan.FFmpeg` через WinGet;
-3. добавляют найденный путь в текущий процесс;
-4. `doctor` показывает фактический путь и AAC/M4A fallback status.
-
-```powershell
-.\scripts\ensure_ffmpeg.ps1
-```
-
-Отключить auto-install:
-
-```powershell
-.\scripts\setup.ps1 -SkipFFmpeg
-.\scripts\upgrade.ps1 -SkipFFmpeg
-```
-
-## Hugging Face cache/auth
-
-Genre_test не переопределяет пользовательский `HF_HOME`, поэтому token из `hf auth login` остаётся доступен. Repo-local используются только model caches:
-
-```text
-HF_HUB_CACHE -> .genre_test\huggingface\hub
-HF_XET_CACHE -> .genre_test\huggingface\xet
-```
+History is gitignored. Historical JSON import remains available as a migration/data-recovery feature, but old portable release bootstrap semantics are not part of the active repository.
 
 ## CLI
 
-Версия:
+Version and diagnostics:
 
 ```powershell
 .\.venv\Scripts\genre-test.exe --version
-```
-
-Runtime diagnostics:
-
-```powershell
 .\.venv\Scripts\genre-test.exe doctor
 ```
 
-Обычный ensemble profile:
+Single file:
 
 ```powershell
-.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav"
+.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --view all
 ```
 
-SUNO output:
+Recursive batch:
 
 ```powershell
-.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --view suno
+.\.venv\Scripts\genre-test.exe batch "D:\Music" --device auto --mode auto --semantic auto --view all --full-path
 ```
 
-Distributor output:
+Validation:
 
 ```powershell
-.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --view distributor
+.\.venv\Scripts\genre-test.exe validate "D:\Music" --filter all
+.\.venv\Scripts\genre-test.exe validate "D:\Music" --compare-modes --filter all
 ```
 
-Отключить independent semantic model:
+Large repeatable regression:
 
 ```powershell
-.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --semantic off
+.\scripts\run_large_regression.ps1 -Source "D:\Music" -CompareModes
 ```
 
-Требовать semantic layer без fallback:
+Omit `-CompareModes` for a faster Auto-only validation pass.
 
-```powershell
-.\.venv\Scripts\genre-test.exe analyze "D:\Music\track.wav" --semantic on
-```
+## Current release evidence
 
-Batch:
+Accepted v0.4 release gates include:
 
-```powershell
-.\.venv\Scripts\genre-test.exe batch "D:\Music\Album"
-```
+- Windows ensemble batch: 25/25 complete, semantic 25/25, file errors 0;
+- Accurate Validation: 25/25, file errors 0;
+- Safe Stop verified;
+- CUDA/Blackwell runtime verified on RTX 5070 Ti;
+- CI on Python 3.11 / 3.12 / 3.13 with Ruff, pytest and PowerShell/CUDA gates.
 
-Raw MAEST Validation:
+## Known development items
 
-```powershell
-.\.venv\Scripts\genre-test.exe validate "D:\Music" --compare-modes
-```
+- shared audio decode/cache between MAEST and AST;
+- persistent semantic cache;
+- explicit fine-style ambiguity presentation for near-tied Top-1/Top-2 results;
+- independent BPM ground-truth fixtures;
+- classical resolver/calibration;
+- larger reviewed benchmark/confusion analysis;
+- similarity, XLSX and richer calibrated descriptors.
 
-## Реальный baseline до 0.4
-
-Последний полный v0.3.5 Auto catalog run:
-
-```text
-187 paths
-187 processed
-0 errors
-~24.3 tracks/min
-```
-
-На 180 сопоставленных unique tracks переход 0.3.4 -> 0.3.5 дал 180/180 совпадений resolved genre, broad family, classification, confidence и windows. Это raw-MAEST baseline, относительно которого проверяется 0.4.
-
-## Ограничения 0.4.0
-
-- AudioSet semantic tags являются вероятностным independent evidence, а не ground truth.
-- `SUNO Style of Music` и distributor mapping — deterministic presentation layer, а не утверждение о требованиях конкретного дистрибьютора.
-- Validation 0.4.0 пока валидирует raw MAEST, а не calibration semantic-fusion layer.
-- Semantic analyzer сейчас повторно декодирует аудио после MAEST; shared-decode optimization запланирована в 0.4.x.
-- track-to-track musical similarity, XLSX catalog export и calibrated danceability/acoustic scores вынесены в roadmap.
-
-См. [ROADMAP.md](ROADMAP.md).
+See [ROADMAP.md](ROADMAP.md) and [docs/ACTIVE_CURRENT.md](docs/ACTIVE_CURRENT.md).

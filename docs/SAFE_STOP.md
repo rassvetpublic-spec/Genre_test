@@ -1,45 +1,44 @@
-# Safe Stop — v0.3.1
+# Safe Stop — v0.4.0
 
 Genre_test uses cooperative cancellation for long GUI analysis jobs.
 
 ## GUI behavior
 
-Both `Анализ` and `Validation / Перепроверка` expose an `ОСТАНОВИТЬ` button while a cancellable job is running.
+`Анализ` and `Validation` expose `ОСТАНОВИТЬ` while a cancellable job is running.
 
-The button does not terminate the Python worker thread and does not interrupt a CUDA/PyTorch inference call in the middle. It sets a cancellation flag. The analyzer checks that flag before and after each MAEST inference window and at other safe boundaries.
+Safe Stop does not kill the Python worker thread and does not interrupt an active CUDA/PyTorch kernel mid-call. It sets a cancellation flag and exits at safe boundaries between model/decode stages.
 
-Therefore a stop request may take until the current inference window finishes.
+A stop request can therefore take until the current inference unit finishes.
 
-Both result panes also expose `СКОПИРОВАТЬ СОДЕРЖИМОЕ`. The persistent log path is shown in the GUI and can be opened directly.
+## Ordinary analysis
 
-Default development log:
+- completed tracks are already written to JSON/history;
+- partial batch output remains usable;
+- the currently incomplete track is not committed as a completed result;
+- GUI state ends as stopped rather than error;
+- unreadable files are logged/skipped and do not terminate a folder batch.
+
+## Validation
+
+- completed tracks/comparisons remain durable;
+- a track is committed only after the requested analysis for that track completes;
+- the incomplete current track is not committed;
+- the session records stopped/cancelled state and remaining tracks;
+- partial JSON/CSV reports are still generated;
+- decode failures are reported and Validation continues.
+
+If cancellation occurs during initial scanning/identity work, only already-completed safe identity/cache writes may remain.
+
+## Проверка
+
+Saved-build comparison and repeatability do not run MAEST/AST inference and are normally short. They are not treated as long cancellable analysis jobs.
+
+## Runtime locations
+
+Default working-copy log:
 
 ```text
 C:\GIT\Genre_test\.genre_test\logs\genre_test.log
 ```
 
-## Ordinary analysis
-
-- completed tracks are already written to JSON and SQLite history;
-- a partial batch also receives a partial `summary.csv`;
-- the currently incomplete track is not written to history;
-- the GUI ends in `Остановлено`, not `Ошибка`;
-- an unreadable individual file in folder batch mode is logged and skipped instead of terminating the entire batch.
-
-## Validation Lab
-
-- completed tracks and comparisons remain durable;
-- a track is committed only after all requested modes for that track complete;
-- the incomplete current track is not committed;
-- the validation session is finalized with `status=stopped` and `cancelled=true`;
-- partial JSON/CSV validation reports are still generated;
-- `remaining_tracks` records how many scanned tracks were left unprocessed;
-- audio decode failures are listed as `status=ERROR`, written to the persistent log, and Validation continues with the next track.
-
-If cancellation is requested during the pre-session scan/identity phase, no validation session is created and history remains unchanged apart from safe file-location/hash cache entries that may already have completed.
-
-## Non-cancellable short operations
-
-History JSON import and version-only comparison remain non-cancellable in v0.3.1 because they do not run MAEST inference and are normally short. The Stop button is disabled for those operations.
-
-See `docs/RUNTIME_DATA.md` for repo-local history, logs, reports and Hugging Face cache locations.
+See `docs/RUNTIME_DATA.md` for history, reports and cache locations.

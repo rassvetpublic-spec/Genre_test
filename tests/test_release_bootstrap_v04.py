@@ -23,10 +23,13 @@ def test_v04_release_bootstrap_runtime_contract() -> None:
     assert "genre-test-gui.exe" in script
 
 
-def test_packaged_launcher_prefers_release_bootstrap() -> None:
+def test_packaged_launcher_requires_current_release_bootstrap_only() -> None:
     launcher = (ROOT / "Genre_test_START.cmd").read_text(encoding="utf-8")
     assert 'scripts\\release_bootstrap.ps1' in launcher
-    assert 'if defined RELEASE_BOOTSTRAP goto RELEASE_PREFLIGHT' in launcher
+    assert 'if not exist "%ROOT%scripts\\release_bootstrap.ps1" goto RELEASE_NO_BOOTSTRAP' in launcher
+    assert 'set "RELEASE_BOOTSTRAP=%ROOT%scripts\\release_bootstrap.ps1"' in launcher
+    assert "portable_bootstrap" not in launcher
+    assert "0.3.6" not in launcher
 
 
 def test_portable_docs_are_v04_and_not_fixed_to_old_path() -> None:
@@ -40,4 +43,5 @@ def test_portable_docs_are_v04_and_not_fixed_to_old_path() -> None:
     assert "Genre_test 0.4.0" in russian
     assert "Python 3.11 / 3.12 / 3.13 x64" in russian
     assert "CUDA 13.0 / cu130" in russian
-    assert "Фиксированный путь больше НЕ обязателен" in russian
+    assert "Фиксированный каталог больше не обязателен" in russian
+    assert "0.3.x выведены из эксплуатации" in russian

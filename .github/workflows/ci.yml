@@ -34,6 +34,7 @@ jobs:
       - name: Root launcher auto-mode gate
         shell: bash
         run: |
+          set -euo pipefail
           grep -Fq 'if exist "%ROOT%.git" set "MODE=WORKING"' Genre_test_START.cmd
           grep -Fq 'Mode   : Git working tree' Genre_test_START.cmd
           grep -Fq 'Mode   : packaged release' Genre_test_START.cmd
@@ -42,25 +43,46 @@ jobs:
           grep -Fq '%%~zF_%%~tF' Genre_test_START.cmd
           grep -Fq '.venv\Scripts\genre-test-gui.exe' Genre_test_START.cmd
           grep -Fq 'scripts\release_bootstrap.ps1' Genre_test_START.cmd
-          grep -Fq 'if /I "%VERSION%"=="0.3.6"' Genre_test_START.cmd
-          grep -Fq 'accepted only for 0.3.6' Genre_test_START.cmd
           grep -Fq 'setup.ps1" -InstallPython' Genre_test_START.cmd
           grep -Fq 'Microsoft.PowerShell' Genre_test_START.cmd
           grep -Fq 'ensure_winget.ps1' Genre_test_START.cmd
           grep -Fq 'Python 3.11/3.12/3.13 x64' Genre_test_START.cmd
+          if grep -Fq 'portable_bootstrap' Genre_test_START.cmd; then
+            echo 'Root launcher still contains retired portable bootstrap fallback.' >&2
+            exit 1
+          fi
+          if grep -Fq '0.3.6' Genre_test_START.cmd; then
+            echo 'Root launcher still contains retired 0.3.6 semantics.' >&2
+            exit 1
+          fi
           if grep -Fq 'Get-FileHash' Genre_test_START.cmd; then
             echo 'Root launcher still shells through PowerShell for its fingerprint.' >&2
             exit 1
           fi
-          if grep -Fq 'set "EXPECTED=C:\Genre_test_0.3.6_portable\"' Genre_test_START.cmd; then
-            echo 'Root launcher still contains frozen 0.3.6 path gate.' >&2
+          echo 'universal v0.4 launcher + first-run bootstrap gate PASS'
+      - name: Legacy retirement gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e .github/workflows/portable-prerelease.yml
+          test ! -e scripts/portable_bootstrap.ps1
+          test ! -e scripts/portable_bootstrap_v2.ps1
+          test ! -e scripts/upgrade-v0.2.ps1
+          if find releases -maxdepth 1 -type f -name '*0.3.6*' | grep -q .; then
+            echo 'Retired 0.3.6 release files remain in releases/.' >&2
             exit 1
           fi
-          echo 'universal root launcher + first-run bootstrap gate PASS'
-      - name: PowerShell setup/release parser and CUDA 13 gate
+          grep -Fq 'Publish v0.4.0 files into repository releases folder' .github/workflows/release-v0.4.0.yml
+          grep -Fq 'releases/Genre_test_0.4.0_portable.zip' .github/workflows/release-v0.4.0.yml
+          echo '0.3.x active-release legacy retirement gate PASS'
+      - name: PowerShell setup/release/regression parser and CUDA 13 gate
         shell: pwsh
         run: |
-          foreach ($script in @('./scripts/setup.ps1', './scripts/release_bootstrap.ps1')) {
+          foreach ($script in @(
+            './scripts/setup.ps1',
+            './scripts/release_bootstrap.ps1',
+            './scripts/run_large_regression.ps1'
+          )) {
             $tokens = $null
             $errors = $null
             [System.Management.Automation.Language.Parser]::ParseFile(
@@ -94,7 +116,7 @@ jobs:
           if ($release -notmatch 'Win32_VideoController' -or $release -notmatch 'VEN_10DE' -or $release -notmatch 'torch\.cuda\.get_arch_list') {
             throw 'v0.4 release bootstrap is missing NVIDIA PnP/native architecture gates.'
           }
-          Write-Host 'setup/release parser/CUDA13/Python3.13 gate PASS'
+          Write-Host 'setup/release/regression parser/CUDA13/Python3.13 gate PASS'
       - name: FFmpeg bootstrap script smoke
         shell: pwsh
         run: ./scripts/ensure_ffmpeg.ps1 -NoInstall

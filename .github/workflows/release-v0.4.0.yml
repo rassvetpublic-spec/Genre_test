@@ -5,9 +5,11 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/release-v0.4.0.yml'
+      - 'Genre_test_START.cmd'
       - 'scripts/release_bootstrap.ps1'
       - 'PORTABLE_README.txt'
       - 'README_RU.txt'
+      - 'README.md'
       - 'RELEASE_NOTES_0.4.0.md'
   workflow_dispatch:
 
@@ -19,6 +21,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Verify v0.4.0 source version
         shell: bash
@@ -63,6 +67,10 @@ jobs:
           grep -Fq 'blackwell = major in {10, 11, 12}' scripts/release_bootstrap.ps1
           grep -Fq 'Compatible PyTorch already present' scripts/release_bootstrap.ps1
           grep -Fq 'scripts\release_bootstrap.ps1' Genre_test_START.cmd
+          if grep -Fq 'portable_bootstrap' Genre_test_START.cmd; then
+            echo 'Retired portable bootstrap fallback is still present in launcher.' >&2
+            exit 1
+          fi
 
       - name: Build portable folder
         shell: bash
@@ -127,3 +135,43 @@ jobs:
               dist/Genre_test_0.4.0_portable.zip \
               dist/SHA256SUMS.txt
           fi
+
+      - name: Publish v0.4.0 files into repository releases folder
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p releases
+          rm -f releases/Genre_test_*_portable.zip releases/SHA256SUMS.txt releases/RELEASE_NOTES_*.md
+          cp dist/Genre_test_0.4.0_portable.zip releases/Genre_test_0.4.0_portable.zip
+          cp dist/SHA256SUMS.txt releases/SHA256SUMS.txt
+          cp RELEASE_NOTES_0.4.0.md releases/RELEASE_NOTES_0.4.0.md
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add releases
+          if git diff --cached --quiet; then
+            echo 'Repository release folder already current.'
+          else
+            git commit -m 'release: publish Genre_test 0.4.0 portable in repository [skip ci]'
+            git push origin HEAD:main
+          fi
+
+      - name: Prune merged legacy branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set +e
+          for ref in \
+            'v0-3-6-portable-prerelease' \
+            'v0-4-0-audio-profile-foundation' \
+            'realise/13-first-run-bootstrap' \
+            'realise/15-release-blockers' \
+            'realise/17-v0-4-release' \
+            'realise/19-repo-cleanup-docs' \
+            'realise/19-v0-4-legacy-cleanup'
+          do
+            echo "Deleting merged/retired branch: $ref"
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$ref" >/dev/null 2>&1 || true
+          done
+          exit 0
