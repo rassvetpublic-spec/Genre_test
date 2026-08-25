@@ -25,6 +25,7 @@ def test_cpu_only_gui_hides_cuda_device() -> None:
 
     assert _cuda_usable(health) is False
     assert _device_options(health) == ("auto", "cpu")
+    assert health.compact_summary.startswith("Deps: 0/0 | CUDA: N/A")
 
 
 def test_compatible_cuda_gui_exposes_cuda_device() -> None:
