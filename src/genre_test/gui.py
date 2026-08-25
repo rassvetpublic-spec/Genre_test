@@ -5,11 +5,11 @@ import queue
 import threading
 import tkinter as tk
 import traceback
+from dataclasses import dataclass
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from . import __version__
-from .analyzer import GenreAnalyzer
 from .audio import iter_audio_files
 from .cancellation import AnalysisCancelled
 from .gui_text import bind_copy_shortcuts
@@ -25,6 +25,7 @@ from .performance import (
     tracks_per_minute,
 )
 from .presentation import format_result_text
+from .profile_analyzer import ProfileAnalyzer
 from .report import write_json, write_summary_csv
 from .runtime_diagnostics import collect_runtime_diagnostics
 from .runtime_meta import default_history_path, default_log_path, default_results_dir
@@ -42,26 +43,50 @@ MODE_LABELS = {
     "Экспертный": "expert",
 }
 
+VIEW_LABELS = {
+    "Авто (все)": "all",
+    "Обычный": "normal",
+    "SUNO": "suno",
+    "Дистрибьютор": "distributor",
+}
+
 SEPARATOR = "=" * 88
+
+
+@dataclass(frozen=True)
+class LiveAnalysisSettings:
+    device: str
+    mode: str
+    view: str
+    include_path: bool
 
 
 class GenreTestWindow(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title(f"Genre_test v{__version__} — Music Genre Analyzer")
-        self.geometry("1040x800")
-        self.minsize(820, 650)
+        self.geometry("1180x840")
+        self.minsize(900, 650)
 
         self.input_var = tk.StringVar()
         self.out_var = tk.StringVar(value=str(default_results_dir()))
         self.device_var = tk.StringVar(value="auto")
         self.mode_var = tk.StringVar(value="Авто")
+        self.view_var = tk.StringVar(value="Авто (все)")
+        self.full_path_var = tk.BooleanVar(value=False)
         self.windows_var = tk.IntVar(value=5)
         self.top_k_var = tk.IntVar(value=15)
         self.status_var = tk.StringVar(value="Готов")
         self._queue: queue.Queue[tuple[str, object]] = queue.Queue()
         self._cancel_event = threading.Event()
         self._busy = False
+        self._settings_lock = threading.Lock()
+        self._live_settings = LiveAnalysisSettings(
+            device="auto",
+            mode="auto",
+            view="all",
+            include_path=False,
+        )
         self.runtime_diagnostics = collect_runtime_diagnostics()
 
         self._build_ui()
@@ -126,13 +151,16 @@ class GenreTestWindow(tk.Tk):
         settings = ttk.Frame(root)
         settings.grid(row=2, column=0, columnspan=4, sticky="ew", pady=(8, 4))
         ttk.Label(settings, text="Device").pack(side="left")
-        ttk.Combobox(
+        device_combo = ttk.Combobox(
             settings,
             textvariable=self.device_var,
             values=("auto", "cuda", "cpu"),
             state="readonly",
             width=8,
-        ).pack(side="left", padx=(6, 18))
+        )
+        device_combo.pack(side="left", padx=(6, 18))
+        device_combo.bind("<<ComboboxSelected>>", self._on_live_setting_changed)
+
         ttk.Label(settings, text="Режим анализа").pack(side="left")
         mode_combo = ttk.Combobox(
             settings,
@@ -142,7 +170,25 @@ class GenreTestWindow(tk.Tk):
             width=13,
         )
         mode_combo.pack(side="left", padx=(6, 18))
-        mode_combo.bind("<<ComboboxSelected>>", self._sync_mode_ui)
+        mode_combo.bind("<<ComboboxSelected>>", self._on_mode_selected)
+
+        ttk.Label(settings, text="Вывод").pack(side="left")
+        view_combo = ttk.Combobox(
+            settings,
+            textvariable=self.view_var,
+            values=tuple(VIEW_LABELS),
+            state="readonly",
+            width=17,
+        )
+        view_combo.pack(side="left", padx=(6, 12))
+        view_combo.bind("<<ComboboxSelected>>", self._on_live_setting_changed)
+
+        ttk.Checkbutton(
+            settings,
+            text="Полный путь",
+            variable=self.full_path_var,
+            command=self._on_live_setting_changed,
+        ).pack(side="left", padx=(0, 12))
 
         self.advanced_frame = ttk.Frame(settings)
         ttk.Label(self.advanced_frame, text="Окон").pack(side="left")
@@ -195,18 +241,69 @@ class GenreTestWindow(tk.Tk):
             text="СКОПИРОВАТЬ СОДЕРЖИМОЕ",
             command=self._copy_output,
         ).pack(side="left")
-        ttk.Button(footer, text="Открыть лог", command=self._open_log).pack(
-            side="left", padx=(8, 0)
+        log_link = tk.Label(
+            footer,
+            text=f"Лог: {default_log_path()}",
+            fg="#0563c1",
+            cursor="hand2",
+            font=("Segoe UI", 9, "underline"),
+            takefocus=True,
         )
-        ttk.Label(footer, text=f"Лог: {default_log_path()}").pack(side="left", padx=(12, 0))
+        log_link.pack(side="left", padx=(12, 0))
+        log_link.bind("<Button-1>", self._open_log_folder)
+        log_link.bind("<Return>", self._open_log_folder)
+        log_link.bind("<space>", self._open_log_folder)
         self._sync_mode_ui()
+        self._publish_live_settings(notify=False)
 
-    def _sync_mode_ui(self, _event=None) -> None:
+    def _sync_mode_ui(self) -> None:
         if MODE_LABELS.get(self.mode_var.get()) == "expert":
             if not self.advanced_frame.winfo_manager():
                 self.advanced_frame.pack(side="left")
         elif self.advanced_frame.winfo_manager():
             self.advanced_frame.pack_forget()
+
+    def _on_mode_selected(self, _event=None) -> None:
+        self._sync_mode_ui()
+        self._publish_live_settings()
+
+    def _on_live_setting_changed(self, _event=None) -> None:
+        self._publish_live_settings()
+
+    def _publish_live_settings(self, *, notify: bool = True) -> None:
+        settings = LiveAnalysisSettings(
+            device=self.device_var.get(),
+            mode=MODE_LABELS.get(self.mode_var.get(), "auto"),
+            view=VIEW_LABELS.get(self.view_var.get(), "all"),
+            include_path=bool(self.full_path_var.get()),
+        )
+        with self._settings_lock:
+            previous = self._live_settings
+            self._live_settings = settings
+
+        if not notify or not self._busy or settings == previous:
+            return
+
+        analysis_changed = settings.device != previous.device or settings.mode != previous.mode
+        presentation_changed = (
+            settings.view != previous.view or settings.include_path != previous.include_path
+        )
+        if analysis_changed and presentation_changed:
+            message = "Настройки изменены: анализ — со следующего трека, вывод — с ближайшего результата"
+        elif analysis_changed:
+            message = "Device/режим изменены — применятся со следующего трека"
+        else:
+            message = "Тип вывода изменён — применится к ближайшему результату"
+        self.status_var.set(message)
+        append_log(
+            "Live settings changed: "
+            f"device={settings.device}; mode={settings.mode}; view={settings.view}; "
+            f"include_path={settings.include_path}; analysis_applies=next_track"
+        )
+
+    def _snapshot_live_settings(self) -> LiveAnalysisSettings:
+        with self._settings_lock:
+            return self._live_settings
 
     def _choose_file(self) -> None:
         selected = filedialog.askopenfilename(
@@ -231,11 +328,11 @@ class GenreTestWindow(tk.Tk):
         out.mkdir(parents=True, exist_ok=True)
         os.startfile(out)  # type: ignore[attr-defined]
 
-    def _open_log(self) -> None:
+    def _open_log_folder(self, _event=None) -> None:
         path = default_log_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         path.touch(exist_ok=True)
-        os.startfile(path)  # type: ignore[attr-defined]
+        os.startfile(path.parent)  # type: ignore[attr-defined]
 
     def _copy_output(self) -> None:
         text = self.output.get("1.0", "end-1c")
@@ -264,26 +361,32 @@ class GenreTestWindow(tk.Tk):
             )
             return
         out = Path(self.out_var.get().strip().strip('"')).expanduser()
-        mode = MODE_LABELS.get(self.mode_var.get(), "auto")
+        self._publish_live_settings(notify=False)
+        settings = self._snapshot_live_settings()
+        windows = self.windows_var.get()
+        top_k = self.top_k_var.get()
         self.output.delete("1.0", "end")
-        self._append_output(f"Источник: {source}\nРежим: {mode}\nПодготовка анализа…")
+        self._append_output(
+            f"Источник: {source}\n"
+            f"Device: {settings.device}\n"
+            f"Режим: {settings.mode}\n"
+            f"Вывод: {settings.view}\n"
+            f"Полный путь: {'да' if settings.include_path else 'нет'}\n"
+            "Профиль: MAEST + AudioSet AST\nПодготовка анализа…"
+        )
         self._cancel_event.clear()
         self._busy = True
         self.run_button.configure(state="disabled")
         self.stop_button.configure(state="normal")
         self.progress.start(10)
-        self.status_var.set("Загрузка модели / анализ…")
-        append_log(f"Analysis started: source={source}; mode={mode}; output={out}")
+        self.status_var.set("Загрузка моделей / анализ…")
+        append_log(
+            f"Analysis started: source={source}; device={settings.device}; mode={settings.mode}; "
+            f"view={settings.view}; include_path={settings.include_path}; output={out}"
+        )
         threading.Thread(
             target=self._worker,
-            args=(
-                source,
-                out,
-                self.device_var.get(),
-                mode,
-                self.windows_var.get(),
-                self.top_k_var.get(),
-            ),
+            args=(source, out, windows, top_k),
             daemon=True,
         ).start()
 
@@ -295,12 +398,25 @@ class GenreTestWindow(tk.Tk):
         self.status_var.set("Остановка после текущего безопасного шага…")
         append_log("Safe stop requested by user")
 
+    @staticmethod
+    def _make_analyzer(
+        settings: LiveAnalysisSettings,
+        windows: int,
+        top_k: int,
+    ) -> ProfileAnalyzer:
+        return ProfileAnalyzer(
+            model_id=DEFAULT_MODEL,
+            device=settings.device,
+            analysis_mode=settings.mode,
+            window_count=windows,
+            top_k=top_k,
+            semantic_mode="auto",
+        )
+
     def _worker(
         self,
         source: Path,
         out: Path,
-        device: str,
-        mode: str,
         windows: int,
         top_k: int,
     ) -> None:
@@ -309,27 +425,32 @@ class GenreTestWindow(tk.Tk):
         file_errors: list[str] = []
         processing_started: float | None = None
         try:
-            analyzer = GenreAnalyzer(
-                model_id=DEFAULT_MODEL,
-                device=device,
-                analysis_mode=mode,
-                window_count=windows,
-                top_k=top_k,
-            )
             history = HistoryDB()
             processing_started = clock()
             if source.is_file():
+                analysis_settings = self._snapshot_live_settings()
+                analyzer = self._make_analyzer(analysis_settings, windows, top_k)
                 item_started = clock()
-                result = analyzer.analyze(source, cancel_check=self._cancel_event.is_set)
+                result = analyzer.analyze(
+                    source,
+                    analysis_mode=analysis_settings.mode,
+                    cancel_check=self._cancel_event.is_set,
+                )
                 write_json(result, out)
                 history.record_result(result)
                 item_s = elapsed_seconds(item_started)
                 total_s = elapsed_seconds(session_started)
+                render_settings = self._snapshot_live_settings()
                 append_perf(
                     "analysis_item",
                     path=source,
                     status="ok",
-                    mode=mode,
+                    mode=result.analysis_mode,
+                    requested_device=analysis_settings.device,
+                    profile_view=render_settings.view,
+                    semantic_status=(
+                        result.semantic_evidence.status if result.semantic_evidence else "not_available"
+                    ),
                     elapsed_ms=milliseconds(item_s),
                     includes_persistence=True,
                 )
@@ -344,7 +465,11 @@ class GenreTestWindow(tk.Tk):
                     avg_seconds_per_track=average_seconds(1, item_s),
                     tracks_per_minute=tracks_per_minute(1, item_s),
                 )
-                text = format_result_text(result) + f"\n\nElapsed: {item_s:.2f} s"
+                text = format_result_text(
+                    result,
+                    view=render_settings.view,
+                    include_path=render_settings.include_path,
+                ) + f"\n\nElapsed: {item_s:.2f} s"
                 append_log(f"Analysis complete: {source}; elapsed={item_s:.3f}s")
                 self._queue.put(("done", text))
                 return
@@ -355,13 +480,34 @@ class GenreTestWindow(tk.Tk):
                     "В выбранной папке не найдено поддерживаемых аудиофайлов."
                 )
             self._queue.put(("append", f"Найдено аудиофайлов: {len(files)}"))
+            analyzer: ProfileAnalyzer | None = None
+            analyzer_device: str | None = None
+
             for idx, path in enumerate(files, 1):
                 if self._cancel_event.is_set():
                     raise AnalysisCancelled("Operation cancelled by user")
-                self._queue.put(("status", f"[{idx}/{len(files)}] {path.name}"))
+
+                analysis_settings = self._snapshot_live_settings()
+                if analyzer is None or analyzer_device != analysis_settings.device:
+                    analyzer = self._make_analyzer(analysis_settings, windows, top_k)
+                    analyzer_device = analysis_settings.device
+                    append_log(
+                        f"Batch analyzer prepared: device={analysis_settings.device}; "
+                        f"mode={analysis_settings.mode}"
+                    )
+
+                status_text = (
+                    f"[{idx}/{len(files)}] {path.name} | "
+                    f"{analysis_settings.device} | {analysis_settings.mode}"
+                )
+                self._queue.put(("status", status_text))
                 item_started = clock()
                 try:
-                    result = analyzer.analyze(path, cancel_check=self._cancel_event.is_set)
+                    result = analyzer.analyze(
+                        path,
+                        analysis_mode=analysis_settings.mode,
+                        cancel_check=self._cancel_event.is_set,
+                    )
                 except AnalysisCancelled:
                     raise
                 except Exception as exc:
@@ -374,25 +520,38 @@ class GenreTestWindow(tk.Tk):
                         "analysis_item",
                         path=path,
                         status="error",
-                        mode=mode,
+                        mode=analysis_settings.mode,
+                        requested_device=analysis_settings.device,
                         elapsed_ms=milliseconds(item_s),
                         error_type=type(exc).__name__,
                     )
                     self._queue.put(("append_block", summary))
                     continue
+
                 results.append(result)
                 write_json(result, out)
                 history.record_result(result)
                 item_s = elapsed_seconds(item_started)
+                render_settings = self._snapshot_live_settings()
                 append_perf(
                     "analysis_item",
                     path=path,
                     status="ok",
-                    mode=mode,
+                    mode=result.analysis_mode,
+                    requested_device=analysis_settings.device,
+                    profile_view=render_settings.view,
+                    semantic_status=(
+                        result.semantic_evidence.status if result.semantic_evidence else "not_available"
+                    ),
                     elapsed_ms=milliseconds(item_s),
                     includes_persistence=True,
                 )
-                block = format_result_text(result, top_n=5) + f"\nElapsed: {item_s:.2f} s"
+                block = format_result_text(
+                    result,
+                    top_n=5,
+                    view=render_settings.view,
+                    include_path=render_settings.include_path,
+                ) + f"\nElapsed: {item_s:.2f} s"
                 self._queue.put(("append_block", block))
 
             summary_csv = write_summary_csv(results, out) if results else None
@@ -402,8 +561,13 @@ class GenreTestWindow(tk.Tk):
             )
             avg_s = average_seconds(len(results), processing_s)
             rate = tracks_per_minute(len(results), processing_s)
+            semantic_ok = sum(
+                result.semantic_evidence is not None and result.semantic_evidence.status == "ok"
+                for result in results
+            )
             summary = (
                 f"Completed: {len(results)} / {len(files)}\n"
+                f"Semantic profiles: {semantic_ok} / {len(results)}\n"
                 f"File errors skipped: {len(file_errors)}\n"
                 f"Elapsed: {total_s:.2f} s\n"
                 f"Processing: {processing_s:.2f} s\n"
@@ -414,7 +578,7 @@ class GenreTestWindow(tk.Tk):
                 summary += f"\nSummary CSV: {summary_csv}"
             append_log(
                 f"Batch complete: source={source}; completed={len(results)}; "
-                f"errors={len(file_errors)}; elapsed={total_s:.3f}s; "
+                f"semantic_ok={semantic_ok}; errors={len(file_errors)}; elapsed={total_s:.3f}s; "
                 f"throughput={rate:.3f} tracks/min"
             )
             append_perf(
@@ -423,6 +587,7 @@ class GenreTestWindow(tk.Tk):
                 status="complete",
                 files_seen=len(files),
                 completed=len(results),
+                semantic_ok=semantic_ok,
                 errors=len(file_errors),
                 total_ms=milliseconds(total_s),
                 processing_ms=milliseconds(processing_s),

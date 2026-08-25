@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import os
 import tkinter as tk
 from tkinter import ttk
 
 from . import __version__
+from .check_gui import CheckTab
 from .logging_utils import append_log
-from .model_config import DEFAULT_MODEL_REVISION
 from .runtime_health import RuntimeHealth, collect_runtime_health
+from .runtime_meta import default_history_path
 
 STATUS_COLORS = {
     "OK": "#187a2f",
@@ -14,12 +16,92 @@ STATUS_COLORS = {
     "FAIL": "#b00020",
 }
 
+EXPERT_WINDOWS_MIN = 1
+EXPERT_WINDOWS_MAX = 12
+EXPERT_TOP_K_MIN = 3
+EXPERT_TOP_K_MAX = 50
+EXPERT_WINDOWS_DEFAULT = 5
+EXPERT_TOP_K_DEFAULT = 15
+
+VALIDATION_DESCRIPTION = (
+    "Validation — повторно анализирует выбранное аудио и сверяет новые результаты с history. "
+    "Используйте для regression, поиска нестабильных треков и проверки сходимости."
+)
+VALIDATION_MODE_DESCRIPTION = (
+    "Режим: Быстрый — быстрее; Авто — баланс скорости и качества; Точный — больше окон; "
+    "Fast + Auto + Accurate — три режима за один проход."
+)
+EXPERT_CONTROLS_DESCRIPTION = "(окна MAEST / жанровые кандидаты)"
+
 
 def _blocking_failure(health: RuntimeHealth) -> bool:
     return any(
         item.status == "FAIL" and item.category in {"Core", "Package"}
         for item in health.components
     )
+
+
+def _cuda_usable(health: RuntimeHealth) -> bool:
+    cuda = health.by_name("CUDA")
+    return bool(cuda and cuda.status == "OK" and cuda.value != "unavailable")
+
+
+def _device_options(health: RuntimeHealth) -> tuple[str, ...]:
+    if _cuda_usable(health):
+        return ("auto", "cuda", "cpu")
+    return ("auto", "cpu")
+
+
+def _bounded_expert_parameters(window_count: int, top_k: int) -> tuple[int, int]:
+    return (
+        min(EXPERT_WINDOWS_MAX, max(EXPERT_WINDOWS_MIN, window_count)),
+        min(EXPERT_TOP_K_MAX, max(EXPERT_TOP_K_MIN, top_k)),
+    )
+
+
+def _find_bound_combobox(root: tk.Misc, variable: tk.Variable) -> ttk.Combobox | None:
+    target = str(variable)
+    stack: list[tk.Misc] = [root]
+    while stack:
+        parent = stack.pop()
+        for child in parent.winfo_children():
+            stack.append(child)
+            if isinstance(child, ttk.Combobox) and str(child.cget("textvariable")) == target:
+                return child
+    return None
+
+
+def _is_device_selector_values(values: tuple[str, ...]) -> bool:
+    normalized = set(values)
+    return {"auto", "cpu"}.issubset(normalized) and normalized.issubset(
+        {"auto", "cuda", "cpu"}
+    )
+
+
+def _find_device_comboboxes(root: tk.Misc) -> list[ttk.Combobox]:
+    matches: list[ttk.Combobox] = []
+    stack: list[tk.Misc] = [root]
+    while stack:
+        parent = stack.pop()
+        for child in parent.winfo_children():
+            stack.append(child)
+            if not isinstance(child, ttk.Combobox):
+                continue
+            values = tuple(str(value) for value in child.cget("values"))
+            if _is_device_selector_values(values):
+                matches.append(child)
+    return matches
+
+
+def _walk_widgets(root: tk.Misc) -> list[tk.Misc]:
+    widgets: list[tk.Misc] = []
+    stack: list[tk.Misc] = [root]
+    while stack:
+        parent = stack.pop()
+        for child in parent.winfo_children():
+            widgets.append(child)
+            stack.append(child)
+    return widgets
 
 
 def _fill_tree(tree: ttk.Treeview, health: RuntimeHealth) -> None:
@@ -55,10 +137,10 @@ def _build_health_tree(parent: tk.Misc) -> ttk.Treeview:
     tree.heading("value", text="Версия / значение")
     tree.heading("details", text="Подробности")
     tree.column("category", width=95, stretch=False)
-    tree.column("component", width=145, stretch=False)
+    tree.column("component", width=155, stretch=False)
     tree.column("status", width=70, stretch=False, anchor="center")
-    tree.column("value", width=245, stretch=True)
-    tree.column("details", width=330, stretch=True)
+    tree.column("value", width=280, stretch=True)
+    tree.column("details", width=360, stretch=True)
     _configure_tree_tags(tree)
     return tree
 
@@ -66,8 +148,8 @@ def _build_health_tree(parent: tk.Misc) -> ttk.Treeview:
 def _show_blocking_failure(health: RuntimeHealth) -> None:
     root = tk.Tk()
     root.title(f"Genre_test v{__version__} — Runtime dependency error")
-    root.geometry("940x560")
-    root.minsize(760, 440)
+    root.geometry("960x580")
+    root.minsize(780, 440)
 
     header = tk.Label(
         root,
@@ -116,11 +198,143 @@ def main() -> None:
                 f"{self.runtime_health.compact_summary}"
             )
 
+        def _publish_live_settings(self, *, notify: bool = True) -> None:
+            if self.device_var.get() == "cuda" and not _cuda_usable(self.runtime_health):
+                self.device_var.set("auto")
+                super()._publish_live_settings(notify=False)
+                if notify:
+                    self.status_var.set("CUDA недоступна — Device оставлен auto (CPU fallback)")
+                    append_log(
+                        "Rejected live device change: cuda unavailable; device reset to auto"
+                    )
+                return
+            super()._publish_live_settings(notify=notify)
+
+        def _sync_device_capability(self) -> None:
+            options = _device_options(self.runtime_health)
+            for combo in _find_device_comboboxes(self):
+                combo.configure(values=options)
+                if combo.get() not in options:
+                    combo.set("auto")
+            if self.device_var.get() == "cuda" and not _cuda_usable(self.runtime_health):
+                self.device_var.set("auto")
+                super()._publish_live_settings(notify=False)
+
+        def _normalize_expert_inputs(self) -> None:
+            changed = False
+            try:
+                windows = int(self.windows_var.get())
+            except (tk.TclError, TypeError, ValueError):
+                windows = EXPERT_WINDOWS_DEFAULT
+                changed = True
+            try:
+                top_k = int(self.top_k_var.get())
+            except (tk.TclError, TypeError, ValueError):
+                top_k = EXPERT_TOP_K_DEFAULT
+                changed = True
+
+            bounded_windows, bounded_top_k = _bounded_expert_parameters(windows, top_k)
+            changed = changed or bounded_windows != windows or bounded_top_k != top_k
+            self.windows_var.set(bounded_windows)
+            self.top_k_var.set(bounded_top_k)
+
+            if changed:
+                self.status_var.set(
+                    f"Параметры Expert скорректированы: Окон={bounded_windows}, "
+                    f"Top-K={bounded_top_k}"
+                )
+                append_log(
+                    "Expert parameters normalized before analysis: "
+                    f"windows={bounded_windows}; top_k={bounded_top_k}"
+                )
+
+        def _start(self) -> None:
+            self._normalize_expert_inputs()
+            super()._start()
+
+        def _open_history_folder(self, _event=None) -> None:
+            path = default_history_path()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            os.startfile(path.parent)  # type: ignore[attr-defined]
+
+        def _decorate_history_link(self) -> None:
+            style = ttk.Style(self)
+            style.configure(
+                "HistoryLink.TLabel",
+                foreground="#0563c1",
+                font=("Segoe UI", 9, "underline"),
+            )
+            for widget in _walk_widgets(self):
+                if not isinstance(widget, ttk.Label):
+                    continue
+                text = str(widget.cget("text"))
+                if not text.startswith("History: "):
+                    continue
+                widget.configure(style="HistoryLink.TLabel", cursor="hand2", takefocus=True)
+                widget.bind("<Button-1>", self._open_history_folder)
+                widget.bind("<Return>", self._open_history_folder)
+                widget.bind("<space>", self._open_history_folder)
+
+        def _decorate_expert_controls(self) -> None:
+            if any(
+                isinstance(child, ttk.Label)
+                and str(child.cget("text")) == EXPERT_CONTROLS_DESCRIPTION
+                for child in self.advanced_frame.winfo_children()
+            ):
+                return
+            ttk.Label(
+                self.advanced_frame,
+                text=EXPERT_CONTROLS_DESCRIPTION,
+            ).pack(side="left", padx=(8, 0))
+
+        def _split_validation_and_check_tabs(self, notebook: ttk.Notebook) -> None:
+            existing_titles = {
+                str(notebook.tab(tab_id, "text"))
+                for tab_id in notebook.tabs()
+            }
+            validation_tab: tk.Misc | None = None
+            for tab_id in notebook.tabs():
+                title = str(notebook.tab(tab_id, "text"))
+                if title == "Validation / Перепроверка":
+                    validation_tab = self.nametowidget(tab_id)
+                    notebook.tab(tab_id, text="Validation")
+                    break
+                if title == "Validation":
+                    validation_tab = self.nametowidget(tab_id)
+                    break
+
+            if validation_tab is not None:
+                for widget in validation_tab.winfo_children():
+                    if isinstance(widget, ttk.Label):
+                        text = str(widget.cget("text"))
+                        if text.startswith("Источники аудио"):
+                            widget.configure(
+                                text=(
+                                    VALIDATION_DESCRIPTION
+                                    + "\n"
+                                    + VALIDATION_MODE_DESCRIPTION
+                                    + "\n\nИсточники аудио (можно разные диски и каталоги):"
+                                ),
+                                wraplength=1050,
+                                justify="left",
+                            )
+                    elif isinstance(widget, ttk.LabelFrame):
+                        if str(widget.cget("text")) == "Сравнение версий анализатора":
+                            widget.grid_remove()
+
+            if "Проверка" not in existing_titles:
+                notebook.add(CheckTab(notebook), text="Проверка")
+
         def _build_ui(self) -> None:
             super()._build_ui()
             children = self.winfo_children()
             old_runtime_bar = children[0] if children else None
             notebook = next((child for child in children if isinstance(child, ttk.Notebook)), None)
+            if notebook is not None:
+                self._split_validation_and_check_tabs(notebook)
+            self._decorate_history_link()
+            self._decorate_expert_controls()
+            self._sync_device_capability()
             if old_runtime_bar is not None and old_runtime_bar is not notebook:
                 old_runtime_bar.pack_forget()
             self._health_bar = ttk.Frame(self, padding=(10, 6))
@@ -137,7 +351,7 @@ def main() -> None:
 
             ttk.Label(
                 self._health_bar,
-                text=f"Genre_test {__version__} | MAEST revision: {DEFAULT_MODEL_REVISION}",
+                text=f"Genre_test {__version__} | Models: MAEST Discogs519 + AudioSet AST",
             ).pack(side="left")
 
             ttk.Button(
@@ -157,6 +371,7 @@ def main() -> None:
 
         def _refresh_runtime_health(self, tree: ttk.Treeview, summary: tk.Label) -> None:
             self.runtime_health = collect_runtime_health()
+            self._sync_device_capability()
             _fill_tree(tree, self.runtime_health)
             overall = self.runtime_health.overall_status
             summary.configure(
@@ -172,8 +387,8 @@ def main() -> None:
         def _show_runtime_health(self) -> None:
             dialog = tk.Toplevel(self)
             dialog.title(f"Genre_test v{__version__} — Runtime / Dependencies")
-            dialog.geometry("980x600")
-            dialog.minsize(800, 460)
+            dialog.geometry("1020x620")
+            dialog.minsize(820, 460)
             dialog.transient(self)
 
             header = ttk.Frame(dialog, padding=(10, 10, 10, 6))

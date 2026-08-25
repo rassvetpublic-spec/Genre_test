@@ -14,6 +14,7 @@ permissions:
 
 jobs:
   package:
+    if: github.event_name != 'pull_request' || github.head_ref == 'v0-3-6-portable-prerelease'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4

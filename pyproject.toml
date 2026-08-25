@@ -4,10 +4,10 @@ build-backend = "hatchling.build"
 
 [project]
 name = "genre-test"
-version = "0.3.6"
-description = "Local music genre analyzer with MAEST classification, versioned history and validation lab."
+version = "0.4.0"
+description = "Local ensemble music analyzer with MAEST genre classification, AudioSet semantic profiling, history and validation lab."
 readme = "README.md"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 license = {text = "MIT"}
 authors = [{name = "rassvetpublic"}]
 dependencies = [
@@ -15,7 +15,7 @@ dependencies = [
   "scipy>=1.12,<2",
   "soundfile>=0.12.1,<1",
   "librosa>=0.10.2,<1",
-  "torch>=2.5,<3",
+  "torch>=2.12.1,<3",
   "transformers>=4.48,<6",
   "accelerate>=1.2,<2",
   "safetensors>=0.4.5,<1",
@@ -32,7 +32,7 @@ dev = [
 
 [project.scripts]
 genre-test = "genre_test.cli:app"
-genre-test-gui = "genre_test.runtime_health_gui:main"
+genre-test-gui = "genre_test.desktop_gui:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/genre_test"]
@@ -49,3 +49,4 @@ target-version = "py311"
 "src/genre_test/cli.py" = ["B008"]
 "src/genre_test/gui.py" = ["BLE001"]
 "src/genre_test/validation_gui.py" = ["BLE001"]
+"src/genre_test/themed_gui.py" = ["B010"]

@@ -4,17 +4,24 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .models import AnalysisResult
+from .source_audio import format_source_audio
 
 if TYPE_CHECKING:
     from .validation import ValidationSessionResult
+
+PROFILE_VIEWS = {"all", "normal", "suno", "distributor"}
 
 
 def tempo_candidates(bpm: float | None) -> str:
     if not bpm:
         return "n/a"
     half = bpm / 2.0
+    two_thirds = bpm * 2.0 / 3.0
     double = bpm * 2.0
-    return f"{bpm:.2f} BPM  |  half {half:.2f}  |  double {double:.2f}"
+    return (
+        f"{bpm:.2f} BPM  |  half {half:.2f}  |  "
+        f"2/3 {two_thirds:.2f}  |  double {double:.2f}"
+    )
 
 
 def _score_table(result: AnalysisResult, top_n: int = 10, broad_n: int = 6) -> list[str]:
@@ -49,12 +56,147 @@ def _score_table(result: AnalysisResult, top_n: int = 10, broad_n: int = 6) -> l
     return lines
 
 
+def _append_source_audio(lines: list[str], result: AnalysisResult) -> None:
+    source_audio = format_source_audio(result.path)
+    if source_audio:
+        lines.append(f"Source audio: {source_audio}")
+
+
+def _with_optional_path(text: str, result: AnalysisResult, include_path: bool) -> str:
+    if not include_path:
+        return text
+    lines = text.splitlines()
+    if not lines:
+        return f"Full path: {result.path}"
+    return "\n".join([lines[0], f"Full path: {result.path}", *lines[1:]])
+
+
+def _without_file_header(text: str, result: AnalysisResult) -> str:
+    lines = text.splitlines()
+    if lines and lines[0] == Path(result.path).name:
+        lines = lines[1:]
+        if lines and not lines[0]:
+            lines = lines[1:]
+    return "\n".join(lines)
+
+
+def _format_profile_normal(result: AnalysisResult, top_n: int) -> str:
+    profile = result.audio_profile
+    assert profile is not None
+    lines = [
+        Path(result.path).name,
+        "",
+        f"Genre: {profile.primary_genre or 'n/a'}",
+        f"Family: {profile.broad_family or 'n/a'}",
+        f"Confidence: {profile.confidence}",
+    ]
+    if profile.secondary_influence:
+        lines.append(f"Secondary influence: {profile.secondary_influence}")
+    if profile.adjacent_genres:
+        lines.append("Adjacent: " + ", ".join(profile.adjacent_genres))
+    if profile.vocal:
+        lines.append(f"Vocal: {profile.vocal}")
+    if profile.instruments:
+        lines.append("Instrumentation: " + ", ".join(profile.instruments))
+    if profile.moods:
+        lines.append("Mood: " + ", ".join(profile.moods))
+    if profile.production:
+        lines.append("Production: " + ", ".join(profile.production))
+    _append_source_audio(lines, result)
+    if result.input_quality != "NORMAL":
+        lines.append(f"Input quality: {result.input_quality}")
+        if result.quality_notes:
+            lines.append("QC: " + "; ".join(result.quality_notes))
+    lines.extend(
+        [
+            f"Tempo: {tempo_candidates(result.audio_features.bpm)}",
+            f"Key: {result.audio_features.key or 'n/a'} {result.audio_features.mode or ''}".rstrip(),
+            f"Analysis: {result.analysis_mode} | MAEST windows: {result.windows_analyzed}",
+            "",
+            "Scores:",
+            *_score_table(result, top_n=top_n),
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _format_profile_suno(result: AnalysisResult) -> str:
+    profile = result.audio_profile
+    assert profile is not None
+    lines = [Path(result.path).name, "", "SUNO Style of Music:", profile.suno_style or "n/a"]
+    if profile.primary_genre:
+        lines.append(f"Primary: {profile.primary_genre}")
+    if profile.secondary_influence:
+        lines.append(f"Influence: {profile.secondary_influence}")
+    if profile.vocal:
+        lines.append(f"Vocal: {profile.vocal}")
+    if profile.instruments:
+        lines.append("Instruments: " + ", ".join(profile.instruments))
+    if profile.moods:
+        lines.append("Mood: " + ", ".join(profile.moods))
+    lines.extend(
+        [
+            f"Tempo: {tempo_candidates(result.audio_features.bpm)}",
+            f"Key: {result.audio_features.key or 'n/a'} {result.audio_features.mode or ''}".rstrip(),
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _format_profile_distributor(result: AnalysisResult) -> str:
+    profile = result.audio_profile
+    assert profile is not None
+    lines = [
+        Path(result.path).name,
+        "",
+        f"Distributor genre: {profile.distributor_genre or 'n/a'}",
+        f"Distributor subgenre: {profile.distributor_subgenre or 'n/a'}",
+        f"Primary genre: {profile.primary_genre or 'n/a'}",
+        f"Confidence: {profile.confidence}",
+    ]
+    if profile.secondary_influence:
+        lines.append(f"Secondary influence: {profile.secondary_influence}")
+    if profile.adjacent_genres:
+        lines.append("Adjacent: " + ", ".join(profile.adjacent_genres))
+    return "\n".join(lines)
+
+
+def _format_profile_all(result: AnalysisResult, top_n: int) -> str:
+    filename = Path(result.path).name
+    normal = _without_file_header(_format_profile_normal(result, top_n), result)
+    suno = _without_file_header(_format_profile_suno(result), result)
+    distributor = _without_file_header(_format_profile_distributor(result), result)
+    return (
+        f"{filename}\n\n"
+        f"[ОБЫЧНЫЙ]\n{normal}\n\n"
+        f"[SUNO]\n{suno}\n\n"
+        f"[ДИСТРИБЬЮТОР]\n{distributor}"
+    )
+
+
 def format_result_text(
     result: AnalysisResult,
     top_n: int = 10,
     *,
     detailed: bool = False,
+    view: str = "all",
+    include_path: bool = False,
 ) -> str:
+    normalized_view = view.lower().strip()
+    if normalized_view not in PROFILE_VIEWS:
+        raise ValueError(f"Unknown presentation view: {view}")
+
+    if result.audio_profile is not None and not detailed:
+        if normalized_view == "all":
+            text = _format_profile_all(result, top_n)
+        elif normalized_view == "suno":
+            text = _format_profile_suno(result)
+        elif normalized_view == "distributor":
+            text = _format_profile_distributor(result)
+        else:
+            text = _format_profile_normal(result, top_n)
+        return _with_optional_path(text, result, include_path)
+
     genre = result.resolved_genre or "n/a"
     family = result.primary_genre or "n/a"
     family_score = (
@@ -78,6 +220,7 @@ def format_result_text(
             secondary_bits.append(f"family={result.secondary_genre}")
         lines.append("Alternative: " + " | ".join(secondary_bits))
 
+    _append_source_audio(lines, result)
     if result.input_quality != "NORMAL":
         lines.append(f"Input quality: {result.input_quality}")
         if result.quality_notes:
@@ -108,9 +251,40 @@ def format_result_text(
             lines.append(f"Secondary/primary family ratio: {result.family_ratio:.3f}")
         if result.style_margin is not None:
             lines.append(f"Relative style margin: {result.style_margin:.3f}")
+        if result.semantic_evidence is not None:
+            semantic = result.semantic_evidence
+            lines.extend(
+                [
+                    f"Semantic status: {semantic.status}",
+                    f"Semantic model: {semantic.model_id}",
+                    f"Semantic revision: {semantic.model_revision or 'un-pinned'}",
+                    f"Semantic device/windows: {semantic.device} / {semantic.windows_analyzed}",
+                    f"Semantic genres: {_score_list(semantic.genre_tags, 8)}",
+                    f"Semantic vocals: {_score_list(semantic.vocal_tags, 5)}",
+                    f"Semantic instruments: {_score_list(semantic.instrument_tags, 8)}",
+                    f"Semantic moods: {_score_list(semantic.mood_tags, 5)}",
+                ]
+            )
+        if result.audio_profile is not None:
+            profile = result.audio_profile
+            profile_primary_line = (
+                f"Profile primary/family: {profile.primary_genre or 'n/a'} / "
+                f"{profile.broad_family or 'n/a'}"
+            )
+            profile_confidence_line = (
+                f"Profile confidence/agreement: {profile.confidence} / "
+                f"{profile.ensemble_agreement}"
+            )
+            lines.extend(
+                [
+                    profile_primary_line,
+                    profile_confidence_line,
+                    "Profile family evidence: " + _score_list(profile.family_evidence, 8),
+                ]
+            )
 
     lines.extend(["", "Scores:", *_score_table(result, top_n=top_n)])
-    return "\n".join(lines)
+    return _with_optional_path("\n".join(lines), result, include_path)
 
 
 def _score_list(items, limit: int) -> str:
@@ -164,6 +338,39 @@ def format_validation_run_metadata(result: ValidationSessionResult) -> str:
                 lines.append(
                     f"    alternative: style={item.secondary_style or 'n/a'} | "
                     f"family={item.secondary_genre or 'n/a'}"
+                )
+            if item.semantic_evidence is not None:
+                semantic = item.semantic_evidence
+                semantic_model_line = (
+                    f"    semantic={semantic.model_id} @ "
+                    f"{semantic.model_revision or 'un-pinned'}"
+                )
+                lines.extend(
+                    [
+                        f"    semantic_status={semantic.status}",
+                        semantic_model_line,
+                        f"    semantic_genres: {_score_list(semantic.genre_tags, 8)}",
+                        f"    semantic_vocals: {_score_list(semantic.vocal_tags, 5)}",
+                        f"    semantic_instruments: {_score_list(semantic.instrument_tags, 8)}",
+                        f"    semantic_moods: {_score_list(semantic.mood_tags, 5)}",
+                    ]
+                )
+            if item.audio_profile is not None:
+                profile = item.audio_profile
+                profile_line = (
+                    f"    profile={profile.primary_genre or 'n/a'} / "
+                    f"{profile.broad_family or 'n/a'} / {profile.confidence}"
+                )
+                ensemble_line = (
+                    f"    ensemble={profile.ensemble_agreement}; "
+                    f"sources={','.join(profile.ensemble_sources)}"
+                )
+                lines.extend(
+                    [
+                        profile_line,
+                        ensemble_line,
+                        f"    family_evidence: {_score_list(profile.family_evidence, 8)}",
+                    ]
                 )
             if item.quality_notes:
                 lines.append("    QC: " + "; ".join(item.quality_notes))
