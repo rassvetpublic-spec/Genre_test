@@ -1,103 +1,116 @@
-# ARCHITECTURE
+# ARCHITECTURE — v0.4.0
 
-## v0.3 data flow
+## Product data flow
 
 ```text
-Windows GUI / CLI
+file / folder input
       |
-      +----------------------- Analysis ------------------------+
-      |                                                         |
-      v                                                         v
-file/folder input                                      Validation sources
-      |                                              many roots / files
-      v                                                         |
-audio decode                                                   v
-      |                                                SHA-256 track identity
-      +--> BPM / key / spectral features                        |
-      |                                                         v
-      v                                                deduplicate by content
-representative 30 s windows                                    |
-      |                                                         v
-      v                                              recheck filter / history
-MAEST Discogs 519                                               |
-      |                                                         v
-      v                                              Fast / Auto / Accurate
-raw style probabilities                              shared prediction cache
-      |                                                         |
-      +--> broad family aggregation                             v
-      |                                                versioned AnalysisResult
-      v                                                         |
-genre resolver                                                  v
-primary/hybrid/confidence                              SQLite history + snapshots
-      |                                                         |
-      +------------------------------+--------------------------+
-                                     v
-                              drift / convergence
-                     JS divergence / cosine / Top-N overlap
-                     BPM equivalence / key / label stability
-                                     |
-                                     v
-                      STABLE / MINOR / SIGNIFICANT / CRITICAL
-                                     |
-                                     v
-                           JSON / CSV / GUI reports
+      +--> native source metadata --------------------------+
+      +--> DSP: BPM / key / features ----------------------+ 
+      +--> MAEST Discogs519 -------------------------------+--> AudioProfile fusion
+      |      fine styles / broad families                  |        |
+      +--> AudioSet AST -----------------------------------+        +--> Normal
+             semantic genre/vocal/instrument/mood                   +--> SUNO
+                                                                    +--> Distributor
+
+raw MAEST evidence --> history / Validation / build comparison
 ```
 
-## Core modules
+## Core analysis modules
 
 ```text
-analyzer.py          MAEST inference and shared multi-mode prediction cache
-analysis_policy.py   Auto/Fast/Accurate window selection
-resolver.py          human-facing genre resolution
-track_identity.py    SHA-256 logical track identity
-runtime_meta.py      schema/version/run/timestamp/git metadata
-history.py           local SQLite persistence
-comparison.py        pairwise result drift metrics and severity
-convergence.py       Fast/Auto/Accurate convergence summary
-validation_policy.py recheck-selection rules
-validation.py        multi-root scan, recheck, version comparison
-validation_gui.py    Validation Lab Tkinter tab
-report.py            immutable run snapshots and validation reports
+profile_analyzer.py       ordinary MAEST + AST orchestration
+analyzer.py               MAEST inference and mode-aware window cache
+semantic_analyzer.py      pinned AudioSet AST inference
+profile.py                AudioProfile evidence fusion / family reconciliation
+analysis_policy.py        Auto/Fast/Accurate window selection
+resolver.py               raw MAEST fine-style resolver
+features.py               tempo/key/DSP features
+source_metadata.py        original file metadata
+presentation.py           Normal/SUNO/Distributor text views
 ```
+
+## Validation / history modules
+
+```text
+track_identity.py         SHA-256 logical track identity
+runtime_meta.py           schema/version/run/timestamp/git metadata
+history.py                local SQLite persistence
+build_history.py          composite saved-build identity
+comparison.py             pairwise result drift metrics
+convergence.py            Fast/Auto/Accurate convergence summary
+validation_policy.py      recheck-selection rules
+validation.py             multi-root scan, recheck and comparison
+validation_gui.py         Validation GUI
+check_gui.py              saved-build comparison GUI
+```
+
+## Build identity
+
+Analyzer semver alone is not sufficient during development. A saved build is identified by the relevant combination of:
+
+```text
+analyzer_version
+git_commit
+schema_version
+model_id
+model_revision
+```
+
+This prevents different `0.4.0` commits from being treated as one build.
 
 ## History model
 
-`track_id` is content-based, not path-based. Paths are locations of a track, not its identity.
+`track_id` is content-based, not path-based. Paths are locations of a logical track.
 
-SQLite stores:
+SQLite stores analysis runs and evidence append-only. New runs do not silently overwrite previous runs.
+
+Default working-copy history:
 
 ```text
-tracks
-file_locations
-runs
-style_scores
-broad_scores
-validation_sessions
-comparisons
+C:\GIT\Genre_test\.genre_test\history.sqlite3
 ```
-
-The DB lives outside the repository by default and is ignored if a custom DB is placed inside the repo.
-
-## Result immutability
-
-A v0.3 run has a unique `run_id`. JSON snapshots include version/mode/run-id in the filename and therefore do not overwrite older run JSON.
-
-Each run records analyzer/schema version, track identity, timestamps, model/revision, device, Git commit when available, window settings and both raw/resolved genre evidence.
 
 ## Multi-mode efficiency
 
-When Validation requests `Fast + Auto + Accurate`, the audio is decoded once. A canonical duration-based window grid is created once, and predictions are cached by window index. Each mode then consumes the subset it needs.
+Validation Fast + Auto + Accurate uses one decoded track and a shared MAEST window-prediction cache. Each mode consumes the window subset it needs.
 
-This makes convergence testing substantially cheaper than launching three independent model pipelines.
+Ordinary semantic analysis is currently a separate decode/inference path. Shared MAEST/AST decode/cache is planned for v0.4.1.
+
+## Runtime architecture
+
+Working copy:
+
+```text
+Genre_test_START.cmd
+  -> scripts/setup.ps1
+  -> project .venv
+  -> Runtime Health
+  -> GUI
+```
+
+Packaged release:
+
+```text
+Genre_test_START.cmd
+  -> scripts/release_bootstrap.ps1
+  -> project-local .venv
+  -> doctor/runtime gates
+  -> GUI
+```
+
+Current supported release runtime is Python 3.11-3.13 + PyTorch 2.12.1, with CUDA 13.0/cu130 on NVIDIA and CPU PyTorch otherwise.
 
 ## Design rules
 
-- preserve raw classifier outputs separately from resolved human labels
-- do not claim a single definitive genre when top broad families are nearly tied
-- track identity must survive moves/renames and therefore uses content hashing
-- history is append-oriented; old run snapshots are not silently overwritten
-- GUI is a presentation/input layer; analysis/validation logic remains shared with CLI
-- long ML work runs outside the Tk main thread
+- preserve raw classifier evidence separately from presentation labels
+- final published Genre and Family must be internally consistent
+- weak semantic evidence must not be promoted to full source confidence by normalization
+- track identity survives moves/renames through content hashing
+- history is append-oriented
+- GUI is presentation/input; analysis logic remains shared with CLI
+- long ML work stays outside the Tk main thread
+- Safe Stop is cooperative and preserves completed work
 - comparisons measure stability, not objective correctness
-- no model weights are stored in Git
-- raw audio/video, generated `results/`, SQLite DBs and WAL/SHM files are ignored by Git
+- no model weights or raw audio are stored in Git
+- generated `results/`, SQLite DBs and runtime caches are gitignored
