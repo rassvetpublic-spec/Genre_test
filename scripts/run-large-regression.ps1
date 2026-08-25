@@ -39,20 +39,23 @@ try {
     & $genre doctor
     if ($LASTEXITCODE -ne 0) { throw 'genre-test doctor failed.' }
 
-    if (-not $SkipBatch) {
-        Write-Host "`n== Ensemble batch ==" -ForegroundColor Cyan
-        & $genre batch $Source --out $batchOut --device auto --mode $Mode --semantic auto --view all --full-path
-        if ($LASTEXITCODE -ne 0) { throw 'Large ensemble batch failed.' }
-    }
-
+    # Validation intentionally runs before the ordinary batch. The batch persists fresh
+    # history, so reversing this order would hide results that were stale/missing at
+    # the start of the regression session.
     if ($FullValidation) {
         Write-Host "`n== Full mode-convergence validation ==" -ForegroundColor Cyan
         & $genre validate $Source --out $validationOut --device auto --compare-modes --filter all
         if ($LASTEXITCODE -ne 0) { throw 'Full Validation failed.' }
     } else {
-        Write-Host "`n== Current-mode history recheck ==" -ForegroundColor Cyan
+        Write-Host "`n== Pre-batch stale/missing history recheck ==" -ForegroundColor Cyan
         & $genre validate $Source --out $validationOut --device auto --mode $Mode --filter old_versions
         if ($LASTEXITCODE -ne 0) { throw 'Validation recheck failed.' }
+    }
+
+    if (-not $SkipBatch) {
+        Write-Host "`n== Ensemble batch ==" -ForegroundColor Cyan
+        & $genre batch $Source --out $batchOut --device auto --mode $Mode --semantic auto --view all --full-path
+        if ($LASTEXITCODE -ne 0) { throw 'Large ensemble batch failed.' }
     }
 
     Write-Host "`nLarge regression complete." -ForegroundColor Green
