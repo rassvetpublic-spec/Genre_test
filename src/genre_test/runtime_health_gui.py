@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import os
 import tkinter as tk
 from tkinter import ttk
 
 from . import __version__
+from .check_gui import CheckTab
 from .logging_utils import append_log
 from .runtime_health import RuntimeHealth, collect_runtime_health
+from .runtime_meta import default_history_path
 
 STATUS_COLORS = {
     "OK": "#187a2f",
@@ -19,6 +22,16 @@ EXPERT_TOP_K_MIN = 3
 EXPERT_TOP_K_MAX = 50
 EXPERT_WINDOWS_DEFAULT = 5
 EXPERT_TOP_K_DEFAULT = 15
+
+VALIDATION_DESCRIPTION = (
+    "Validation — повторно анализирует выбранное аудио и сверяет новые результаты с history. "
+    "Используйте для regression, поиска нестабильных треков и проверки сходимости."
+)
+VALIDATION_MODE_DESCRIPTION = (
+    "Режим: Быстрый — быстрее; Авто — баланс скорости и качества; Точный — больше окон; "
+    "Fast + Auto + Accurate — три режима за один проход."
+)
+EXPERT_CONTROLS_DESCRIPTION = "(окна MAEST / жанровые кандидаты)"
 
 
 def _blocking_failure(health: RuntimeHealth) -> bool:
@@ -78,6 +91,17 @@ def _find_device_comboboxes(root: tk.Misc) -> list[ttk.Combobox]:
             if _is_device_selector_values(values):
                 matches.append(child)
     return matches
+
+
+def _walk_widgets(root: tk.Misc) -> list[tk.Misc]:
+    widgets: list[tk.Misc] = []
+    stack: list[tk.Misc] = [root]
+    while stack:
+        parent = stack.pop()
+        for child in parent.winfo_children():
+            widgets.append(child)
+            stack.append(child)
+    return widgets
 
 
 def _fill_tree(tree: ttk.Treeview, health: RuntimeHealth) -> None:
@@ -228,12 +252,89 @@ def main() -> None:
             self._normalize_expert_inputs()
             super()._start()
 
+        def _open_history_folder(self, _event=None) -> None:
+            path = default_history_path()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            os.startfile(path.parent)  # type: ignore[attr-defined]
+
+        def _decorate_history_link(self) -> None:
+            style = ttk.Style(self)
+            style.configure(
+                "HistoryLink.TLabel",
+                foreground="#0563c1",
+                font=("Segoe UI", 9, "underline"),
+            )
+            for widget in _walk_widgets(self):
+                if not isinstance(widget, ttk.Label):
+                    continue
+                text = str(widget.cget("text"))
+                if not text.startswith("History: "):
+                    continue
+                widget.configure(style="HistoryLink.TLabel", cursor="hand2", takefocus=True)
+                widget.bind("<Button-1>", self._open_history_folder)
+                widget.bind("<Return>", self._open_history_folder)
+                widget.bind("<space>", self._open_history_folder)
+
+        def _decorate_expert_controls(self) -> None:
+            if any(
+                isinstance(child, ttk.Label)
+                and str(child.cget("text")) == EXPERT_CONTROLS_DESCRIPTION
+                for child in self.advanced_frame.winfo_children()
+            ):
+                return
+            ttk.Label(
+                self.advanced_frame,
+                text=EXPERT_CONTROLS_DESCRIPTION,
+            ).pack(side="left", padx=(8, 0))
+
+        def _split_validation_and_check_tabs(self, notebook: ttk.Notebook) -> None:
+            existing_titles = {
+                str(notebook.tab(tab_id, "text"))
+                for tab_id in notebook.tabs()
+            }
+            validation_tab: tk.Misc | None = None
+            for tab_id in notebook.tabs():
+                title = str(notebook.tab(tab_id, "text"))
+                if title == "Validation / Перепроверка":
+                    validation_tab = self.nametowidget(tab_id)
+                    notebook.tab(tab_id, text="Validation")
+                    break
+                if title == "Validation":
+                    validation_tab = self.nametowidget(tab_id)
+                    break
+
+            if validation_tab is not None:
+                for widget in validation_tab.winfo_children():
+                    if isinstance(widget, ttk.Label):
+                        text = str(widget.cget("text"))
+                        if text.startswith("Источники аудио"):
+                            widget.configure(
+                                text=(
+                                    VALIDATION_DESCRIPTION
+                                    + "\n"
+                                    + VALIDATION_MODE_DESCRIPTION
+                                    + "\n\nИсточники аудио (можно разные диски и каталоги):"
+                                ),
+                                wraplength=1050,
+                                justify="left",
+                            )
+                    elif isinstance(widget, ttk.LabelFrame):
+                        if str(widget.cget("text")) == "Сравнение версий анализатора":
+                            widget.grid_remove()
+
+            if "Проверка" not in existing_titles:
+                notebook.add(CheckTab(notebook), text="Проверка")
+
         def _build_ui(self) -> None:
             super()._build_ui()
-            self._sync_device_capability()
             children = self.winfo_children()
             old_runtime_bar = children[0] if children else None
             notebook = next((child for child in children if isinstance(child, ttk.Notebook)), None)
+            if notebook is not None:
+                self._split_validation_and_check_tabs(notebook)
+            self._decorate_history_link()
+            self._decorate_expert_controls()
+            self._sync_device_capability()
             if old_runtime_bar is not None and old_runtime_bar is not notebook:
                 old_runtime_bar.pack_forget()
             self._health_bar = ttk.Frame(self, padding=(10, 6))
