@@ -21,3 +21,12 @@ def test_setup_detects_nvidia_hardware_even_when_nvidia_smi_is_not_on_path():
     assert "VEN_10DE" in setup
     assert "$hasNvidia = Test-NvidiaHardware" in setup
     assert "NVIDIA hardware is present but CUDA runtime is unavailable/incompatible" in setup
+
+
+def test_successful_winget_bootstrap_returns_to_calling_setup():
+    helper = (ROOT / "scripts" / "ensure_winget.ps1").read_text(encoding="utf-8")
+    assert "exit 0" not in helper
+    assert 'Write-Host "WinGet OK: $existing"\n    return' in helper
+    assert 'Write-Host "WinGet repaired successfully: $winget"' in helper
+    assert "& $winget --version\n        return" in helper
+    assert "exit 2" in helper
