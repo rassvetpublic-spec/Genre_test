@@ -40,7 +40,7 @@ def probe_source_audio(path: str | Path) -> SourceAudioInfo | None:
     source = Path(path)
     try:
         info = sf.info(str(source))
-    except Exception:
+    except (OSError, RuntimeError, TypeError, ValueError):
         return None
 
     duration_s = float(info.frames / info.samplerate) if info.samplerate else 0.0
