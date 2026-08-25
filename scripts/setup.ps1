@@ -30,7 +30,7 @@ function Get-CompatiblePython {
     if ($py) {
         foreach ($selector in @('-3.12', '-3.11')) {
             try {
-                $v = (& $py.Source $selector -c "import struct, sys; print(f'{sys.version_info.major}.{sys.version_info.minor}|{struct.calcsize(\"P\") * 8}')" 2>$null | Select-Object -Last 1)
+                $v = (& $py.Source $selector -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}|{64 if sys.maxsize > 2**32 else 32}')" 2>$null | Select-Object -Last 1)
                 if ($LASTEXITCODE -eq 0 -and $v -match '^3\.(11|12)\|64$') {
                     $version = ($v -split '\|')[0]
                     return [pscustomobject]@{ Exe=$py.Source; Prefix=@($selector); Version=$version; Display="py $selector" }
@@ -42,7 +42,7 @@ function Get-CompatiblePython {
     $python = Get-Command python -ErrorAction SilentlyContinue
     if ($python) {
         try {
-            $v = (& $python.Source -c "import struct, sys; print(f'{sys.version_info.major}.{sys.version_info.minor}|{struct.calcsize(\"P\") * 8}')" 2>$null | Select-Object -Last 1)
+            $v = (& $python.Source -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}|{64 if sys.maxsize > 2**32 else 32}')" 2>$null | Select-Object -Last 1)
             if ($LASTEXITCODE -eq 0 -and $v -match '^3\.(11|12)\|64$') {
                 $version = ($v -split '\|')[0]
                 return [pscustomobject]@{ Exe=$python.Source; Prefix=@(); Version=$version; Display=$python.Source }
