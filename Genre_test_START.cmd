@@ -119,8 +119,14 @@ echo Version: %VERSION%
 echo.
 
 if not exist "%WINPS%" goto RELEASE_NO_WINPS
-if not exist "%ROOT%scripts\portable_bootstrap_v2.ps1" goto RELEASE_NO_BOOTSTRAP
 
+set "RELEASE_BOOTSTRAP="
+if exist "%ROOT%scripts\release_bootstrap.ps1" set "RELEASE_BOOTSTRAP=%ROOT%scripts\release_bootstrap.ps1"
+if defined RELEASE_BOOTSTRAP goto RELEASE_PREFLIGHT
+if /I "%VERSION%"=="0.3.6" if exist "%ROOT%scripts\portable_bootstrap_v2.ps1" set "RELEASE_BOOTSTRAP=%ROOT%scripts\portable_bootstrap_v2.ps1"
+if not defined RELEASE_BOOTSTRAP goto RELEASE_NO_BOOTSTRAP
+
+:RELEASE_PREFLIGHT
 if not exist "%ROOT%scripts\ensure_winget.ps1" goto RELEASE_VC
 "%WINPS%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\ensure_winget.ps1"
 set "WINGET_RC=%ERRORLEVEL%"
@@ -131,13 +137,14 @@ echo Bootstrap will continue and only require it if a dependency is missing.
 echo.
 
 :RELEASE_VC
-if not exist "%ROOT%scripts\ensure_vcredist.ps1" goto RELEASE_BOOTSTRAP
+if not exist "%ROOT%scripts\ensure_vcredist.ps1" goto RELEASE_BOOTSTRAP_RUN
 "%WINPS%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\ensure_vcredist.ps1"
 set "VC_RC=%ERRORLEVEL%"
 if not "%VC_RC%"=="0" goto RELEASE_VC_FAIL
 
-:RELEASE_BOOTSTRAP
-"%WINPS%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\portable_bootstrap_v2.ps1"
+:RELEASE_BOOTSTRAP_RUN
+echo [INFO] Release bootstrap: %RELEASE_BOOTSTRAP%
+"%WINPS%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%RELEASE_BOOTSTRAP%"
 set "RC=%ERRORLEVEL%"
 if "%RC%"=="0" exit /b 0
 
@@ -159,9 +166,13 @@ pause
 exit /b 1
 
 :RELEASE_NO_BOOTSTRAP
-echo [FAIL] Release bootstrap is missing:
-echo   %ROOT%scripts\portable_bootstrap_v2.ps1
-echo This folder does not look like a complete Genre_test release package.
+echo [FAIL] No bootstrap matches Genre_test release %VERSION%.
+echo.
+echo Current releases must contain:
+echo   scripts\release_bootstrap.ps1
+echo.
+echo Legacy scripts\portable_bootstrap_v2.ps1 is accepted only for 0.3.6.
+echo This guard prevents a 0.4+ release from silently installing the old CUDA 12.8 runtime.
 echo.
 pause
 exit /b 1
