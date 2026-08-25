@@ -8,7 +8,7 @@ from tkinter import messagebox, ttk
 
 from .build_compare import compare_builds, compare_repeatability, format_build_comparison
 from .build_history import BuildAwareHistoryDB, BuildInfo
-from .check_gui import CheckTab, VERSION_MODE_LABELS
+from .check_gui import VERSION_MODE_LABELS, CheckTab
 from .logging_utils import append_log
 
 BETWEEN_BUILDS = "Сборки A → B"
