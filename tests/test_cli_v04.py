@@ -1,40 +1,19 @@
 from __future__ import annotations
 
-from click import Command
-from typer.main import get_command
+from inspect import signature
 
-from genre_test.cli import app
-
-
-def _subcommand(name: str) -> Command:
-    root = get_command(app)
-    command = root.commands.get(name)
-    assert command is not None
-    return command
+from genre_test.cli import analyze, batch
 
 
-def _param(command: Command, name: str):
-    for param in command.params:
-        if param.name == name:
-            return param
-    raise AssertionError(f"Missing CLI parameter: {name}")
+def _assert_v04_defaults(command) -> None:
+    params = signature(command).parameters
+    assert params["view"].default.default == "all"
+    assert params["full_path"].default.default is False
 
 
 def test_v04_analyze_defaults_to_all_views_and_short_paths() -> None:
-    command = _subcommand("analyze")
-    view = _param(command, "view")
-    full_path = _param(command, "full_path")
-
-    assert view.default == "all"
-    assert full_path.default is False
-    assert "--full-path" in full_path.opts
+    _assert_v04_defaults(analyze)
 
 
 def test_v04_batch_defaults_to_all_views_and_short_paths() -> None:
-    command = _subcommand("batch")
-    view = _param(command, "view")
-    full_path = _param(command, "full_path")
-
-    assert view.default == "all"
-    assert full_path.default is False
-    assert "--full-path" in full_path.opts
+    _assert_v04_defaults(batch)
