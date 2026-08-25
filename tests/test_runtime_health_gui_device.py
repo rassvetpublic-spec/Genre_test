@@ -3,6 +3,7 @@ from genre_test.runtime_health_gui import (
     _bounded_expert_parameters,
     _cuda_usable,
     _device_options,
+    _is_device_selector_values,
 )
 
 
@@ -38,6 +39,12 @@ def test_failed_cuda_runtime_is_not_selectable() -> None:
 
     assert _cuda_usable(health) is False
     assert _device_options(health) == ("auto", "cpu")
+
+
+def test_device_selector_detection_covers_analysis_and_validation_states() -> None:
+    assert _is_device_selector_values(("auto", "cuda", "cpu")) is True
+    assert _is_device_selector_values(("auto", "cpu")) is True
+    assert _is_device_selector_values(("Auto", "Fast", "Accurate")) is False
 
 
 def test_expert_two_windows_remains_valid_but_top_k_two_is_raised_to_three() -> None:
