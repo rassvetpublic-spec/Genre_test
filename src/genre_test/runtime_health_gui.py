@@ -21,6 +21,29 @@ def _blocking_failure(health: RuntimeHealth) -> bool:
     )
 
 
+def _cuda_usable(health: RuntimeHealth) -> bool:
+    cuda = health.by_name("CUDA")
+    return bool(cuda and cuda.status == "OK" and cuda.value != "unavailable")
+
+
+def _device_options(health: RuntimeHealth) -> tuple[str, ...]:
+    if _cuda_usable(health):
+        return ("auto", "cuda", "cpu")
+    return ("auto", "cpu")
+
+
+def _find_bound_combobox(root: tk.Misc, variable: tk.Variable) -> ttk.Combobox | None:
+    target = str(variable)
+    stack: list[tk.Misc] = [root]
+    while stack:
+        parent = stack.pop()
+        for child in parent.winfo_children():
+            stack.append(child)
+            if isinstance(child, ttk.Combobox) and str(child.cget("textvariable")) == target:
+                return child
+    return None
+
+
 def _fill_tree(tree: ttk.Treeview, health: RuntimeHealth) -> None:
     for item_id in tree.get_children():
         tree.delete(item_id)
@@ -115,8 +138,29 @@ def main() -> None:
                 f"{self.runtime_health.compact_summary}"
             )
 
+        def _publish_live_settings(self, *, notify: bool = True) -> None:
+            if self.device_var.get() == "cuda" and not _cuda_usable(self.runtime_health):
+                self.device_var.set("auto")
+                super()._publish_live_settings(notify=False)
+                if notify:
+                    self.status_var.set("CUDA недоступна — Device оставлен auto (CPU fallback)")
+                    append_log(
+                        "Rejected live device change: cuda unavailable; device reset to auto"
+                    )
+                return
+            super()._publish_live_settings(notify=notify)
+
+        def _sync_device_capability(self) -> None:
+            combo = _find_bound_combobox(self, self.device_var)
+            if combo is not None:
+                combo.configure(values=_device_options(self.runtime_health))
+            if self.device_var.get() == "cuda" and not _cuda_usable(self.runtime_health):
+                self.device_var.set("auto")
+                super()._publish_live_settings(notify=False)
+
         def _build_ui(self) -> None:
             super()._build_ui()
+            self._sync_device_capability()
             children = self.winfo_children()
             old_runtime_bar = children[0] if children else None
             notebook = next((child for child in children if isinstance(child, ttk.Notebook)), None)
@@ -156,6 +200,7 @@ def main() -> None:
 
         def _refresh_runtime_health(self, tree: ttk.Treeview, summary: tk.Label) -> None:
             self.runtime_health = collect_runtime_health()
+            self._sync_device_capability()
             _fill_tree(tree, self.runtime_health)
             overall = self.runtime_health.overall_status
             summary.configure(
