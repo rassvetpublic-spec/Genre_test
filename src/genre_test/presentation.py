@@ -166,19 +166,11 @@ def _format_profile_all(result: AnalysisResult, top_n: int) -> str:
     normal = _without_file_header(_format_profile_normal(result, top_n), result)
     suno = _without_file_header(_format_profile_suno(result), result)
     distributor = _without_file_header(_format_profile_distributor(result), result)
-    return "\n".join(
-        [
-            filename,
-            "",
-            "[ОБЫЧНЫЙ]",
-            normal,
-            "",
-            "[SUNO]",
-            suno,
-            "",
-            "[ДИСТРИБЬЮТОР]",
-            distributor,
-        ]
+    return (
+        f"{filename}\n\n"
+        f"[ОБЫЧНЫЙ]\n{normal}\n\n"
+        f"[SUNO]\n{suno}\n\n"
+        f"[ДИСТРИБЬЮТОР]\n{distributor}"
     )
 
 
