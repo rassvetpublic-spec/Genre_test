@@ -91,6 +91,16 @@ class BuildAwareHistoryDB(HistoryDB):
             for row in rows
         ]
 
+    def track_ids_for_build(self, build: BuildInfo, mode: str | None = None) -> set[str]:
+        clauses, params = self._build_clauses(build)
+        if mode:
+            clauses.append("analysis_mode = ?")
+            params.append(mode)
+        query = "SELECT DISTINCT track_id FROM runs WHERE " + " AND ".join(clauses)
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+        return {str(row["track_id"]) for row in rows}
+
     def runs_for_build(
         self,
         track_id: str,
