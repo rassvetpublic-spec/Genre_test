@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .models import AnalysisResult
+from .source_audio import format_source_audio
 
 if TYPE_CHECKING:
     from .validation import ValidationSessionResult
@@ -15,8 +16,12 @@ def tempo_candidates(bpm: float | None) -> str:
     if not bpm:
         return "n/a"
     half = bpm / 2.0
+    two_thirds = bpm * 2.0 / 3.0
     double = bpm * 2.0
-    return f"{bpm:.2f} BPM  |  half {half:.2f}  |  double {double:.2f}"
+    return (
+        f"{bpm:.2f} BPM  |  half {half:.2f}  |  "
+        f"2/3 {two_thirds:.2f}  |  double {double:.2f}"
+    )
 
 
 def _score_table(result: AnalysisResult, top_n: int = 10, broad_n: int = 6) -> list[str]:
@@ -51,6 +56,12 @@ def _score_table(result: AnalysisResult, top_n: int = 10, broad_n: int = 6) -> l
     return lines
 
 
+def _append_source_audio(lines: list[str], result: AnalysisResult) -> None:
+    source_audio = format_source_audio(result.path)
+    if source_audio:
+        lines.append(f"Source audio: {source_audio}")
+
+
 def _format_profile_normal(result: AnalysisResult, top_n: int) -> str:
     profile = result.audio_profile
     assert profile is not None
@@ -73,6 +84,7 @@ def _format_profile_normal(result: AnalysisResult, top_n: int) -> str:
         lines.append("Mood: " + ", ".join(profile.moods))
     if profile.production:
         lines.append("Production: " + ", ".join(profile.production))
+    _append_source_audio(lines, result)
     if result.input_quality != "NORMAL":
         lines.append(f"Input quality: {result.input_quality}")
         if result.quality_notes:
@@ -172,6 +184,7 @@ def format_result_text(
             secondary_bits.append(f"family={result.secondary_genre}")
         lines.append("Alternative: " + " | ".join(secondary_bits))
 
+    _append_source_audio(lines, result)
     if result.input_quality != "NORMAL":
         lines.append(f"Input quality: {result.input_quality}")
         if result.quality_notes:
