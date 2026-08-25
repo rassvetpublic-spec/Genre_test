@@ -128,9 +128,19 @@ def test_profile_round_trip_and_product_views() -> None:
     normal = format_result_text(enriched, view="normal")
     suno = format_result_text(enriched, view="suno")
     distributor = format_result_text(enriched, view="distributor")
+    combined = format_result_text(enriched)
+    combined_with_path = format_result_text(enriched, include_path=True)
     assert "Genre: Pop Rock" in normal
     assert "Vocal: Male singing" in normal
     assert "SUNO Style of Music:" in suno
     assert "Distributor genre:" in distributor
+    assert "[ОБЫЧНЫЙ]" in combined
+    assert "[SUNO]" in combined
+    assert "[ДИСТРИБЬЮТОР]" in combined
+    assert "Genre: Pop Rock" in combined
+    assert "SUNO Style of Music:" in combined
+    assert "Distributor genre:" in combined
+    assert "Full path: C:/Music/test.wav" not in combined
+    assert "Full path: C:/Music/test.wav" in combined_with_path
     assert "Run ID:" not in normal
     assert "MAEST revision:" not in normal
