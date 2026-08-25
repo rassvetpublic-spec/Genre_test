@@ -178,7 +178,7 @@ class CheckTab(ttk.Frame):
     def _refresh_versions(self) -> None:
         try:
             versions = HistoryDB(Path(self.history_var.get())).versions()
-        except Exception:
+        except Exception:  # noqa: BLE001 - GUI must remain usable when history cannot be opened
             versions = []
         self.version_a_combo.configure(values=versions)
         self.version_b_combo.configure(values=versions)
@@ -221,7 +221,7 @@ class CheckTab(ttk.Frame):
             )
             result = engine.compare_versions(version_a, version_b, mode=mode)
             self._queue.put(("done", format_version_comparison(result)))
-        except Exception:
+        except Exception:  # noqa: BLE001 - report unexpected comparison failures in the GUI/log
             detail = traceback.format_exc()
             append_log(f"Version comparison fatal error:\n{detail}")
             self._queue.put(("error", detail))
