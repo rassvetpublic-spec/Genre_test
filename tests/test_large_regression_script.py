@@ -1,11 +1,6 @@
-from pathlib import Path
-
-
-ROOT = Path(__file__).resolve().parents[1]
-
-
 def test_large_regression_validates_before_persisting_batch() -> None:
-    script = (ROOT / "scripts" / "run-large-regression.ps1").read_text(encoding="utf-8")
+    with open("scripts/run-large-regression.ps1", encoding="utf-8") as handle:
+        script = handle.read()
     validation = "& $genre validate $Source"
     batch = "& $genre batch $Source"
     assert validation in script
