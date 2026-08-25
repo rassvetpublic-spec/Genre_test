@@ -6,7 +6,12 @@ import traceback
 from pathlib import Path
 from tkinter import messagebox, ttk
 
-from .build_compare import compare_builds, compare_repeatability, format_build_comparison
+from .build_compare import (
+    build_coverage,
+    compare_builds,
+    compare_repeatability,
+    format_build_comparison,
+)
 from .build_history import BuildAwareHistoryDB, BuildInfo
 from .check_gui import VERSION_MODE_LABELS, CheckTab
 from .logging_utils import append_log
@@ -116,6 +121,30 @@ class BuildAwareCheckTab(CheckTab):
         mode_label = self.version_mode_var.get()
         mode = VERSION_MODE_LABELS[mode_label]
         self.output.delete("1.0", "end")
+
+        if kind == BETWEEN_BUILDS:
+            assert build_b is not None
+            try:
+                history = BuildAwareHistoryDB(Path(self.history_var.get()))
+                coverage = build_coverage(history, build_a, build_b, mode=mode)
+            except Exception:  # noqa: BLE001 - normal worker will report DB failures in detail
+                coverage = None
+            if coverage is not None:
+                self._append_output(
+                    "Preflight:\n"
+                    f"  Сборка A ({mode_label}): {coverage['left_tracks']} треков\n"
+                    f"  Сборка B ({mode_label}): {coverage['right_tracks']} треков\n"
+                    f"  Общих треков: {coverage['common_tracks']}"
+                )
+                if coverage["common_tracks"] == 0:
+                    self._append_output(
+                        "\nСравнение не запущено: у выбранных сборок нет общих сохранённых "
+                        "результатов в этом режиме.\n"
+                        "Запустите Validation для недостающей сборки/режима либо выберите другой режим."
+                    )
+                    self.status_var.set("Нет общих треков")
+                    return
+
         if kind == REPEATABILITY:
             self._append_output(f"Повторяемость сборки: {build_a.label} ({mode_label})")
         else:
