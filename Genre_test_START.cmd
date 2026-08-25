@@ -74,7 +74,7 @@ if not defined PWSH goto WORKING_NO_PWSH
 if not exist "%ROOT%scripts\setup.ps1" goto WORKING_NO_SETUP
 if exist "%ROOT%scripts\ensure_winget.ps1" "%WINPS%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\ensure_winget.ps1"
 
-echo [INFO] First-run bootstrap will install Python 3.12 x64 automatically if required.
+echo [INFO] First-run bootstrap reuses Python 3.11/3.12/3.13 x64; installs Python 3.12 x64 only if none is available.
 "%PWSH%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\setup.ps1" -InstallPython
 set "RC=%ERRORLEVEL%"
 if not "%RC%"=="0" goto WORKING_SETUP_FAIL
