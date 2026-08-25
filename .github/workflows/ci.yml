@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.11', '3.12']
+        python-version: ['3.11', '3.12', '3.13']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,6 +25,12 @@ jobs:
           pip install -e . --no-deps
       - name: CLI version smoke
         run: genre-test --version
+      - name: Python support metadata gate
+        shell: bash
+        run: |
+          grep -Fq 'requires-python = ">=3.11,<3.14"' pyproject.toml
+          python -c "import sys; assert sys.version_info[:2] in {(3,11),(3,12),(3,13)}"
+          echo 'Python 3.11-3.13 metadata gate PASS'
       - name: Root launcher auto-mode gate
         shell: bash
         run: |
@@ -41,6 +47,7 @@ jobs:
           grep -Fq 'setup.ps1" -InstallPython' Genre_test_START.cmd
           grep -Fq 'Microsoft.PowerShell' Genre_test_START.cmd
           grep -Fq 'ensure_winget.ps1' Genre_test_START.cmd
+          grep -Fq 'Python 3.11/3.12/3.13 x64' Genre_test_START.cmd
           if grep -Fq 'Get-FileHash' Genre_test_START.cmd; then
             echo 'Root launcher still shells through PowerShell for its fingerprint.' >&2
             exit 1
@@ -71,10 +78,13 @@ jobs:
           if ($setup -notmatch 'Refresh-ProcessPath' -or $setup -notmatch 'Get-WingetPath') {
             throw 'First-run setup does not refresh PATH / recover WinGet.'
           }
-          if ($setup -notmatch 'Python\.Python\.3\.12' -or $setup -notmatch '--architecture x64') {
-            throw 'First-run setup does not enforce automatic Python 3.12 x64 installation.'
+          if ($setup -notmatch "'-3\.13'" -or $setup -notmatch '11\|12\|13') {
+            throw 'First-run setup does not accept/prefer Python 3.13 x64.'
           }
-          Write-Host 'setup.ps1 parser/CUDA13/first-run gate PASS'
+          if ($setup -notmatch 'Python\.Python\.3\.12' -or $setup -notmatch '--architecture x64') {
+            throw 'First-run fallback does not enforce automatic Python 3.12 x64 installation.'
+          }
+          Write-Host 'setup.ps1 parser/CUDA13/Python3.13/first-run gate PASS'
       - name: FFmpeg bootstrap script smoke
         shell: pwsh
         run: ./scripts/ensure_ffmpeg.ps1 -NoInstall
