@@ -47,8 +47,32 @@ if "%NEED_SETUP%"=="0" goto WORKING_GUI
 echo [INFO] Working environment needs setup/update.
 set "PWSH="
 for /f "delims=" %%P in ('where pwsh.exe 2^>nul') do if not defined PWSH set "PWSH=%%P"
+if not defined PWSH if exist "%ProgramFiles%\PowerShell\7\pwsh.exe" set "PWSH=%ProgramFiles%\PowerShell\7\pwsh.exe"
+if defined PWSH goto WORKING_HAVE_PWSH
+
+echo [INFO] PowerShell 7 not found. Attempting automatic installation...
+if not exist "%WINPS%" goto WORKING_NO_PWSH
+if not exist "%ROOT%scripts\ensure_winget.ps1" goto WORKING_NO_PWSH
+"%WINPS%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\ensure_winget.ps1"
+set "RC=%ERRORLEVEL%"
+if not "%RC%"=="0" goto WORKING_NO_PWSH
+
+set "WINGET="
+for /f "delims=" %%W in ('where winget.exe 2^>nul') do if not defined WINGET set "WINGET=%%W"
+if not defined WINGET if exist "%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe" set "WINGET=%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe"
+if not defined WINGET goto WORKING_NO_PWSH
+
+"%WINGET%" install --id Microsoft.PowerShell --exact --accept-package-agreements --accept-source-agreements
+set "RC=%ERRORLEVEL%"
+if not "%RC%"=="0" goto WORKING_NO_PWSH
+
+if exist "%ProgramFiles%\PowerShell\7\pwsh.exe" set "PWSH=%ProgramFiles%\PowerShell\7\pwsh.exe"
+if not defined PWSH for /f "delims=" %%P in ('where pwsh.exe 2^>nul') do if not defined PWSH set "PWSH=%%P"
 if not defined PWSH goto WORKING_NO_PWSH
+
+:WORKING_HAVE_PWSH
 if not exist "%ROOT%scripts\setup.ps1" goto WORKING_NO_SETUP
+if exist "%ROOT%scripts\ensure_winget.ps1" "%WINPS%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\ensure_winget.ps1"
 
 echo [INFO] First-run bootstrap will install Python 3.12 x64 automatically if required.
 "%PWSH%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\setup.ps1" -InstallPython
@@ -67,7 +91,8 @@ set "RC=%ERRORLEVEL%"
 exit /b %RC%
 
 :WORKING_NO_PWSH
-echo [FAIL] PowerShell 7 ^(pwsh.exe^) is required to prepare a working checkout.
+echo [FAIL] PowerShell 7 could not be prepared automatically.
+echo Ensure Windows PowerShell 5.1 and WinGet/App Installer are available, then run this launcher again.
 echo.
 pause
 exit /b 1
