@@ -111,14 +111,19 @@ def _normalize_scores(items: list[StyleScore]) -> dict[str, float]:
     return {item.label: max(0.0, item.score) / total for item in items}
 
 
-def semantic_family_scores(evidence: SemanticEvidence | None) -> list[StyleScore]:
+def _semantic_family_totals(evidence: SemanticEvidence | None) -> dict[str, float]:
     if evidence is None or evidence.status != "ok":
-        return []
+        return {}
     totals: dict[str, float] = defaultdict(float)
     for item in evidence.genre_tags:
         family = AST_FAMILY_MAP.get(item.label.casefold())
         if family:
             totals[family] += max(0.0, item.score)
+    return dict(totals)
+
+
+def semantic_family_scores(evidence: SemanticEvidence | None) -> list[StyleScore]:
+    totals = _semantic_family_totals(evidence)
     total = sum(totals.values())
     if total <= 0.0:
         return []
@@ -135,15 +140,25 @@ def fuse_family_evidence(
     maest_weight: float = 0.75,
 ) -> tuple[list[StyleScore], str]:
     maest_norm = _normalize_scores(maest)
+    ast_totals = _semantic_family_totals(semantic)
+    ast_total = sum(ast_totals.values())
     ast_items = semantic_family_scores(semantic)
     ast_norm = {item.label: item.score for item in ast_items}
-    if not ast_norm:
+    if not ast_norm or ast_total <= 0.0:
         return [StyleScore(label, round(score, 6)) for label, score in maest_norm.items()], "maest_only"
 
-    ast_weight = 1.0 - maest_weight
+    # AudioSet class probabilities are absolute evidence, not a categorical
+    # distribution. Preserve that strength before normalizing across mapped
+    # families so a lone weak tag (for example Rock=0.03) cannot receive the
+    # full semantic vote merely because it is the only recognized family.
+    ast_strength = min(1.0, ast_total)
+    max_ast_weight = 1.0 - maest_weight
+    ast_weight = max_ast_weight * ast_strength
+    effective_maest_weight = 1.0 - ast_weight
+
     labels = set(maest_norm) | set(ast_norm)
     combined = {
-        label: maest_weight * maest_norm.get(label, 0.0) + ast_weight * ast_norm.get(label, 0.0)
+        label: effective_maest_weight * maest_norm.get(label, 0.0) + ast_weight * ast_norm.get(label, 0.0)
         for label in labels
     }
     evidence = [
