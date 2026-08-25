@@ -1,245 +1,163 @@
-# VALIDATION LAB — v0.3.0
+# VALIDATION LAB — v0.4.0
 
 ## Purpose
 
-Validation Lab turns Genre_test from a one-shot classifier into a versioned test system. It is designed to answer three questions:
+Validation Lab checks reproducibility, mode convergence and build-to-build drift. It is deliberately separate from ordinary AudioProfile output.
+
+It answers:
 
 1. Do `Fast`, `Auto` and `Accurate` converge on the same track?
-2. Did a Genre_test update change a previously stored result?
-3. Which tracks need manual review because the disagreement is material?
+2. Did a new build change a previously stored result?
+3. Which tracks need manual review?
+4. Are two runs of the same build repeatable?
+
+Validation is not a ground-truth accuracy test. A stable result can still be wrong.
 
 ## Track identity
 
-Tracks are identified by SHA-256 of file contents:
+Tracks are identified by SHA-256 content identity:
 
 ```text
 track_id = sha256:<hex digest>
 ```
 
-A file can move between disks or folders and still resolve to the same track. Identical duplicate files at different paths collapse to one logical track during Validation scans.
+Duplicate byte-identical files at different paths collapse to one logical track during Validation scanning.
 
-The SQLite `file_locations` cache stores path + size + mtime so unchanged files do not need to be rehashed on every scan.
+## Build identity
 
-## Local history database
+Saved comparisons use a composite build identity rather than analyzer semver alone:
 
-Default path:
+- analyzer version
+- Git commit
+- schema version
+- model id
+- model revision
+
+This prevents two different `0.4.0` development builds from being treated as identical.
+
+## Local history
+
+Working-copy default:
 
 ```text
-Windows: %LOCALAPPDATA%\Genre_test\history.sqlite3
-Linux:   $XDG_DATA_HOME/Genre_test/history.sqlite3
-         or ~/.local/share/Genre_test/history.sqlite3
+C:\GIT\Genre_test\.genre_test\history.sqlite3
 ```
 
 The database is local and gitignored.
 
-Core tables:
+Core history includes tracks, file locations, immutable runs, style/broad evidence, validation sessions and comparisons.
 
-- `tracks` — logical content identities
-- `file_locations` — current/previous filesystem locations
-- `runs` — complete versioned analysis runs
-- `style_scores` — detailed MAEST style scores
-- `broad_scores` — broad-family scores
-- `validation_sessions` — recheck sessions
-- `comparisons` — mode/version/rerun comparisons
+## GUI separation
 
-## Immutable run metadata
+The Runtime Health GUI uses three independent tabs:
 
-Every v0.3 result stores:
+### Анализ
 
-- `schema_version`
-- `analyzer_version`
-- `run_id`
-- `analyzed_at`
-- `track_id`
-- `analysis_mode`
-- `windows_analyzed`
-- `window_seconds`
-- `internal_top_k`
-- `report_top_k`
-- `model_id`
-- `model_revision`
-- `device`
-- `git_commit` when available
+Ordinary MAEST + AudioSet AST AudioProfile analysis and Normal / SUNO / Distributor presentation.
 
-Result JSON filenames include analyzer version, mode and run-id prefix, so a new analysis does not overwrite the previous run snapshot.
+### Validation
 
-## Multi-mode convergence
+Re-analyzes selected files or folders to measure current convergence and history drift.
 
-`Fast + Auto + Accurate` uses one decoded track and one shared prediction cache. The analyzer computes only the window predictions needed by the union of the requested modes.
+Modes:
 
-Pairwise comparisons are produced for:
+- Быстрый / Fast
+- Авто / Auto
+- Точный / Accurate
+- Fast + Auto + Accurate comparison
 
-- Fast vs Auto
-- Fast vs Accurate
-- Auto vs Accurate
+Filters:
 
-Overall convergence:
+- all
+- stale/missing build results
+- unstable
 
-| Worst pairwise severity | Convergence |
-|---|---|
-| STABLE | HIGH |
-| MINOR | MEDIUM |
-| SIGNIFICANT | LOW |
-| CRITICAL | FAIL |
+Safe Stop is cooperative: completed results remain stored and the report records the remaining count.
 
-## Drift metrics
+### Проверка
 
-The comparator does not rely on the final genre string alone. It checks:
+Compares already saved builds without decoding/re-analyzing audio.
 
-- broad-family equality
+The preflight reports:
+
+```text
+Build A coverage
+Build B coverage
+Common tracks
+```
+
+If common coverage is zero, comparison stops instead of printing meaningless `0%` metrics.
+
+A repeatability mode compares two saved runs from the same build.
+
+## Drift terminology
+
+Validation labels explicitly describe drift:
+
+```text
+DRIFT: STABLE
+DRIFT: MINOR
+DRIFT: SIGNIFICANT
+DRIFT: CRITICAL
+```
+
+This is separate from classifier confidence such as `high`, `medium` or `low-medium`.
+
+## Comparison signals
+
+The comparator may use:
+
 - resolved fine-style equality
+- broad-family equality
 - primary/hybrid classification equality
-- normalized broad-distribution Jensen-Shannon divergence
+- broad-distribution Jensen-Shannon divergence
 - broad-distribution cosine similarity
-- rank-weighted Top-N detailed-style overlap
-- BPM equivalence
-- key/mode equality when both are known
+- weighted Top-N style overlap
+- tempo equivalence
+- key/mode equality when both are available
 
-### Tempo equivalence
+Tempo comparison treats close half/double relationships as equivalent where appropriate. Tempo-v2 itself additionally handles the short-loop 3:2 case in ordinary analysis.
 
-The following are treated as equivalent tempo interpretations within tolerance:
+## Large-catalog workflow
 
-```text
-x
-x / 2
-x * 2
-```
-
-Therefore `81.5 BPM` vs `163 BPM` is reported as `half-double`, not as a large tempo disagreement.
-
-## Severity
-
-### STABLE
-
-Genre evidence is convergent and only small numerical drift is present.
-
-### MINOR
-
-Typical cases:
-
-- fine style changes while broad family remains the same
-- moderate probability drift
-- key/mode changes
-- detailed Top-N overlap falls substantially
-
-### SIGNIFICANT
-
-Typical cases:
-
-- broad family changes without a high-confidence contradiction
-- `primary` ↔ `hybrid` changes
-- large probability-distribution drift
-- BPM is neither close nor half/double equivalent
-
-### CRITICAL
-
-Typical cases:
-
-- two high-confidence runs disagree on broad family
-- extremely large broad-distribution drift
-
-Thresholds are diagnostic defaults and remain subject to benchmark calibration.
-
-## Recheck filters
-
-Validation supports:
-
-- `all` — analyze all discovered tracks
-- `old_versions` — analyze only tracks whose latest relevant run is not from the current analyzer version
-- `unstable` — analyze tracks with non-high confidence, hybrid classification, or a latest SIGNIFICANT/CRITICAL comparison
-
-## Scattered catalogs
-
-GUI Validation accepts multiple roots and individual files, for example:
-
-```text
-D:\Документы\! SUNO
-E:\Music Archive
-F:\Old Releases
-D:\single_track.mp3
-```
-
-All sources are scanned recursively and deduplicated by content hash.
-
-## Legacy JSON import
-
-Existing `*.genre*.json` can be imported into history.
-
-If the JSON has no `track_id`, the original audio path from its `path` field must still resolve so Genre_test can compute SHA-256 and associate the historical result with the correct logical track.
-
-Legacy JSON without analyzer metadata is stored as `legacy-unknown`. Import IDs are deterministic for the same unchanged JSON file to prevent duplicate imports.
-
-## GUI
-
-The second tab is:
-
-```text
-Validation / Перепроверка
-```
-
-It provides:
-
-- multiple source roots/files
-- local history DB selection
-- `all / old versions / unstable` filters
-- `Auto / Fast / Accurate / Fast+Auto+Accurate`
-- JSON history import
-- version A ↔ version B comparison
-- generated validation JSON/CSV reports
-
-## CLI
-
-Recheck one or more roots:
+For a full local v0.4 regression use:
 
 ```powershell
-.\.venv\Scripts\genre-test.exe validate "D:\Music" "E:\Archive" --compare-modes
+.\scripts\run_large_regression.ps1 -Source "D:\Music" -CompareModes
 ```
 
-Only old analyzer results:
+The script runs runtime diagnostics, full ensemble batch analysis and Validation into a timestamped result folder.
+
+For a faster first pass omit `-CompareModes`.
+
+## CLI examples
+
+Full ordinary ensemble batch:
 
 ```powershell
-.\.venv\Scripts\genre-test.exe validate "D:\Music" --filter old_versions
+.\.venv\Scripts\genre-test.exe batch "D:\Music" --device auto --mode auto --semantic auto --view all
 ```
 
-Only unstable tracks:
+Validation of one or more roots:
+
+```powershell
+.\.venv\Scripts\genre-test.exe validate "D:\Music" "E:\Archive" --filter all
+```
+
+Full Fast / Auto / Accurate convergence:
+
+```powershell
+.\.venv\Scripts\genre-test.exe validate "D:\Music" --compare-modes --filter all
+```
+
+Only unstable items:
 
 ```powershell
 .\.venv\Scripts\genre-test.exe validate "D:\Music" --filter unstable
 ```
 
-Import old JSON:
+Historical JSON import remains supported as a migration/data-recovery feature; it is not part of the active release bootstrap architecture.
 
-```powershell
-.\.venv\Scripts\genre-test.exe history-import ".\results" "D:\OldGenreResults"
-```
+## Interpretation rule
 
-Compare two analyzer versions regardless of stored analysis mode:
-
-```powershell
-.\.venv\Scripts\genre-test.exe compare-versions 0.2.1 0.3.0 --mode any
-```
-
-Strict Auto-to-Auto version comparison:
-
-```powershell
-.\.venv\Scripts\genre-test.exe compare-versions 0.3.0 0.3.1 --mode auto
-```
-
-## Validation report summary
-
-A version comparison reports:
-
-```text
-tracks compared
-STABLE / MINOR / SIGNIFICANT / CRITICAL counts
-resolved genre match %
-broad family match %
-tempo equivalent %
-key/mode match %
-```
-
-The JSON/CSV rows retain per-track drift metrics and reasons.
-
-## Important limitation
-
-History and convergence measure consistency, not objective genre correctness. A wrong model can be perfectly stable. Ground-truth/manual labels are still required to measure real classification accuracy.
+History and convergence measure consistency, not objective genre correctness. Accuracy calibration requires independently reviewed expected labels, especially for ambiguous fine styles and BPM octave/ratio cases.
