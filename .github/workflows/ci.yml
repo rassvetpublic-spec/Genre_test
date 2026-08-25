@@ -25,6 +25,21 @@ jobs:
           pip install -e . --no-deps
       - name: CLI version smoke
         run: genre-test --version
+      - name: Root launcher auto-mode gate
+        shell: bash
+        run: |
+          grep -Fq 'if exist "%ROOT%.git" set "MODE=WORKING"' Genre_test_START.cmd
+          grep -Fq 'Mode   : Git working tree' Genre_test_START.cmd
+          grep -Fq 'Mode   : packaged release' Genre_test_START.cmd
+          grep -Fq 'findstr /b /c:"version = "' Genre_test_START.cmd
+          grep -Fq 'launcher_pyproject.sha256' Genre_test_START.cmd
+          grep -Fq '.venv\Scripts\genre-test-gui.exe' Genre_test_START.cmd
+          grep -Fq 'scripts\portable_bootstrap_v2.ps1' Genre_test_START.cmd
+          if grep -Fq 'set "EXPECTED=C:\Genre_test_0.3.6_portable\"' Genre_test_START.cmd; then
+            echo 'Root launcher still contains frozen 0.3.6 path gate.' >&2
+            exit 1
+          fi
+          echo 'universal root launcher gate PASS'
       - name: PowerShell setup parser and CUDA 13 gate
         shell: pwsh
         run: |
