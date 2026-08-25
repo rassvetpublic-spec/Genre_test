@@ -3,6 +3,8 @@ from __future__ import annotations
 import importlib
 import platform
 import re
+import shutil
+import subprocess
 import sys
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError
@@ -33,7 +35,7 @@ RUNTIME_PACKAGES: tuple[tuple[str, str], ...] = (
 MIN_TORCH_VERSION = (2, 12, 1)
 TARGET_CUDA_PREFIX = "13.0"
 BLACKWELL_MAJOR_CAPABILITIES = {10, 11, 12}
-STATUS_ORDER = {"OK": 0, "WARN": 1, "FAIL": 2}
+STATUS_ORDER = {"N/A": -1, "OK": 0, "WARN": 1, "FAIL": 2}
 MIN_PYTHON_VERSION = (3, 11)
 MAX_PYTHON_VERSION_EXCLUSIVE = (3, 14)
 
@@ -55,7 +57,7 @@ class RuntimeHealth:
     def overall_status(self) -> str:
         if not self.components:
             return "FAIL"
-        return max(self.components, key=lambda item: STATUS_ORDER[item.status]).status
+        return max(self.components, key=lambda item: STATUS_ORDER.get(item.status, 2)).status
 
     @property
     def package_components(self) -> tuple[RuntimeComponent, ...]:
@@ -124,7 +126,38 @@ def _numeric_version(value: str) -> tuple[int, int, int]:
     return tuple(numbers[:3])  # type: ignore[return-value]
 
 
-def _torch_runtime_components(torch_package: RuntimeComponent) -> tuple[RuntimeComponent, ...]:
+def _nvidia_hardware_present() -> bool:
+    if shutil.which("nvidia-smi"):
+        return True
+    if platform.system() != "Windows":
+        return False
+
+    shell = shutil.which("pwsh") or shutil.which("powershell") or shutil.which("powershell.exe")
+    if not shell:
+        return False
+    command = (
+        "$gpu = Get-CimInstance -ClassName Win32_VideoController -ErrorAction SilentlyContinue | "
+        "Where-Object { $_.Name -match 'NVIDIA' -or $_.PNPDeviceID -match 'VEN_10DE' } | "
+        "Select-Object -First 1; if ($gpu) { 'NVIDIA' }"
+    )
+    try:
+        probe = subprocess.run(
+            [shell, "-NoProfile", "-NonInteractive", "-Command", command],
+            capture_output=True,
+            text=True,
+            timeout=4,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return "NVIDIA" in probe.stdout.upper()
+
+
+def _torch_runtime_components(
+    torch_package: RuntimeComponent,
+    *,
+    nvidia_hardware: bool | None = None,
+) -> tuple[RuntimeComponent, ...]:
     if torch_package.status != "OK":
         return (
             RuntimeComponent(
@@ -182,30 +215,77 @@ def _torch_runtime_components(torch_package: RuntimeComponent) -> tuple[RuntimeC
     cuda_available = bool(torch.cuda.is_available())
 
     if not cuda_available:
+        if not torch_version_ok:
+            return (
+                RuntimeComponent(
+                    name="CUDA",
+                    status="FAIL",
+                    value="unavailable",
+                    details=f"PyTorch {torch_version} is below required 2.12.1",
+                    category="Acceleration",
+                ),
+                RuntimeComponent(
+                    name="GPU",
+                    status="FAIL",
+                    value="unavailable",
+                    details="Acceleration runtime cannot use the required PyTorch baseline",
+                    category="Acceleration",
+                ),
+                RuntimeComponent(
+                    name="GPU architecture",
+                    status="FAIL",
+                    value="unavailable",
+                    details="Architecture check unavailable with unsupported PyTorch",
+                    category="Acceleration",
+                ),
+            )
+
+        has_nvidia = _nvidia_hardware_present() if nvidia_hardware is None else nvidia_hardware
+        if not has_nvidia:
+            return (
+                RuntimeComponent(
+                    name="CUDA",
+                    status="N/A",
+                    value="not applicable",
+                    details="CPU-only system; CUDA is not required",
+                    category="Acceleration",
+                ),
+                RuntimeComponent(
+                    name="GPU",
+                    status="N/A",
+                    value="CPU-only",
+                    details="No NVIDIA hardware detected; CPU inference is expected",
+                    category="Acceleration",
+                ),
+                RuntimeComponent(
+                    name="GPU architecture",
+                    status="N/A",
+                    value="CPU-only",
+                    details="Native CUDA architecture check is not applicable",
+                    category="Acceleration",
+                ),
+            )
+
         return (
             RuntimeComponent(
                 name="CUDA",
-                status="WARN" if torch_version_ok else "FAIL",
+                status="FAIL",
                 value="unavailable",
-                details=(
-                    "CPU fallback available; GPU baseline is PyTorch >=2.12.1 + CUDA 13.0"
-                    if torch_version_ok
-                    else f"PyTorch {torch_version} is below required 2.12.1"
-                ),
+                details="NVIDIA hardware detected but PyTorch CUDA runtime is unavailable",
                 category="Acceleration",
             ),
             RuntimeComponent(
                 name="GPU",
-                status="WARN",
-                value="CPU mode",
-                details="No CUDA GPU available to PyTorch",
+                status="FAIL",
+                value="NVIDIA unavailable to PyTorch",
+                details="Run setup/driver repair or explicitly choose CPU mode",
                 category="Acceleration",
             ),
             RuntimeComponent(
                 name="GPU architecture",
-                status="WARN",
-                value="CPU mode",
-                details="Native CUDA architecture check skipped",
+                status="FAIL",
+                value="not checked",
+                details="CUDA must be available before the native architecture gate can run",
                 category="Acceleration",
             ),
         )
@@ -284,7 +364,9 @@ def collect_runtime_health() -> RuntimeHealth:
     components.extend(package_items)
 
     torch_package = next(item for item in package_items if item.name == "PyTorch")
-    components.extend(_torch_runtime_components(torch_package))
+    components.extend(
+        _torch_runtime_components(torch_package, nvidia_hardware=_nvidia_hardware_present())
+    )
 
     diagnostics = collect_runtime_diagnostics()
     components.append(
@@ -303,9 +385,12 @@ def collect_runtime_health() -> RuntimeHealth:
     components.append(
         RuntimeComponent(
             name="HF auth",
-            status="OK" if diagnostics.hf_token_available else "WARN",
+            status="OK",
             value="authenticated" if diagnostics.hf_token_available else "anonymous",
-            details=diagnostics.hf_auth_label,
+            details=(
+                diagnostics.hf_auth_label
+                + "; public pinned models support anonymous access; token is optional"
+            ),
             category="External",
         )
     )
