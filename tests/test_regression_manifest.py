@@ -28,7 +28,20 @@ def test_problem_tempo_case_does_not_claim_unverified_170_as_ground_truth():
     assert case["expected"]["key"] == "F# minor"
 
 
-def test_mode_and_family_cases_are_marked_as_known_instabilities():
+def test_xlaunge_regression_pins_the_observed_mode_split() -> None:
+    case = _cases()["mode-convergence-xlaunge"]
+    observed = case["observed"]
+
+    assert case["status"] == "known_instability"
+    assert observed["fast_genre"] == "Reggaeton"
+    assert observed["accurate_genre"] == "Reggaeton"
+    assert observed["auto_genre"] == "Drum n Bass"
+    assert observed["fast_genre"] == observed["accurate_genre"]
+    assert observed["auto_genre"] != observed["fast_genre"]
+    assert case["expected"]["resolved_genre_stable_across_modes"] is True
+
+
+def test_family_cases_are_marked_as_known_instabilities():
     cases = _cases()
-    assert cases["mode-convergence-xlaunge"]["status"] == "known_instability"
     assert cases["family-consistency-za-hutorom"]["status"] == "known_instability"
+    assert cases["family-consistency-live-acoustic"]["status"] == "known_instability"
