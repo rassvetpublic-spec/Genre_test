@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from pathlib import Path
 
 from . import __version__
 from .history import HistoryDB, RunInfo
@@ -50,6 +49,24 @@ class BuildInfo:
 class BuildAwareHistoryDB(HistoryDB):
     """History view that distinguishes persisted analyzer builds, not only semver."""
 
+    @staticmethod
+    def _build_clauses(build: BuildInfo) -> tuple[list[str], list[object]]:
+        clauses = [
+            "analyzer_version = ?",
+            "schema_version = ?",
+            "model_id = ?",
+            "COALESCE(git_commit, '') = ?",
+            "COALESCE(model_revision, '') = ?",
+        ]
+        params: list[object] = [
+            build.analyzer_version,
+            build.schema_version,
+            build.model_id,
+            build.git_commit or "",
+            build.model_revision or "",
+        ]
+        return clauses, params
+
     def builds(self) -> list[BuildInfo]:
         with self._connect() as conn:
             rows = conn.execute(
@@ -74,39 +91,38 @@ class BuildAwareHistoryDB(HistoryDB):
             for row in rows
         ]
 
+    def runs_for_build(
+        self,
+        track_id: str,
+        build: BuildInfo,
+        mode: str | None = None,
+        *,
+        limit: int = 2,
+    ) -> list[AnalysisResult]:
+        clauses, params = self._build_clauses(build)
+        clauses.insert(0, "track_id = ?")
+        params.insert(0, track_id)
+        if mode:
+            clauses.append("analysis_mode = ?")
+            params.append(mode)
+        params.append(max(1, int(limit)))
+        query = (
+            "SELECT result_json FROM runs WHERE "
+            + " AND ".join(clauses)
+            + " ORDER BY analyzed_at DESC, rowid DESC LIMIT ?"
+        )
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+        return [AnalysisResult.from_dict(json.loads(row["result_json"])) for row in rows]
+
     def latest_run_for_build(
         self,
         track_id: str,
         build: BuildInfo,
         mode: str | None = None,
     ) -> AnalysisResult | None:
-        clauses = [
-            "track_id = ?",
-            "analyzer_version = ?",
-            "schema_version = ?",
-            "model_id = ?",
-            "COALESCE(git_commit, '') = ?",
-            "COALESCE(model_revision, '') = ?",
-        ]
-        params: list[object] = [
-            track_id,
-            build.analyzer_version,
-            build.schema_version,
-            build.model_id,
-            build.git_commit or "",
-            build.model_revision or "",
-        ]
-        if mode:
-            clauses.append("analysis_mode = ?")
-            params.append(mode)
-        query = (
-            "SELECT result_json FROM runs WHERE "
-            + " AND ".join(clauses)
-            + " ORDER BY analyzed_at DESC, rowid DESC LIMIT 1"
-        )
-        with self._connect() as conn:
-            row = conn.execute(query, params).fetchone()
-        return AnalysisResult.from_dict(json.loads(row["result_json"])) if row else None
+        runs = self.runs_for_build(track_id, build, mode, limit=1)
+        return runs[0] if runs else None
 
     def latest_run_info(self, track_id: str, mode: str | None = None) -> RunInfo | None:
         clauses = ["track_id = ?"]
@@ -204,7 +220,8 @@ def install_validation_build_awareness() -> None:
 
         def __init__(self, master) -> None:
             super().__init__(master)
-            if self.filter_var.get() == old_label or self.filter_var.get() not in validation_gui.FILTER_LABELS:
+            invalid_default = self.filter_var.get() not in validation_gui.FILTER_LABELS
+            if self.filter_var.get() == old_label or invalid_default:
                 self.filter_var.set(new_label)
 
     validation_gui.ValidationTab = BuildAwareValidationTab
