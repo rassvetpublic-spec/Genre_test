@@ -14,14 +14,26 @@ $TorchVersion = '2.12.1'
 $CudaIndex = 'https://download.pytorch.org/whl/cu130'
 $CpuIndex = 'https://download.pytorch.org/whl/cpu'
 
+function Refresh-ProcessPath {
+    $machine = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+    $user = [Environment]::GetEnvironmentVariable('Path', 'User')
+    $parts = @()
+    if ($machine) { $parts += $machine }
+    if ($user) { $parts += $user }
+    if ($parts.Count -gt 0) { $env:Path = ($parts -join ';') }
+}
+
 function Get-CompatiblePython {
+    Refresh-ProcessPath
+
     $py = Get-Command py -ErrorAction SilentlyContinue
     if ($py) {
         foreach ($selector in @('-3.12', '-3.11')) {
             try {
-                $v = (& $py.Source $selector -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null | Select-Object -Last 1)
-                if ($LASTEXITCODE -eq 0 -and $v -match '^3\.(11|12)$') {
-                    return [pscustomobject]@{ Exe=$py.Source; Prefix=@($selector); Version=$v; Display="py $selector" }
+                $v = (& $py.Source $selector -c "import struct, sys; print(f'{sys.version_info.major}.{sys.version_info.minor}|{struct.calcsize(\"P\") * 8}')" 2>$null | Select-Object -Last 1)
+                if ($LASTEXITCODE -eq 0 -and $v -match '^3\.(11|12)\|64$') {
+                    $version = ($v -split '\|')[0]
+                    return [pscustomobject]@{ Exe=$py.Source; Prefix=@($selector); Version=$version; Display="py $selector" }
                 }
             } catch {}
         }
@@ -30,11 +42,25 @@ function Get-CompatiblePython {
     $python = Get-Command python -ErrorAction SilentlyContinue
     if ($python) {
         try {
-            $v = (& $python.Source -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null | Select-Object -Last 1)
-            if ($LASTEXITCODE -eq 0 -and $v -match '^3\.(11|12)$') {
-                return [pscustomobject]@{ Exe=$python.Source; Prefix=@(); Version=$v; Display=$python.Source }
+            $v = (& $python.Source -c "import struct, sys; print(f'{sys.version_info.major}.{sys.version_info.minor}|{struct.calcsize(\"P\") * 8}')" 2>$null | Select-Object -Last 1)
+            if ($LASTEXITCODE -eq 0 -and $v -match '^3\.(11|12)\|64$') {
+                $version = ($v -split '\|')[0]
+                return [pscustomobject]@{ Exe=$python.Source; Prefix=@(); Version=$version; Display=$python.Source }
             }
         } catch {}
+    }
+    return $null
+}
+
+function Get-WingetPath {
+    Refresh-ProcessPath
+    $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
+    if (-not $winget) { $winget = Get-Command winget -ErrorAction SilentlyContinue }
+    if ($winget) { return $winget.Source }
+
+    if ($env:LOCALAPPDATA) {
+        $alias = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\winget.exe'
+        if (Test-Path -LiteralPath $alias -PathType Leaf) { return $alias }
     }
     return $null
 }
@@ -88,10 +114,18 @@ except Exception as exc:
 
 $runtime = Get-CompatiblePython
 if (-not $runtime -and $InstallPython) {
-    $winget = Get-Command winget -ErrorAction SilentlyContinue
-    if (-not $winget) { throw 'Python is missing and winget is unavailable.' }
+    $wingetPath = Get-WingetPath
+    if (-not $wingetPath -and $IsWindows) {
+        $ensureWinget = Join-Path $PSScriptRoot 'ensure_winget.ps1'
+        if (Test-Path $ensureWinget) {
+            Write-Host 'WinGet not found. Attempting automatic repair...'
+            & $ensureWinget
+            $wingetPath = Get-WingetPath
+        }
+    }
+    if (-not $wingetPath) { throw 'Python is missing and winget is unavailable.' }
     Write-Host 'Installing Python 3.12 x64...'
-    & $winget.Source install --id Python.Python.3.12 --exact --accept-package-agreements --accept-source-agreements
+    & $wingetPath install --id Python.Python.3.12 --exact --architecture x64 --accept-package-agreements --accept-source-agreements
     if ($LASTEXITCODE -ne 0) { throw 'Python 3.12 installation failed.' }
     $runtime = Get-CompatiblePython
 }
