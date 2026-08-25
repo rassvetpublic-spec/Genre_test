@@ -50,7 +50,8 @@ for /f "delims=" %%P in ('where pwsh.exe 2^>nul') do if not defined PWSH set "PW
 if not defined PWSH goto WORKING_NO_PWSH
 if not exist "%ROOT%scripts\setup.ps1" goto WORKING_NO_SETUP
 
-"%PWSH%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\setup.ps1"
+echo [INFO] First-run bootstrap will install Python 3.12 x64 automatically if required.
+"%PWSH%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\setup.ps1" -InstallPython
 set "RC=%ERRORLEVEL%"
 if not "%RC%"=="0" goto WORKING_SETUP_FAIL
 
