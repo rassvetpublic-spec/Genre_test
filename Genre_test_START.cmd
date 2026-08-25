@@ -85,7 +85,9 @@ set "RC=%ERRORLEVEL%"
 if not "%RC%"=="0" goto WORKING_SETUP_FAIL
 
 if not exist "%ROOT%.genre_test" mkdir "%ROOT%.genre_test" >nul 2>&1
-set "PYPROJECT_STAMP="nset "SETUP_STAMP="nset "ENV_STAMP="
+set "PYPROJECT_STAMP="
+set "SETUP_STAMP="
+set "ENV_STAMP="
 if exist "%ROOT%pyproject.toml" for %%F in ("%ROOT%pyproject.toml") do set "PYPROJECT_STAMP=%%~zF_%%~tF"
 if exist "%ROOT%scripts\setup.ps1" for %%F in ("%ROOT%scripts\setup.ps1") do set "SETUP_STAMP=%%~zF_%%~tF"
 if defined PYPROJECT_STAMP if defined SETUP_STAMP set "ENV_STAMP=%PYPROJECT_STAMP%__SETUP__%SETUP_STAMP%"
