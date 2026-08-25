@@ -1,101 +1,92 @@
 # Genre_test Roadmap
 
-## Product target
+## Current stable line
 
-Genre_test должен быть не просто single-model genre classifier, а локальным музыкальным профайлером:
+**v0.4.0 — released.**
+
+The active architecture is:
 
 ```text
 Audio
-  -> fine genre/style evidence
-  -> independent semantic/tagging evidence
-  -> BPM/key/audio features
+  -> MAEST detailed genre/style evidence
+  -> AudioSet AST semantic evidence
+  -> BPM/key/source metadata
   -> calibrated evidence fusion
   -> AudioProfile
-  -> Normal / Technical / SUNO / Distributor / Similarity outputs
+  -> Normal / SUNO / Distributor
+  -> History / Validation / build comparison
 ```
 
-## 0.4.0 — Ensemble AudioProfile foundation
+Legacy portable 0.3.x is retired. Older history snapshots remain readable only for regression/data compatibility.
 
-Status: implemented on `v0-4-0-audio-profile-foundation`, pending CI/local CUDA validation and merge.
+## 0.4.1 — ambiguity and regression quality
 
-- MAEST Discogs519 remains fine-style classifier.
-- MIT AudioSet AST is independent semantic classifier.
-- semantic genre, vocal, instrumentation, mood and production tags.
-- deterministic evidence fusion with high-confidence MAEST protection.
-- `AudioProfile` schema.
-- result schema 4, backward-compatible loading.
-- `normal`, `suno`, `distributor` presentation modes.
-- semantic/profile data in JSON/history/summary CSV.
-- semantic model revisions visible in diagnostics, not normal output.
-- graceful MAEST-only fallback when semantic model is unavailable.
-- existing raw-MAEST Validation baseline retained unchanged.
+Priority: P0/P1.
 
-Release gate:
+- margin-aware Top-1 / Top-2 ambiguity reporting;
+- short-input ambiguity policy;
+- independent ground-truth BPM set for half/double/3:2 cases;
+- xLaunge mode-convergence investigation;
+- expand registered regression corpus;
+- large-corpus repeatability and build-to-build reports;
+- stronger genre/family/secondary-influence consistency tests.
 
-- Python 3.11/3.12 CI green.
-- Ruff green.
-- full unit suite green.
-- Windows RTX CUDA smoke: MAEST + AST both on GPU.
-- no raw-MAEST classification drift versus 0.3.6 when semantic layer is disabled.
-- representative manual review of semantic vocal/instrument/mood tags.
+## 0.4.2 — performance and cache
 
-## 0.4.1 — Performance and semantic calibration
+- decode audio once and share waveform between MAEST, DSP and AudioSet AST;
+- persistent semantic cache by `track_id + model_revision`;
+- skip byte-identical duplicate inference where safe;
+- benchmark AST/MAEST VRAM and throughput on RTX 5070 Ti;
+- tune semantic window count from measured accuracy/speed evidence;
+- improve warm-start and multi-track throughput telemetry.
 
-Priority P0 after 0.4.0.
+## 0.4.3 — catalog and similarity
 
-- decode audio once and share waveform between MAEST, DSP and semantic layer.
-- benchmark AST overhead and VRAM consumption on RTX 5070 Ti.
-- choose semantic window count from empirical accuracy/speed evidence.
-- calibrate MAEST/AST family fusion weight on manually reviewed tracks.
-- expose model agreement and semantic confidence without pretending scores are directly comparable across taxonomies.
-- cache semantic inference by content `track_id + model_revision`.
-- optionally skip re-analysis of byte-identical duplicate files in ordinary batch mode.
+- XLSX export in addition to CSV/JSON;
+- sortable catalog for genre/family/mood/vocal/instrumentation/BPM/key;
+- track-to-track musical similarity;
+- embeddings/evidence-vector similarity instead of label-only similarity;
+- nearest-neighbour and compare-selected-tracks workflow;
+- separate musical similarity from regression similarity.
 
-## 0.4.2 — Catalog and similarity
+## 0.4.4 — additional musical descriptors
 
-- XLSX export in addition to CSV/JSON.
-- sortable catalog fields for genre/family/mood/vocal/instrumentation/BPM/key.
-- track-to-track musical similarity.
-- similarity should use embeddings/evidence vectors, not only final genre labels.
-- nearest-neighbour list and compare-selected-tracks workflow.
-- distinguish regression similarity from musical similarity.
+Only expose descriptors with a reproducible model or validated estimator.
 
-## 0.4.3 — Additional musical descriptors
-
-Only add descriptors with a reproducible model or validated estimator.
-
-Targets:
+Candidates:
 
 - danceability;
 - energy;
 - acoustic/electronic balance;
 - vocal presence probability;
-- richer production descriptors.
+- richer production descriptors;
+- instrumentation confidence.
 
 Do not expose arbitrary 0..1 values unless the score source and calibration are defined.
 
-## 0.4.4 — Product mappings
+## 0.4.5 — product mappings
 
-- calibrate distributor genre/subgenre mapping against actual target platform taxonomies.
-- expand SUNO Style of Music generation with compact ordering rules and length limits.
-- allow Normal/SUNO/Distributor outputs without altering raw stored evidence.
-- user-configurable mapping profiles without changing model inference.
+- calibrate distributor genre/subgenre mapping against target platform taxonomies;
+- improve SUNO Style of Music ordering, ambiguity handling and compactness;
+- user-configurable presentation mappings without changing stored evidence;
+- preserve deterministic Normal/SUNO/Distributor formatting.
 
-## 0.5 — Validated multi-model system
+## 0.5 — validated multi-model system
 
-Exit criteria for 0.5:
+Exit criteria:
 
-- manually reviewed independent ground-truth set, not only version-to-version convergence;
-- 20+ diverse external/reference tracks in addition to project catalog;
+- manually reviewed ground-truth set, not only version-to-version convergence;
+- diverse external/reference corpus in addition to project catalog;
 - confusion/error analysis for broad family and selected fine styles;
 - calibrated ensemble thresholds;
 - semantic tag precision review;
 - documented failure modes;
 - reproducible pinned models and schema migrations;
-- semantic/profile regression checks in Validation Lab.
+- semantic/profile regression inside Validation Lab;
+- stable large-corpus automation suitable for release gating.
 
-## Deliberately not used
+## Architecture rule
 
-Legacy `musicnn`/TensorFlow-1-era stack is not part of the default architecture because it would introduce a second obsolete runtime into the current Python 3.12/PyTorch application. A second model must be operationally independent in its learned taxonomy/evidence, not necessarily implemented in a different ML framework.
+A second model must add genuinely independent learned evidence. It does not need to use a different ML framework merely for diversity.
 
-Essentia/Jamendo models remain candidates for later validation if they can be integrated reproducibly on the supported Windows/Python environment without destabilizing setup.
+Legacy TensorFlow-1-era stacks are not part of the supported runtime. New model additions must work reproducibly in the supported Python/PyTorch environment without destabilizing Windows setup.
