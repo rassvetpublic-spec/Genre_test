@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
 
 from .build_history import BuildAwareHistoryDB, BuildInfo
@@ -16,12 +17,15 @@ def _comparable(left: AnalysisResult, right: AnalysisResult) -> tuple[bool, str]
     return True, ""
 
 
-def compare_builds(
-    history: BuildAwareHistoryDB,
-    build_a: BuildInfo,
-    build_b: BuildInfo,
+def _compare_pairs(
+    pairs: Iterable[tuple[str, AnalysisResult, AnalysisResult]],
     *,
-    mode: str = "auto",
+    label_a: str,
+    label_b: str,
+    key_a: str,
+    key_b: str,
+    mode: str,
+    comparison_kind: str,
     out_dir: Path,
 ) -> tuple[dict[str, object], list[dict[str, object]], str, str]:
     rows: list[dict[str, object]] = []
@@ -34,13 +38,7 @@ def compare_builds(
     comparable_total = 0
     not_comparable = 0
 
-    for track_id in history.track_ids():
-        selected_mode = None if mode == "any" else mode
-        left = history.latest_run_for_build(track_id, build_a, selected_mode)
-        right = history.latest_run_for_build(track_id, build_b, selected_mode)
-        if not left or not right:
-            continue
-
+    for track_id, left, right in pairs:
         is_comparable, reason = _comparable(left, right)
         base_row: dict[str, object] = {
             "track_id": track_id,
@@ -96,10 +94,11 @@ def compare_builds(
         return round(100.0 * value / denom, 2) if denom else 0.0
 
     summary: dict[str, object] = {
-        "version_a": build_a.label,
-        "version_b": build_b.label,
-        "build_key_a": build_a.key,
-        "build_key_b": build_b.key,
+        "version_a": label_a,
+        "version_b": label_b,
+        "build_key_a": key_a,
+        "build_key_b": key_b,
+        "comparison_kind": comparison_kind,
         "mode": mode,
         "mode_warning": (
             "diagnostic any-mode comparison may pair different analysis modes"
@@ -120,6 +119,59 @@ def compare_builds(
     return summary, rows, str(json_path), str(csv_path)
 
 
+def compare_builds(
+    history: BuildAwareHistoryDB,
+    build_a: BuildInfo,
+    build_b: BuildInfo,
+    *,
+    mode: str = "auto",
+    out_dir: Path,
+) -> tuple[dict[str, object], list[dict[str, object]], str, str]:
+    selected_mode = None if mode == "any" else mode
+    pairs: list[tuple[str, AnalysisResult, AnalysisResult]] = []
+    for track_id in history.track_ids():
+        left = history.latest_run_for_build(track_id, build_a, selected_mode)
+        right = history.latest_run_for_build(track_id, build_b, selected_mode)
+        if left and right:
+            pairs.append((track_id, left, right))
+    return _compare_pairs(
+        pairs,
+        label_a=build_a.label,
+        label_b=build_b.label,
+        key_a=build_a.key,
+        key_b=build_b.key,
+        mode=mode,
+        comparison_kind="between_builds",
+        out_dir=out_dir,
+    )
+
+
+def compare_repeatability(
+    history: BuildAwareHistoryDB,
+    build: BuildInfo,
+    *,
+    mode: str = "auto",
+    out_dir: Path,
+) -> tuple[dict[str, object], list[dict[str, object]], str, str]:
+    selected_mode = None if mode == "any" else mode
+    pairs: list[tuple[str, AnalysisResult, AnalysisResult]] = []
+    for track_id in history.track_ids():
+        runs = history.runs_for_build(track_id, build, selected_mode, limit=2)
+        if len(runs) >= 2:
+            newest, previous = runs[0], runs[1]
+            pairs.append((track_id, previous, newest))
+    return _compare_pairs(
+        pairs,
+        label_a=f"{build.label} [previous]",
+        label_b=f"{build.label} [latest]",
+        key_a=build.key,
+        key_b=build.key,
+        mode=mode,
+        comparison_kind="repeatability",
+        out_dir=out_dir,
+    )
+
+
 def format_build_comparison(
     summary: dict[str, object],
     rows: list[dict[str, object]],
@@ -127,8 +179,10 @@ def format_build_comparison(
     csv_report: str,
 ) -> str:
     counts = summary["severity_counts"]
+    kind = str(summary.get("comparison_kind") or "between_builds")
+    heading = "Repeatability" if kind == "repeatability" else "Builds"
     lines = [
-        f"Builds: {summary['version_a']} -> {summary['version_b']} ({summary['mode']})",
+        f"{heading}: {summary['version_a']} -> {summary['version_b']} ({summary['mode']})",
         f"Tracks considered: {summary['tracks_considered']}",
         f"Tracks compared: {summary['tracks_compared']}",
         f"Not comparable: {summary['not_comparable_tracks']}",
