@@ -13,6 +13,13 @@ STATUS_COLORS = {
     "FAIL": "#b00020",
 }
 
+EXPERT_WINDOWS_MIN = 1
+EXPERT_WINDOWS_MAX = 12
+EXPERT_TOP_K_MIN = 3
+EXPERT_TOP_K_MAX = 50
+EXPERT_WINDOWS_DEFAULT = 5
+EXPERT_TOP_K_DEFAULT = 15
+
 
 def _blocking_failure(health: RuntimeHealth) -> bool:
     return any(
@@ -30,6 +37,13 @@ def _device_options(health: RuntimeHealth) -> tuple[str, ...]:
     if _cuda_usable(health):
         return ("auto", "cuda", "cpu")
     return ("auto", "cpu")
+
+
+def _bounded_expert_parameters(window_count: int, top_k: int) -> tuple[int, int]:
+    return (
+        min(EXPERT_WINDOWS_MAX, max(EXPERT_WINDOWS_MIN, window_count)),
+        min(EXPERT_TOP_K_MAX, max(EXPERT_TOP_K_MIN, top_k)),
+    )
 
 
 def _find_bound_combobox(root: tk.Misc, variable: tk.Variable) -> ttk.Combobox | None:
@@ -157,6 +171,38 @@ def main() -> None:
             if self.device_var.get() == "cuda" and not _cuda_usable(self.runtime_health):
                 self.device_var.set("auto")
                 super()._publish_live_settings(notify=False)
+
+        def _normalize_expert_inputs(self) -> None:
+            changed = False
+            try:
+                windows = int(self.windows_var.get())
+            except (tk.TclError, TypeError, ValueError):
+                windows = EXPERT_WINDOWS_DEFAULT
+                changed = True
+            try:
+                top_k = int(self.top_k_var.get())
+            except (tk.TclError, TypeError, ValueError):
+                top_k = EXPERT_TOP_K_DEFAULT
+                changed = True
+
+            bounded_windows, bounded_top_k = _bounded_expert_parameters(windows, top_k)
+            changed = changed or bounded_windows != windows or bounded_top_k != top_k
+            self.windows_var.set(bounded_windows)
+            self.top_k_var.set(bounded_top_k)
+
+            if changed:
+                self.status_var.set(
+                    f"Параметры Expert скорректированы: Окон={bounded_windows}, "
+                    f"Top-K={bounded_top_k}"
+                )
+                append_log(
+                    "Expert parameters normalized before analysis: "
+                    f"windows={bounded_windows}; top_k={bounded_top_k}"
+                )
+
+        def _start(self) -> None:
+            self._normalize_expert_inputs()
+            super()._start()
 
         def _build_ui(self) -> None:
             super()._build_ui()
