@@ -141,6 +141,7 @@ if not exist "%WINPS%" goto RELEASE_NO_WINPS
 
 set "RELEASE_BOOTSTRAP="
 if exist "%ROOT%scripts\release_bootstrap.ps1" set "RELEASE_BOOTSTRAP=%ROOT%scripts\release_bootstrap.ps1"
+if defined RELEASE_BOOTSTRAP goto RELEASE_PREFLIGHT
 if not defined RELEASE_BOOTSTRAP goto RELEASE_NO_BOOTSTRAP
 
 :RELEASE_PREFLIGHT
