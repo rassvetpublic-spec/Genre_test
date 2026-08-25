@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from genre_test.models import (
     AnalysisResult,
     AudioFeatures,
@@ -102,6 +104,52 @@ def test_fusion_can_switch_low_confidence_family_with_independent_evidence() -> 
     assert profile.vocal == "Male singing"
     assert "Electric guitar" in profile.instruments
     assert profile.ensemble_sources == ("maest", "audioset_ast")
+
+
+def test_profile_reconciles_resolved_style_with_selected_family() -> None:
+    result = replace(
+        _base_result(),
+        primary_genre="Electronic",
+        primary_genre_score=0.4685,
+        broad_genres=[
+            StyleScore("Electronic", 0.4685),
+            StyleScore("Pop", 0.2708),
+            StyleScore("Rock", 0.1427),
+        ],
+        top_styles=[
+            StyleScore("Pop---Indie Pop", 0.1278),
+            StyleScore("Electronic---Synth-pop", 0.1272),
+            StyleScore("Rock---Pop Rock", 0.0916),
+        ],
+        resolved_genre="Indie Pop",
+        secondary_genre="Pop",
+        secondary_style="Synth-pop",
+    )
+
+    profile = build_audio_profile(result)
+
+    assert profile.broad_family == "Electronic"
+    assert profile.primary_genre == "Synth-pop"
+    assert profile.secondary_influence == "Indie Pop"
+    assert profile.distributor_genre == "Electronic"
+    assert profile.distributor_subgenre == "Synth-pop"
+
+
+def test_profile_falls_back_to_resolved_family_when_selected_family_has_no_style() -> None:
+    result = replace(
+        _base_result(),
+        primary_genre="Electronic",
+        primary_genre_score=0.60,
+        broad_genres=[StyleScore("Electronic", 0.60), StyleScore("Pop", 0.30)],
+        top_styles=[StyleScore("Pop---Indie Pop", 0.20)],
+        resolved_genre="Indie Pop",
+    )
+
+    profile = build_audio_profile(result)
+
+    assert profile.primary_genre == "Indie Pop"
+    assert profile.broad_family == "Pop"
+    assert profile.distributor_genre == "Pop"
 
 
 def test_high_confidence_maest_family_is_not_overridden() -> None:
