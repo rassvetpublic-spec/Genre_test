@@ -1,14 +1,14 @@
-# Runtime data — v0.3.1
+# Runtime data — v0.4.0
 
-For the current development phase, Genre_test keeps runtime-generated project data inside the project checkout.
+Genre_test keeps generated runtime data outside Git while using the checkout as the default working-copy state root.
 
-Default checkout on Windows:
+Default Windows checkout:
 
 ```text
 C:\GIT\Genre_test
 ```
 
-## Default locations
+## Working-copy locations
 
 ```text
 C:\GIT\Genre_test\results\
@@ -17,59 +17,47 @@ C:\GIT\Genre_test\.genre_test\logs\genre_test.log
 C:\GIT\Genre_test\.genre_test\huggingface\
 ```
 
-`.genre_test/` and `results/` are gitignored and must not be committed.
+`.genre_test/` and `results/` are gitignored.
 
-The GUI displays the active History SQLite and log paths. Both Analysis and Validation output panes have a `СКОПИРОВАТЬ СОДЕРЖИМОЕ` button. The log can be opened directly from the GUI.
+The GUI exposes clickable History/log locations. Validation and build-comparison reports are stored under `results/validation`; large scripted regressions use `results/large_regression/<timestamp>/`.
 
-## Migration from v0.3.0
+## History
 
-v0.3.0 stored the default history database outside the checkout, for example:
+SQLite history is append-oriented and stores build-aware run metadata, detailed MAEST evidence and comparison/validation data.
 
-```text
-%LOCALAPPDATA%\Genre_test\history.sqlite3
-```
+Track identity is SHA-256 of file contents, so a track can move or be renamed without becoming a new logical track.
 
-When v0.3.1 first resolves the new default history path and the repo-local database does not yet exist, it uses SQLite backup semantics to copy the legacy database into:
+Historical JSON import remains available for migration/data recovery when old snapshots need to be associated with current track identities. Old release bootstraps are not retained in the active runtime.
 
-```text
-C:\GIT\Genre_test\.genre_test\history.sqlite3
-```
+## Unreadable audio
 
-This preserves already imported legacy JSON history and existing analysis runs.
+A file decode failure does not terminate a large GUI/Validation run. The file is skipped, logged and represented as an error in Validation output where applicable; processing continues with the next file.
 
-The old database is not deleted automatically. This avoids destructive migration. After the repo-local history has been verified, the old external copy may be removed manually.
+## Hugging Face
 
-## Unreadable audio in large validation runs
+Genre_test uses normal user authentication state and shared Hugging Face/pip download caches where available. Project runtime remains isolated by `.venv`.
 
-A single file that cannot be decoded by SoundFile/librosa no longer terminates the entire Validation session.
+Public pinned models do not require an HF token. A configured token may still be used normally.
 
-The failed file is:
+## Packaged release
 
-- skipped;
-- written to the persistent log with its traceback;
-- listed in the Validation JSON/CSV report with `status=ERROR`;
-- included in the final GUI summary under `File errors skipped`.
+A portable source package creates its own `.venv` inside the extracted release folder on first launch. Python/PyTorch/model weights are not embedded in the ZIP.
 
-Validation then continues with the next track.
-
-The same skip-and-continue policy is used by ordinary GUI folder batch analysis.
-
-## Hugging Face model cache
-
-If `HF_HOME` is not already defined by the environment, Genre_test sets it to:
+Current package bootstrap:
 
 ```text
-C:\GIT\Genre_test\.genre_test\huggingface
+Genre_test_START.cmd
+scripts\release_bootstrap.ps1
 ```
-
-The first v0.3.1 model load can therefore download/cache MAEST again inside the checkout even if an older user-level Hugging Face cache already exists.
 
 ## Overrides
 
-Advanced/debug use can override the checkout root or state directory with:
+Advanced/debug use may override runtime paths with supported environment variables such as:
 
 ```text
 GENRE_TEST_PROJECT_ROOT
 GENRE_TEST_DATA_DIR
 HF_HOME
 ```
+
+Do not commit generated SQLite databases, model caches, audio corpora or regression output folders.
