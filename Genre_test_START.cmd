@@ -27,6 +27,8 @@ echo.
 set "NEED_SETUP=0"
 set "INSTALLED_VERSION="
 set "PYPROJECT_STAMP="
+set "SETUP_STAMP="
+set "ENV_STAMP="
 set "SAVED_STAMP="
 set "STAMP_FILE=%ROOT%.genre_test\launcher_pyproject.stamp"
 
@@ -37,10 +39,13 @@ if exist "%ROOT%.venv\Scripts\genre-test.exe" for /f "tokens=2" %%V in ('"%ROOT%
 if /I not "%VERSION%"=="unknown" if /I not "%INSTALLED_VERSION%"=="%VERSION%" set "NEED_SETUP=1"
 
 if exist "%ROOT%pyproject.toml" for %%F in ("%ROOT%pyproject.toml") do set "PYPROJECT_STAMP=%%~zF_%%~tF"
+if exist "%ROOT%scripts\setup.ps1" for %%F in ("%ROOT%scripts\setup.ps1") do set "SETUP_STAMP=%%~zF_%%~tF"
 if not defined PYPROJECT_STAMP set "NEED_SETUP=1"
+if not defined SETUP_STAMP set "NEED_SETUP=1"
+if defined PYPROJECT_STAMP if defined SETUP_STAMP set "ENV_STAMP=%PYPROJECT_STAMP%__SETUP__%SETUP_STAMP%"
 if not exist "%STAMP_FILE%" set "NEED_SETUP=1"
 if exist "%STAMP_FILE%" set /p SAVED_STAMP=<"%STAMP_FILE%"
-if defined PYPROJECT_STAMP if /I not "%SAVED_STAMP%"=="%PYPROJECT_STAMP%" set "NEED_SETUP=1"
+if defined ENV_STAMP if /I not "%SAVED_STAMP%"=="%ENV_STAMP%" set "NEED_SETUP=1"
 
 if "%NEED_SETUP%"=="0" goto WORKING_GUI
 
@@ -80,8 +85,13 @@ set "RC=%ERRORLEVEL%"
 if not "%RC%"=="0" goto WORKING_SETUP_FAIL
 
 if not exist "%ROOT%.genre_test" mkdir "%ROOT%.genre_test" >nul 2>&1
+set "PYPROJECT_STAMP="
+set "SETUP_STAMP="
+set "ENV_STAMP="
 if exist "%ROOT%pyproject.toml" for %%F in ("%ROOT%pyproject.toml") do set "PYPROJECT_STAMP=%%~zF_%%~tF"
-if defined PYPROJECT_STAMP >"%STAMP_FILE%" echo %PYPROJECT_STAMP%
+if exist "%ROOT%scripts\setup.ps1" for %%F in ("%ROOT%scripts\setup.ps1") do set "SETUP_STAMP=%%~zF_%%~tF"
+if defined PYPROJECT_STAMP if defined SETUP_STAMP set "ENV_STAMP=%PYPROJECT_STAMP%__SETUP__%SETUP_STAMP%"
+if defined ENV_STAMP >"%STAMP_FILE%" echo %ENV_STAMP%
 
 :WORKING_GUI
 if not exist "%ROOT%.venv\Scripts\genre-test-gui.exe" goto WORKING_GUI_MISSING
