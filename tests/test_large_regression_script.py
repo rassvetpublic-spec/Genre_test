@@ -1,3 +1,6 @@
+"""Regression contract for the large-corpus Windows runner."""
+
+
 def test_large_regression_validates_before_persisting_batch() -> None:
     with open("scripts/run-large-regression.ps1", encoding="utf-8") as handle:
         script = handle.read()
