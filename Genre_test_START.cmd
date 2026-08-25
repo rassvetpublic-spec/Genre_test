@@ -85,9 +85,7 @@ set "RC=%ERRORLEVEL%"
 if not "%RC%"=="0" goto WORKING_SETUP_FAIL
 
 if not exist "%ROOT%.genre_test" mkdir "%ROOT%.genre_test" >nul 2>&1
-set "PYPROJECT_STAMP="
-set "SETUP_STAMP="
-set "ENV_STAMP="
+set "PYPROJECT_STAMP="nset "SETUP_STAMP="nset "ENV_STAMP="
 if exist "%ROOT%pyproject.toml" for %%F in ("%ROOT%pyproject.toml") do set "PYPROJECT_STAMP=%%~zF_%%~tF"
 if exist "%ROOT%scripts\setup.ps1" for %%F in ("%ROOT%scripts\setup.ps1") do set "SETUP_STAMP=%%~zF_%%~tF"
 if defined PYPROJECT_STAMP if defined SETUP_STAMP set "ENV_STAMP=%PYPROJECT_STAMP%__SETUP__%SETUP_STAMP%"
@@ -138,12 +136,8 @@ echo Version: %VERSION%
 echo.
 
 if not exist "%WINPS%" goto RELEASE_NO_WINPS
-
-set "RELEASE_BOOTSTRAP="
-if exist "%ROOT%scripts\release_bootstrap.ps1" set "RELEASE_BOOTSTRAP=%ROOT%scripts\release_bootstrap.ps1"
-if defined RELEASE_BOOTSTRAP goto RELEASE_PREFLIGHT
-if /I "%VERSION%"=="0.3.6" if exist "%ROOT%scripts\portable_bootstrap_v2.ps1" set "RELEASE_BOOTSTRAP=%ROOT%scripts\portable_bootstrap_v2.ps1"
-if not defined RELEASE_BOOTSTRAP goto RELEASE_NO_BOOTSTRAP
+if not exist "%ROOT%scripts\release_bootstrap.ps1" goto RELEASE_NO_BOOTSTRAP
+set "RELEASE_BOOTSTRAP=%ROOT%scripts\release_bootstrap.ps1"
 
 :RELEASE_PREFLIGHT
 if exist "%ROOT%scripts\ensure_winget.ps1" "%WINPS%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\ensure_winget.ps1"
@@ -169,9 +163,7 @@ pause
 exit /b 1
 
 :RELEASE_NO_BOOTSTRAP
-echo [FAIL] No bootstrap matches Genre_test release %VERSION%.
-echo Current releases must contain scripts\release_bootstrap.ps1.
-echo Legacy portable_bootstrap_v2.ps1 is accepted only for 0.3.6.
+echo [FAIL] scripts\release_bootstrap.ps1 is missing from this release package.
 echo.
 pause
 exit /b 1
