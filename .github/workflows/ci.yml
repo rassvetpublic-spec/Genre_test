@@ -72,11 +72,17 @@ jobs:
             echo 'Retired 0.3.6 release files remain in releases/.' >&2
             exit 1
           fi
+          grep -Fq 'Publish v0.4.0 files into repository releases folder' .github/workflows/release-v0.4.0.yml
+          grep -Fq 'releases/Genre_test_0.4.0_portable.zip' .github/workflows/release-v0.4.0.yml
           echo '0.3.x active-release legacy retirement gate PASS'
-      - name: PowerShell setup/release parser and CUDA 13 gate
+      - name: PowerShell setup/release/regression parser and CUDA 13 gate
         shell: pwsh
         run: |
-          foreach ($script in @('./scripts/setup.ps1', './scripts/release_bootstrap.ps1')) {
+          foreach ($script in @(
+            './scripts/setup.ps1',
+            './scripts/release_bootstrap.ps1',
+            './scripts/run_large_regression.ps1'
+          )) {
             $tokens = $null
             $errors = $null
             [System.Management.Automation.Language.Parser]::ParseFile(
@@ -110,7 +116,7 @@ jobs:
           if ($release -notmatch 'Win32_VideoController' -or $release -notmatch 'VEN_10DE' -or $release -notmatch 'torch\.cuda\.get_arch_list') {
             throw 'v0.4 release bootstrap is missing NVIDIA PnP/native architecture gates.'
           }
-          Write-Host 'setup/release parser/CUDA13/Python3.13 gate PASS'
+          Write-Host 'setup/release/regression parser/CUDA13/Python3.13 gate PASS'
       - name: FFmpeg bootstrap script smoke
         shell: pwsh
         run: ./scripts/ensure_ffmpeg.ps1 -NoInstall
