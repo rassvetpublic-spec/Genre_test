@@ -41,7 +41,7 @@ function Find-Winget {
 $existing = Find-Winget
 if ($existing) {
     Write-Host "WinGet OK: $existing"
-    exit 0
+    return
 }
 
 Write-Host 'WinGet was not found. Attempting official Microsoft repair...' -ForegroundColor Yellow
@@ -88,7 +88,7 @@ try {
     if ($winget) {
         Write-Host "WinGet repaired successfully: $winget" -ForegroundColor Green
         & $winget --version
-        exit 0
+        return
     }
 
     throw 'Microsoft repair completed, but winget.exe is still not available.'
