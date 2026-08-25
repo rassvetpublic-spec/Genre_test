@@ -1,5 +1,9 @@
 from genre_test.runtime_health import RuntimeComponent, RuntimeHealth
-from genre_test.runtime_health_gui import _cuda_usable, _device_options
+from genre_test.runtime_health_gui import (
+    _bounded_expert_parameters,
+    _cuda_usable,
+    _device_options,
+)
 
 
 def _health(cuda_status: str, cuda_value: str) -> RuntimeHealth:
@@ -34,3 +38,11 @@ def test_failed_cuda_runtime_is_not_selectable() -> None:
 
     assert _cuda_usable(health) is False
     assert _device_options(health) == ("auto", "cpu")
+
+
+def test_expert_two_windows_remains_valid_but_top_k_two_is_raised_to_three() -> None:
+    assert _bounded_expert_parameters(2, 2) == (2, 3)
+
+
+def test_expert_parameter_bounds_are_enforced() -> None:
+    assert _bounded_expert_parameters(0, 99) == (1, 50)
