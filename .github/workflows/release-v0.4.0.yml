@@ -127,3 +127,23 @@ jobs:
               dist/Genre_test_0.4.0_portable.zip \
               dist/SHA256SUMS.txt
           fi
+
+      - name: Publish v0.4.0 files into repository releases folder
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p releases
+          rm -f releases/Genre_test_*_portable.zip releases/SHA256SUMS.txt releases/RELEASE_NOTES_*.md
+          cp dist/Genre_test_0.4.0_portable.zip releases/Genre_test_0.4.0_portable.zip
+          cp dist/SHA256SUMS.txt releases/SHA256SUMS.txt
+          cp RELEASE_NOTES_0.4.0.md releases/RELEASE_NOTES_0.4.0.md
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add releases
+          if git diff --cached --quiet; then
+            echo 'Repository release folder already current.'
+            exit 0
+          fi
+          git commit -m 'release: publish Genre_test 0.4.0 portable in repository [skip ci]'
+          git push origin HEAD:main
