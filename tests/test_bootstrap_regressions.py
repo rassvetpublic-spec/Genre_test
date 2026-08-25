@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -11,7 +10,7 @@ def test_launcher_fingerprint_includes_pyproject_and_setup_script():
     assert 'set "ENV_STAMP="' in launcher
     assert 'scripts\\setup.ps1") do set "SETUP_STAMP=%%~zF_%%~tF"' in launcher
     assert "%PYPROJECT_STAMP%__SETUP__%SETUP_STAMP%" in launcher
-    assert 'launcher_pyproject.stamp' in launcher
+    assert "launcher_pyproject.stamp" in launcher
 
 
 def test_setup_detects_nvidia_hardware_even_when_nvidia_smi_is_not_on_path():
