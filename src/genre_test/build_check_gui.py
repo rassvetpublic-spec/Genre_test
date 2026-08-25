@@ -55,15 +55,20 @@ class BuildAwareCheckTab(CheckTab):
                     label.configure(text="Сборка A")
                 elif str(label.cget("text")) == "Версия B":
                     label.configure(text="Сборка B")
-            self.version_a_combo.configure(width=43)
-            self.version_b_combo.configure(width=43)
+            self.version_a_combo.configure(width=32)
+            self.version_b_combo.configure(width=32)
+            for combo in child.winfo_children():
+                if not isinstance(combo, ttk.Combobox):
+                    continue
+                if str(combo.cget("textvariable")) == str(self.version_mode_var):
+                    combo.configure(width=18)
             ttk.Label(child, text="Тип").pack(side="left", padx=(8, 0))
             ttk.Combobox(
                 child,
                 textvariable=self.kind_var,
                 values=(BETWEEN_BUILDS, REPEATABILITY),
                 state="readonly",
-                width=18,
+                width=17,
             ).pack(side="left", padx=(6, 0))
             break
 
