@@ -166,7 +166,8 @@ jobs:
             'realise/13-first-run-bootstrap' \
             'realise/15-release-blockers' \
             'realise/17-v0-4-release' \
-            'realise/19-repo-cleanup-docs'
+            'realise/19-repo-cleanup-docs' \
+            'realise/19-repo-cleanup-final'
           do
             echo "Deleting merged branch: $ref"
             gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$ref" >/dev/null 2>&1 || true
