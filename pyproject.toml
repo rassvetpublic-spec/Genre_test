@@ -32,7 +32,7 @@ dev = [
 
 [project.scripts]
 genre-test = "genre_test.cli:app"
-genre-test-gui = "genre_test.runtime_health_gui:main"
+genre-test-gui = "genre_test.themed_gui:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/genre_test"]
