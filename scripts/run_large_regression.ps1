@@ -39,6 +39,8 @@ $transcript = Join-Path $runRoot 'large_regression.log'
 $started = Get-Date
 $commit = (& git -C $repoRoot rev-parse HEAD 2>$null | Select-Object -Last 1)
 $version = (& $genreTest --version 2>$null | Select-Object -Last 1)
+$protectValidationFilter = -not $SkipValidation -and $ValidationFilter -ne 'all'
+$batchNoHistory = [bool]$NoHistory -or $protectValidationFilter
 
 @(
     "Started: $($started.ToString('o'))"
@@ -48,6 +50,7 @@ $version = (& $genreTest --version 2>$null | Select-Object -Last 1)
     "Mode: $Mode"
     "CompareModes: $CompareModes"
     "ValidationFilter: $ValidationFilter"
+    "BatchNoHistory: $batchNoHistory"
     'Sources:'
     ($resolvedSources | ForEach-Object { "  $_" })
 ) | Set-Content -LiteralPath (Join-Path $runRoot 'RUN_INFO.txt') -Encoding UTF8
@@ -61,6 +64,9 @@ try {
     Write-Host "Commit: $commit"
     Write-Host "Mode: $Mode"
     Write-Host "Sources: $($resolvedSources.Count)"
+    if ($protectValidationFilter) {
+        Write-Host "Filtered Validation ($ValidationFilter): preliminary batch will use --no-history so selection uses pre-run history."
+    }
 
     Write-Host "`n==> Runtime doctor"
     & $genreTest doctor
@@ -84,7 +90,7 @@ try {
                 '--view', 'all',
                 '--full-path'
             )
-            if ($NoHistory) { $batchArgs += '--no-history' }
+            if ($batchNoHistory) { $batchArgs += '--no-history' }
             & $genreTest @batchArgs
             if ($LASTEXITCODE -ne 0) {
                 throw "Batch failed for $sourcePath with exit code $LASTEXITCODE"
