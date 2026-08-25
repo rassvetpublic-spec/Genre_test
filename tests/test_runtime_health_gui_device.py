@@ -21,7 +21,7 @@ def _health(cuda_status: str, cuda_value: str) -> RuntimeHealth:
 
 
 def test_cpu_only_gui_hides_cuda_device() -> None:
-    health = _health("WARN", "unavailable")
+    health = _health("N/A", "not applicable")
 
     assert _cuda_usable(health) is False
     assert _device_options(health) == ("auto", "cpu")
