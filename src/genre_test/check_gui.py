@@ -11,7 +11,6 @@ from tkinter import filedialog, messagebox, ttk
 from .history import HistoryDB
 from .logging_utils import append_log
 from .runtime_meta import default_history_path, default_results_dir
-from .validation import ValidationEngine, format_version_comparison
 
 CHECK_DESCRIPTION = (
     "Проверка — сравнивает уже сохранённые результаты двух версий анализатора. "
@@ -215,6 +214,8 @@ class CheckTab(ttk.Frame):
 
     def _version_compare_worker(self, version_a: str, version_b: str, mode: str) -> None:
         try:
+            from .validation import ValidationEngine, format_version_comparison
+
             engine = ValidationEngine(
                 history_path=Path(self.history_var.get()),
                 out_dir=Path(self.out_var.get()),
