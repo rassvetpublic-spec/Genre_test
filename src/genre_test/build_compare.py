@@ -17,6 +17,26 @@ def _comparable(left: AnalysisResult, right: AnalysisResult) -> tuple[bool, str]
     return True, ""
 
 
+def build_coverage(
+    history: BuildAwareHistoryDB,
+    build_a: BuildInfo,
+    build_b: BuildInfo,
+    *,
+    mode: str,
+) -> dict[str, int]:
+    selected_mode = None if mode == "any" else mode
+    left_ids = history.track_ids_for_build(build_a, selected_mode)
+    right_ids = history.track_ids_for_build(build_b, selected_mode)
+    common_ids = left_ids & right_ids
+    return {
+        "left_tracks": len(left_ids),
+        "right_tracks": len(right_ids),
+        "common_tracks": len(common_ids),
+        "left_only_tracks": len(left_ids - right_ids),
+        "right_only_tracks": len(right_ids - left_ids),
+    }
+
+
 def _compare_pairs(
     pairs: Iterable[tuple[str, AnalysisResult, AnalysisResult]],
     *,
@@ -27,6 +47,7 @@ def _compare_pairs(
     mode: str,
     comparison_kind: str,
     out_dir: Path,
+    coverage: dict[str, int] | None = None,
 ) -> tuple[dict[str, object], list[dict[str, object]], str, str]:
     rows: list[dict[str, object]] = []
     counts = {name: 0 for name in SEVERITY_ORDER}
@@ -115,6 +136,8 @@ def _compare_pairs(
         "key_mode_match_pct": pct(key_matches, key_known),
         "key_mode_known": key_known,
     }
+    if coverage:
+        summary.update(coverage)
     json_path, csv_path = write_version_comparison_report(summary, rows, out_dir)
     return summary, rows, str(json_path), str(csv_path)
 
@@ -128,8 +151,13 @@ def compare_builds(
     out_dir: Path,
 ) -> tuple[dict[str, object], list[dict[str, object]], str, str]:
     selected_mode = None if mode == "any" else mode
+    coverage = build_coverage(history, build_a, build_b, mode=mode)
+    left_ids = history.track_ids_for_build(build_a, selected_mode)
+    right_ids = history.track_ids_for_build(build_b, selected_mode)
+    common_ids = left_ids & right_ids
+
     pairs: list[tuple[str, AnalysisResult, AnalysisResult]] = []
-    for track_id in history.track_ids():
+    for track_id in sorted(common_ids):
         left = history.latest_run_for_build(track_id, build_a, selected_mode)
         right = history.latest_run_for_build(track_id, build_b, selected_mode)
         if left and right:
@@ -143,6 +171,7 @@ def compare_builds(
         mode=mode,
         comparison_kind="between_builds",
         out_dir=out_dir,
+        coverage=coverage,
     )
 
 
@@ -155,11 +184,19 @@ def compare_repeatability(
 ) -> tuple[dict[str, object], list[dict[str, object]], str, str]:
     selected_mode = None if mode == "any" else mode
     pairs: list[tuple[str, AnalysisResult, AnalysisResult]] = []
-    for track_id in history.track_ids():
+    build_tracks = history.track_ids_for_build(build, selected_mode)
+    for track_id in sorted(build_tracks):
         runs = history.runs_for_build(track_id, build, selected_mode, limit=2)
         if len(runs) >= 2:
             newest, previous = runs[0], runs[1]
             pairs.append((track_id, previous, newest))
+    coverage = {
+        "left_tracks": len(build_tracks),
+        "right_tracks": len(build_tracks),
+        "common_tracks": len(pairs),
+        "left_only_tracks": 0,
+        "right_only_tracks": 0,
+    }
     return _compare_pairs(
         pairs,
         label_a=f"{build.label} [previous]",
@@ -169,6 +206,7 @@ def compare_repeatability(
         mode=mode,
         comparison_kind="repeatability",
         out_dir=out_dir,
+        coverage=coverage,
     )
 
 
@@ -183,18 +221,49 @@ def format_build_comparison(
     heading = "Repeatability" if kind == "repeatability" else "Builds"
     lines = [
         f"{heading}: {summary['version_a']} -> {summary['version_b']} ({summary['mode']})",
-        f"Tracks considered: {summary['tracks_considered']}",
-        f"Tracks compared: {summary['tracks_compared']}",
-        f"Not comparable: {summary['not_comparable_tracks']}",
-        f"Stable: {counts['STABLE']}",
-        f"Minor: {counts['MINOR']}",
-        f"Significant: {counts['SIGNIFICANT']}",
-        f"Critical: {counts['CRITICAL']}",
-        f"Resolved genre match: {summary['resolved_genre_match_pct']}%",
-        f"Broad family match: {summary['broad_family_match_pct']}%",
-        f"Tempo equivalent: {summary['tempo_equivalent_pct']}%",
-        f"Key/mode match: {summary['key_mode_match_pct']}%",
+        "Coverage:",
+        f"  A saved tracks: {summary.get('left_tracks', summary['tracks_considered'])}",
+        f"  B saved tracks: {summary.get('right_tracks', summary['tracks_considered'])}",
+        f"  Common tracks: {summary.get('common_tracks', summary['tracks_considered'])}",
     ]
+
+    common_tracks = int(summary.get("common_tracks", summary["tracks_considered"]))
+    if common_tracks == 0:
+        if kind == "repeatability":
+            lines.extend(
+                [
+                    "",
+                    "RESULT: no tracks have two saved runs of this build in the selected mode.",
+                    "Run the same build/mode at least twice, then repeat the check.",
+                ]
+            )
+        else:
+            lines.extend(
+                [
+                    "",
+                    "RESULT: no common saved tracks for these builds in the selected mode.",
+                    "Run Validation for the missing build/mode or select another mode.",
+                    "The tool will not present 0% metrics as a regression verdict.",
+                ]
+            )
+        lines.extend([f"JSON report: {json_report}", f"CSV report: {csv_report}"])
+        return "\n".join(lines)
+
+    lines.extend(
+        [
+            f"Tracks considered: {summary['tracks_considered']}",
+            f"Tracks compared: {summary['tracks_compared']}",
+            f"Not comparable: {summary['not_comparable_tracks']}",
+            f"Drift stable: {counts['STABLE']}",
+            f"Drift minor: {counts['MINOR']}",
+            f"Drift significant: {counts['SIGNIFICANT']}",
+            f"Drift critical: {counts['CRITICAL']}",
+            f"Resolved genre match: {summary['resolved_genre_match_pct']}%",
+            f"Broad family match: {summary['broad_family_match_pct']}%",
+            f"Tempo equivalent: {summary['tempo_equivalent_pct']}%",
+            f"Key/mode match: {summary['key_mode_match_pct']}%",
+        ]
+    )
     if summary.get("mode_warning"):
         lines.append(f"WARNING: {summary['mode_warning']}")
     lines.extend([f"JSON report: {json_report}", f"CSV report: {csv_report}"])
@@ -208,7 +277,7 @@ def format_build_comparison(
             )
         elif row["severity"] != "STABLE":
             lines.append(
-                f"\n[{row['severity']}] {Path(str(row['path'])).name}: "
+                f"\n[DRIFT: {row['severity']}] {Path(str(row['path'])).name}: "
                 f"{row['left_genre']} -> {row['right_genre']} ({row['reasons']})"
             )
     return "\n".join(lines)
