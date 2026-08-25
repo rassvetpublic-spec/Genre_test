@@ -47,11 +47,16 @@ def root_callback(
     del version
 
 
-def _print_result(result: AnalysisResult, view: str = "normal") -> None:
+def _print_result(
+    result: AnalysisResult,
+    view: str = "all",
+    *,
+    include_path: bool = False,
+) -> None:
     from .presentation import format_result_text
 
     console.print()
-    console.print(format_result_text(result, view=view))
+    console.print(format_result_text(result, view=view, include_path=include_path))
 
 
 def _make_analyzer(
@@ -168,7 +173,12 @@ def analyze(
         "auto",
         help="AudioSet semantic layer: auto|on|off; auto falls back to MAEST-only on failure",
     ),
-    view: str = typer.Option("normal", help="normal|suno|distributor"),
+    view: str = typer.Option("all", help="all|normal|suno|distributor"),
+    full_path: bool = typer.Option(
+        False,
+        "--full-path",
+        help="Include the full input file path in text output",
+    ),
     windows: int = typer.Option(5, min=1, max=12, help="Expert mode only"),
     top_k: int = typer.Option(15, min=3, max=50, help="Reported detailed styles"),
     history_db: Path | None = typer.Option(
@@ -182,12 +192,12 @@ def analyze(
     ),
 ) -> None:
     """Analyze one audio file and store an ensemble AudioProfile snapshot."""
-    if view not in {"normal", "suno", "distributor"}:
-        raise typer.BadParameter("view must be normal, suno or distributor")
+    if view not in {"all", "normal", "suno", "distributor"}:
+        raise typer.BadParameter("view must be all, normal, suno or distributor")
     analyzer = _make_analyzer(model, revision, device, mode, windows, top_k, semantic)
     result = analyzer.analyze(audio)
     target = _store_result(result, out, history_db, no_history)
-    _print_result(result, view)
+    _print_result(result, view, include_path=full_path)
     console.print(f"JSON: {target}")
 
 
@@ -206,7 +216,12 @@ def batch(
         "auto",
         help="AudioSet semantic layer: auto|on|off",
     ),
-    view: str = typer.Option("normal", help="normal|suno|distributor"),
+    view: str = typer.Option("all", help="all|normal|suno|distributor"),
+    full_path: bool = typer.Option(
+        False,
+        "--full-path",
+        help="Include the full input file path in text output",
+    ),
     windows: int = typer.Option(5, min=1, max=12, help="Expert mode only"),
     top_k: int = typer.Option(15, min=3, max=50, help="Reported detailed styles"),
     history_db: Path | None = typer.Option(
@@ -229,8 +244,8 @@ def batch(
     from .history import HistoryDB
     from .report import write_json, write_summary_csv
 
-    if view not in {"normal", "suno", "distributor"}:
-        raise typer.BadParameter("view must be normal, suno or distributor")
+    if view not in {"all", "normal", "suno", "distributor"}:
+        raise typer.BadParameter("view must be all, normal, suno or distributor")
     files = iter_audio_files(source, include_service_dirs=include_service_dirs)
     if not files:
         raise typer.BadParameter("No supported audio files found")
@@ -245,7 +260,7 @@ def batch(
         target = write_json(result, out)
         if history:
             history.record_result(result)
-        _print_result(result, view)
+        _print_result(result, view, include_path=full_path)
         console.print(f"JSON: {target}")
 
     csv_path = write_summary_csv(results, out)
