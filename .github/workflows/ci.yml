@@ -34,7 +34,9 @@ jobs:
           grep -Fq 'findstr /b /c:"version = "' Genre_test_START.cmd
           grep -Fq 'launcher_pyproject.sha256' Genre_test_START.cmd
           grep -Fq '.venv\Scripts\genre-test-gui.exe' Genre_test_START.cmd
-          grep -Fq 'scripts\portable_bootstrap_v2.ps1' Genre_test_START.cmd
+          grep -Fq 'scripts\release_bootstrap.ps1' Genre_test_START.cmd
+          grep -Fq 'if /I "%VERSION%"=="0.3.6"' Genre_test_START.cmd
+          grep -Fq 'portable_bootstrap_v2.ps1 is accepted only for 0.3.6' Genre_test_START.cmd
           if grep -Fq 'set "EXPECTED=C:\Genre_test_0.3.6_portable\"' Genre_test_START.cmd; then
             echo 'Root launcher still contains frozen 0.3.6 path gate.' >&2
             exit 1
