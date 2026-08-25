@@ -141,8 +141,6 @@ if not exist "%WINPS%" goto RELEASE_NO_WINPS
 
 set "RELEASE_BOOTSTRAP="
 if exist "%ROOT%scripts\release_bootstrap.ps1" set "RELEASE_BOOTSTRAP=%ROOT%scripts\release_bootstrap.ps1"
-if defined RELEASE_BOOTSTRAP goto RELEASE_PREFLIGHT
-if /I "%VERSION%"=="0.3.6" if exist "%ROOT%scripts\portable_bootstrap_v2.ps1" set "RELEASE_BOOTSTRAP=%ROOT%scripts\portable_bootstrap_v2.ps1"
 if not defined RELEASE_BOOTSTRAP goto RELEASE_NO_BOOTSTRAP
 
 :RELEASE_PREFLIGHT
@@ -169,9 +167,7 @@ pause
 exit /b 1
 
 :RELEASE_NO_BOOTSTRAP
-echo [FAIL] No bootstrap matches Genre_test release %VERSION%.
-echo Current releases must contain scripts\release_bootstrap.ps1.
-echo Legacy portable_bootstrap_v2.ps1 is accepted only for 0.3.6.
+echo [FAIL] scripts\release_bootstrap.ps1 is missing from this release.
 echo.
 pause
 exit /b 1
