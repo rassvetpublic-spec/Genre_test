@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import pathlib
 import subprocess
 import sys
-from pathlib import Path
 
 from genre_test import retrieval
 
@@ -102,11 +102,11 @@ def _test_info() -> retrieval.RetrievalBackendInfo:
     )
 
 
-def _backend(tmp_path: Path) -> retrieval.Clamp3SidecarBackend:
+def _backend(tmp_path: pathlib.Path) -> retrieval.Clamp3SidecarBackend:
     script = tmp_path / "fake_sidecar.py"
     script.write_text(_FAKE_SIDECAR, encoding="utf-8")
     return retrieval.Clamp3SidecarBackend(
-        python_executable=Path(sys.executable),
+        python_executable=pathlib.Path(sys.executable),
         script_path=script,
         runtime_root=tmp_path,
         upstream_root=tmp_path,
@@ -116,7 +116,7 @@ def _backend(tmp_path: Path) -> retrieval.Clamp3SidecarBackend:
 
 
 def test_real_sidecar_cli_help_imports_without_heavy_model_load() -> None:
-    repo_root = Path(__file__).resolve().parents[1]
+    repo_root = pathlib.Path(__file__).resolve().parents[1]
     completed = subprocess.run(
         [sys.executable, str(repo_root / "scripts" / "clamp3_sidecar.py"), "--help"],
         cwd=repo_root,
@@ -146,7 +146,7 @@ def test_sidecar_protocol_request_and_response_roundtrip_unicode() -> None:
     assert retrieval.SidecarResponse.from_json(response.to_json()) == response
 
 
-def test_sidecar_backend_health_text_audio_and_shutdown(tmp_path: Path) -> None:
+def test_sidecar_backend_health_text_audio_and_shutdown(tmp_path: pathlib.Path) -> None:
     audio = tmp_path / "track.wav"
     audio.write_bytes(b"fixture")
 
@@ -171,7 +171,7 @@ def test_sidecar_backend_health_text_audio_and_shutdown(tmp_path: Path) -> None:
     assert not backend.is_running
 
 
-def test_sidecar_backend_preserves_segment_identity(tmp_path: Path) -> None:
+def test_sidecar_backend_preserves_segment_identity(tmp_path: pathlib.Path) -> None:
     audio = tmp_path / "track.wav"
     audio.write_bytes(b"fixture")
 
@@ -188,7 +188,7 @@ def test_sidecar_backend_preserves_segment_identity(tmp_path: Path) -> None:
     assert vector.identity.end_s == 20.0
 
 
-def test_sidecar_backend_propagates_structured_error(tmp_path: Path) -> None:
+def test_sidecar_backend_propagates_structured_error(tmp_path: pathlib.Path) -> None:
     with _backend(tmp_path) as backend:
         try:
             backend.embed_text("fail", language="en")
@@ -199,7 +199,7 @@ def test_sidecar_backend_propagates_structured_error(tmp_path: Path) -> None:
             raise AssertionError("expected Clamp3SidecarError")
 
 
-def test_sidecar_backend_missing_runtime_is_na(tmp_path: Path) -> None:
+def test_sidecar_backend_missing_runtime_is_na(tmp_path: pathlib.Path) -> None:
     backend = retrieval.Clamp3SidecarBackend(
         python_executable=tmp_path / "missing-python.exe",
         script_path=tmp_path / "missing-sidecar.py",
@@ -212,7 +212,7 @@ def test_sidecar_backend_missing_runtime_is_na(tmp_path: Path) -> None:
     assert "not installed" in health.value.lower()
 
 
-def test_sidecar_backend_rejects_partial_segment_bounds(tmp_path: Path) -> None:
+def test_sidecar_backend_rejects_partial_segment_bounds(tmp_path: pathlib.Path) -> None:
     audio = tmp_path / "track.wav"
     audio.write_bytes(b"fixture")
 
