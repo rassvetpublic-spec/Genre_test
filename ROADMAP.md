@@ -23,7 +23,10 @@ The v0.4 release line remains the stable analysis baseline while v0.5 retrieval 
 
 Epic: **#26**  
 Detailed roadmap: [`docs/CLAMP3_ROADMAP.md`](docs/CLAMP3_ROADMAP.md)  
-Architecture: [`docs/CLAMP3_ARCHITECTURE.md`](docs/CLAMP3_ARCHITECTURE.md)
+Architecture: [`docs/CLAMP3_ARCHITECTURE.md`](docs/CLAMP3_ARCHITECTURE.md)  
+Execution checklist: [`docs/CLAMP3_TODO.md`](docs/CLAMP3_TODO.md)  
+Output scope: [`docs/CLAMP3_OUTPUT_SCOPE.md`](docs/CLAMP3_OUTPUT_SCOPE.md)  
+Deferred ideas: [`docs/FAR_TODO.md`](docs/FAR_TODO.md)
 
 Selected direction: **CLaMP 3** for shared multilingual text↔music embeddings.
 
@@ -46,6 +49,8 @@ Core capabilities planned for v0.5:
 - Russian free-text→music search;
 - representative segment and custom segment retrieval;
 - filters using existing Genre_test profile metadata;
+- deterministic evidence-aware **Core Sound** summary (#43);
+- conservative **Tempo / Structure Map** after segment foundation (#44);
 - Catalog/Search GUI tabs;
 - CLI search/index commands;
 - retrieval relevance benchmark and regression gates;
@@ -69,6 +74,7 @@ P1 product/search:
 - **#31** audio-to-audio similarity search
 - **#32** Russian multilingual free-text search
 - **#33** segment embeddings / representative segment
+- **#43** deterministic Core Sound description
 - **#34** Catalog + Search GUI
 - **#35** retrieval CLI / export
 - **#36** relevance benchmark / regression
@@ -76,6 +82,7 @@ P1 product/search:
 P2 graduation/release:
 
 - **#37** controlled zero-shot descriptor experiments
+- **#44** tempo map / structural change-point analysis
 - **#38** Windows bootstrap / portable retrieval runtime
 - **#39** index the existing 10,436-track catalog
 - **#40** documentation / migration / v0.5 release gate
@@ -86,9 +93,41 @@ CLaMP 3 does **not** replace MAEST, AST, BPM/key DSP, AudioProfile, history, or 
 
 The official CLaMP 3 research environment differs materially from the released Genre_test core runtime. Initial work therefore assumes an isolated subprocess sidecar until #27 proves whether safer consolidation is possible.
 
+Target-machine inventory on 2026-08-26 confirms:
+
+```text
+Python 3.12 / 3.13 available
+RTX 5070 Ti, 16 GB
+compute capability 12.0
+Torch 2.12.1+cu130
+CUDA 13.0
+native sm_120 compiled
+```
+
+Therefore the first real sidecar experiment uses a **modern Blackwell-capable Python 3.12 route**. The old upstream Python 3.10/CUDA 11.8 recipe remains reference evidence, not the desired production GPU path.
+
 ### Critical license rule
 
 CLaMP 3 is published as MIT, but its documented audio pipeline uses `m-a-p/MERT-v1-95M`, whose current model card declares `CC-BY-NC-4.0`. The MERT-backed retrieval backend is treated as optional/experimental and not claimed commercially unrestricted until #41 is resolved. Third-party model weights are not bundled in Git or portable packages.
+
+### v0.5 output truth rule
+
+New richer text must preserve the distinction:
+
+```text
+MEASURED / MODEL EVIDENCE
+    -> RESOLVED ANALYSIS
+    -> DETERMINISTIC DESCRIPTION
+    -> OPTIONAL CREATIVE RECOMMENDATIONS (future)
+```
+
+For v0.5:
+
+- `Core Sound` is a deterministic summary of existing/versioned evidence, not new evidence;
+- CLaMP zero-shot scores remain raw similarities until calibrated;
+- `Production era` means perceived sonic era, not release year;
+- Tempo/Structure Map may identify conservative change points but does not automatically claim Verse/Chorus/Drop labels;
+- no specific plug-in/processor may be inferred as fact from rendered audio.
 
 ### v0.5 exit criteria
 
@@ -100,6 +139,7 @@ CLaMP 3 is published as MIT, but its documented audio pipeline uses `m-a-p/MERT-
 - persistent catalog index survives restart and version changes safely;
 - reviewed retrieval-quality corpus and metrics exist;
 - current ~10k catalog can be indexed/reused incrementally;
+- deterministic Core Sound output is evidence-traceable;
 - GUI and CLI both usable;
 - Windows install/update tested;
 - third-party license/provenance state explicit;
@@ -132,21 +172,42 @@ These remain valid but no longer block starting retrieval architecture:
 
 ### Additional calibrated musical descriptors
 
-Only add descriptors with a reproducible model or validated estimator:
+Only add descriptors with a reproducible model or validated estimator.
 
-- danceability;
-- energy;
-- acoustic/electronic balance;
-- vocal presence probability;
-- richer production descriptors.
+Active experimental candidate set in #37:
 
-CLaMP zero-shot descriptor experiments in #37 must follow the same rule: raw cosine similarity is not automatically a calibrated probability.
+- mood/emotion;
+- character;
+- movement/groove;
+- energy bands;
+- small vocal presence/style vocabulary;
+- production era / sonic decade;
+- use-case descriptors.
+
+CLaMP zero-shot raw cosine similarity is not automatically a calibrated probability.
 
 ### Product mappings
 
 - distributor taxonomy calibration;
 - SUNO Style of Music ordering/length rules;
 - configurable presentation mappings without changing stored evidence.
+
+## FAR TODO
+
+Useful but non-blocking ideas are kept in [`docs/FAR_TODO.md`](docs/FAR_TODO.md) instead of inflating v0.5:
+
+- rich vocal register/timbre/diction/spatial profile;
+- detailed kick/snare/hat/808 decomposition;
+- full production/mastering profile;
+- plug-in/processor inference;
+- creative arrangement advice;
+- semantic Verse/Chorus/Bridge/Drop naming;
+- detailed motif/transcription analysis;
+- AI-origin detection;
+- million-track ANN/search infrastructure;
+- cloud/external integrations.
+
+Items move out of FAR TODO only after evidence source, license, schema, reviewed fixtures, precision/repeatability and failure semantics are defined.
 
 ## Architecture rules
 
@@ -155,4 +216,5 @@ CLaMP zero-shot descriptor experiments in #37 must follow the same rule: raw cos
 - retrieval embeddings never silently overwrite analysis history;
 - different embedding backend identities are never mixed in one search matrix without an explicit migration;
 - third-party model licensing is tracked separately from Genre_test source licensing;
-- new model failure must not silently degrade existing stable outputs.
+- new model failure must not silently degrade existing stable outputs;
+- attractive natural-language output is never allowed to outrun the evidence that supports it.
