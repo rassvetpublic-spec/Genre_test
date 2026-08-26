@@ -19,6 +19,9 @@ class RetrievalBackendInfo:
     clamp_weight_sha256: str | None
     mert_model_id: str | None
     mert_revision: str | None
+    text_model_id: str | None
+    text_model_revision: str | None
+    text_tokenizer_revision: str | None
     preprocessing_version: str
     embedding_dim: int
     normalization: str = "l2"
@@ -53,6 +56,7 @@ class EmbeddingIdentity:
     scope: EmbeddingScope
     track_id: str | None = None
     text_sha256: str | None = None
+    language: str | None = None
     start_s: float | None = None
     end_s: float | None = None
 
@@ -69,6 +73,8 @@ class EmbeddingIdentity:
                 raise ValueError("audio embeddings require track_id")
             if self.text_sha256 is not None:
                 raise ValueError("audio embeddings cannot carry text_sha256")
+            if self.language is not None:
+                raise ValueError("audio embeddings cannot carry language")
 
         segment_values = (self.start_s, self.end_s)
         if self.scope in {"segment", "representative"}:
@@ -82,15 +88,23 @@ class EmbeddingIdentity:
             raise ValueError("full/text embeddings cannot carry segment bounds")
 
     @classmethod
-    def for_text(cls, backend_fingerprint: str, text: str) -> EmbeddingIdentity:
+    def for_text(
+        cls,
+        backend_fingerprint: str,
+        text: str,
+        *,
+        language: str | None = None,
+    ) -> EmbeddingIdentity:
         normalized = text.strip()
         if not normalized:
             raise ValueError("text query must not be empty")
+        normalized_language = language.strip().lower() if language and language.strip() else None
         text_sha256 = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
         return cls(
             backend_fingerprint=backend_fingerprint,
             scope="text",
             text_sha256=text_sha256,
+            language=normalized_language,
         )
 
     @property
