@@ -4,6 +4,8 @@ This document stores useful ideas that are **not part of the current v0.5 releas
 
 Rule: an item can move from FAR TODO into an active issue only when we can name a reproducible signal/model, version its identity, define validation data, and state how failure is represented. Attractive prose alone is not enough.
 
+Long-term execution work that has already been promoted beyond v0.5 is tracked in [`SUPERCOMBINE_TODO.md`](SUPERCOMBINE_TODO.md) under epic #49.
+
 ## 1. Rich vocal profile
 
 Desired outputs:
@@ -27,7 +29,7 @@ Why FAR:
 - register/timbre requires a calibrated vocal model or carefully reviewed estimator;
 - spatial position needs DSP/source-separation evidence and is mix-dependent.
 
-Near-term exception: #37 may experimentally evaluate a **small controlled vocal vocabulary** through CLaMP zero-shot scores, but those scores do not become production facts until calibrated.
+Near-term exception: #37 may experimentally evaluate a **small controlled vocal vocabulary** through CLaMP zero-shot scores. Separate future #51 handles **vocal repair processing**, not publication of this full descriptive profile.
 
 ## 2. Detailed rhythm / drum / bass profile
 
@@ -51,7 +53,7 @@ Why FAR:
 
 A future promotion path should combine beat tracking + onset statistics + optional source separation + reviewed rhythmic fixtures.
 
-## 3. Full production / mix profile
+## 3. Full perceptual production / mix profile
 
 Desired outputs:
 
@@ -67,12 +69,12 @@ Desired outputs:
 - reverb/dryness;
 - loudness/true peak/crest-factor style metrics.
 
-Why FAR:
+Why partly FAR:
 
-- objective DSP metrics and perceptual descriptors must remain separate;
-- terms such as `pristine`, `raw`, `punchy`, `wide`, `tube-like` need calibration before publication.
+- objective DSP metrics are being promoted separately through #45 TechnicalProfile;
+- perceptual labels such as `pristine`, `raw`, `punchy`, `wide`, `tube-like` still require calibration before publication.
 
-Some objective mastering-oriented measurements may later be shared with OZONE12_MASTERING_LAB, but Genre_test must keep model identity and measurement definitions explicit.
+Objective mastering-oriented measurements may later be shared with OZONE12_MASTERING_LAB, but Genre_test must keep model identity and measurement definitions explicit.
 
 ## 4. Processing-character inference
 
@@ -162,20 +164,27 @@ Near-term subset: #44 will implement **change-point / tempo-map infrastructure**
 
 Full semantic section naming remains FAR until benchmarked.
 
-## 9. Audio generation / AI-origin detection
+## 9. AI-origin detection / provenance QA
 
-Potential future subsystem:
+Potential future independent subsystem:
 
 - AI-generated likelihood;
 - supported-generator fingerprints;
 - model/version/provenance;
-- unknown/unsupported state.
+- unknown/unsupported state;
+- false-positive/false-negative benchmark.
 
 Why FAR:
 
 - detectors decay rapidly as generators change;
 - false-positive risk is high;
-- must be an independent model output, never a hidden profile heuristic.
+- it must be an independent model output, never a hidden profile heuristic.
+
+Hard boundary:
+
+- detection may be used for provenance/audit research;
+- Genre_test does not optimize mastering/repair to lower detector scores;
+- no detector-evasion, provenance-stripping or watermark-removal objective.
 
 ## 10. Large-catalog advanced retrieval
 
@@ -202,6 +211,108 @@ Deferred:
 - multi-user server mode.
 
 Genre_test remains local-first until retrieval quality and local catalog UX are proven.
+
+## 12. Lyrics transcription, alignment and pronunciation QA
+
+Geekatplay repositories such as `ComfyUI-LipSync-GAP` and `video-indexing-ai` contain Whisper-related architecture that makes this direction worth keeping visible.
+
+Potential outputs:
+
+- transcription text;
+- word/phrase timestamps;
+- supplied lyrics vs rendered lyrics diff;
+- missing/repeated line detection;
+- pronunciation/diction problem timestamps;
+- lyric-synchronized A/B review.
+
+Why FAR:
+
+- do not vendor their Whisper implementation blindly;
+- choose a maintained licensed transcription backend;
+- singing transcription accuracy, especially Russian, needs its own benchmark.
+
+Parts may later support #51 vocal repair after validation.
+
+## 13. Melody / pitch-event extraction
+
+Potential uses:
+
+- vocal pitch stability diagnostics;
+- melody contour;
+- wrong sustained-note candidate detection;
+- note/pitch overlays;
+- motif comparison;
+- supplied reference melody alignment.
+
+Candidate family to evaluate later: Basic Pitch-like models or a more suitable maintained alternative.
+
+Why FAR:
+
+- model/backend has not been selected;
+- polyphonic and expressive singing failure modes need reviewed fixtures;
+- this must not become automatic pitch correction without confidence gates.
+
+## 14. 3D song geometry / structure visualization
+
+Inspired by Geekatplay `song-geometry-mapper`.
+
+Possible view:
+
+```text
+node = segment/frame
+position = DSP + embedding geometry
+edge = chronological or semantic similarity
+```
+
+Could visualize:
+
+- structure changes;
+- similar/repeated sections;
+- stem-specific trajectories;
+- unusual/outlier regions;
+- catalog clusters.
+
+Why FAR:
+
+- useful presentation/research tool but not required to improve audio quality;
+- underlying structure features should ship before 3D presentation.
+
+## 15. Local MCP / agent automation interface
+
+Both Music Suite and Asset Vault demonstrate local MCP/API patterns.
+
+Possible future controls:
+
+- analyze file/folder;
+- query catalog;
+- start index job;
+- run technical QC;
+- request repair/master candidate;
+- inspect job state;
+- open comparison session;
+- generate delivery report.
+
+Why FAR:
+
+- internal CLI/job contracts should stabilize first;
+- external automation must not gain implicit destructive file-write authority.
+
+## 16. Music-to-video / social release package
+
+Geekatplay has music/video and social-media tooling that could eventually sit after final audio delivery.
+
+Potential scope:
+
+- waveform/visualizer video;
+- lyric video timing export;
+- short preview clips;
+- cover-art association;
+- platform asset bundle.
+
+Why FAR:
+
+- downstream presentation is not part of core audio finishing;
+- keep v1.0 audio pipeline focused before broadening into campaign tooling.
 
 ## Promotion gate from FAR TODO
 
