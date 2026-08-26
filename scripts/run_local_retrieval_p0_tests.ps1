@@ -14,6 +14,10 @@ $ReportPath = Join-Path $ResultsDir 'retrieval_p0_local_report.json'
 
 New-Item -ItemType Directory -Force -Path $ResultsDir | Out-Null
 
+$Steps = @()
+$OverallPass = $true
+$StartedAt = Get-Date
+
 function Invoke-Step {
     param(
         [Parameter(Mandatory = $true)][string]$Name,
@@ -23,13 +27,14 @@ function Invoke-Step {
     Write-Host "`n=== $Name ===" -ForegroundColor Cyan
     $started = Get-Date
     try {
-        & $Action
+        & $Action | Out-Host
         $elapsed = (Get-Date) - $started
         $script:Steps += [ordered]@{
             name = $Name
             status = 'PASS'
             seconds = [math]::Round($elapsed.TotalSeconds, 3)
         }
+        return $true
     }
     catch {
         $elapsed = (Get-Date) - $started
@@ -39,7 +44,8 @@ function Invoke-Step {
             seconds = [math]::Round($elapsed.TotalSeconds, 3)
             error = $_.Exception.Message
         }
-        throw
+        Write-Host "FAIL: $($_.Exception.Message)" -ForegroundColor Red
+        return $false
     }
 }
 
@@ -47,8 +53,6 @@ if (-not (Test-Path -LiteralPath $Python -PathType Leaf)) {
     throw "Genre_test virtual environment was not found: $Python. Run .\Genre_test_START.cmd once first."
 }
 
-$Steps = @()
-$StartedAt = Get-Date
 $GitCommit = (& git -C $RepoRoot rev-parse HEAD).Trim()
 $GitBranch = (& git -C $RepoRoot branch --show-current).Trim()
 $PythonVersion = (& $Python --version 2>&1).ToString().Trim()
@@ -56,7 +60,11 @@ $PythonVersion = (& $Python --version 2>&1).ToString().Trim()
 $GpuInfo = $null
 if (Get-Command nvidia-smi -ErrorAction SilentlyContinue) {
     try {
-        $GpuInfo = (& nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader,nounits 2>$null | Select-Object -First 1).Trim()
+        $GpuLine = & nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader,nounits 2>$null |
+            Select-Object -First 1
+        if ($GpuLine) {
+            $GpuInfo = $GpuLine.Trim()
+        }
     }
     catch {
         $GpuInfo = $null
@@ -64,42 +72,56 @@ if (Get-Command nvidia-smi -ErrorAction SilentlyContinue) {
 }
 
 if ($InstallDevDependencies) {
-    Invoke-Step 'Install/update local dev dependencies' {
-        & $Python -m pip install -e "$RepoRoot[dev]"
+    if (-not (Invoke-Step 'Install/update local dev dependencies' {
+        & $Python -m pip install -e "${RepoRoot}[dev]"
         if ($LASTEXITCODE -ne 0) { throw "pip install failed with exit code $LASTEXITCODE" }
+    })) {
+        $OverallPass = $false
     }
 }
 
-Invoke-Step 'Python compileall' {
+if (-not (Invoke-Step 'Python compileall' {
     & $Python -m compileall -q (Join-Path $RepoRoot 'src') (Join-Path $RepoRoot 'tests')
     if ($LASTEXITCODE -ne 0) { throw "compileall failed with exit code $LASTEXITCODE" }
+})) {
+    $OverallPass = $false
 }
 
-Invoke-Step 'Ruff' {
+if (-not (Invoke-Step 'Ruff' {
     & $Python -m ruff check (Join-Path $RepoRoot 'src') (Join-Path $RepoRoot 'tests')
     if ($LASTEXITCODE -ne 0) { throw "Ruff failed with exit code $LASTEXITCODE" }
+})) {
+    $OverallPass = $false
 }
 
-Invoke-Step 'Retrieval P0 regression tests' {
-    & $Python -m pytest -q \
-        (Join-Path $RepoRoot 'tests\test_retrieval_foundation.py') \
+if (-not (Invoke-Step 'Retrieval P0 regression tests' {
+    $TestFiles = @(
+        (Join-Path $RepoRoot 'tests\test_retrieval_foundation.py'),
         (Join-Path $RepoRoot 'tests\test_retrieval_store.py')
+    )
+    & $Python -m pytest -q @TestFiles
     if ($LASTEXITCODE -ne 0) { throw "retrieval pytest failed with exit code $LASTEXITCODE" }
+})) {
+    $OverallPass = $false
 }
 
 if (-not $SkipFullTests) {
-    Invoke-Step 'Full pytest suite' {
+    if (-not (Invoke-Step 'Full pytest suite' {
         & $Python -m pytest -q (Join-Path $RepoRoot 'tests')
         if ($LASTEXITCODE -ne 0) { throw "full pytest failed with exit code $LASTEXITCODE" }
+    })) {
+        $OverallPass = $false
     }
 }
 
-Invoke-Step 'Optional CLaMP runtime health probe' {
+if (-not (Invoke-Step 'Optional CLaMP runtime health probe' {
     & $Python (Join-Path $RepoRoot 'scripts\clamp3_runtime_probe.py')
     if ($LASTEXITCODE -ne 0) { throw "runtime probe failed with exit code $LASTEXITCODE" }
+})) {
+    $OverallPass = $false
 }
 
-Invoke-Step 'Retrieval SQLite/cache/index smoke' {
+if (-not (Invoke-Step 'Retrieval SQLite/cache/index smoke' {
     $Smoke = @'
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -158,12 +180,15 @@ print("LOCAL_RETRIEVAL_SMOKE_PASS")
 
     $Smoke | & $Python -
     if ($LASTEXITCODE -ne 0) { throw "retrieval smoke failed with exit code $LASTEXITCODE" }
+})) {
+    $OverallPass = $false
 }
 
 $FinishedAt = Get-Date
+$Clamp3Python = [Environment]::GetEnvironmentVariable('GENRE_TEST_CLAMP3_PYTHON')
 $Report = [ordered]@{
     schema_version = 1
-    status = if (($Steps | Where-Object status -eq 'FAIL').Count -eq 0) { 'PASS' } else { 'FAIL' }
+    status = if ($OverallPass) { 'PASS' } else { 'FAIL' }
     started_at = $StartedAt.ToString('o')
     finished_at = $FinishedAt.ToString('o')
     elapsed_seconds = [math]::Round(($FinishedAt - $StartedAt).TotalSeconds, 3)
@@ -173,13 +198,18 @@ $Report = [ordered]@{
     powershell = $PSVersionTable.PSVersion.ToString()
     python = $PythonVersion
     gpu = $GpuInfo
-    clamp3_python = $env:GENRE_TEST_CLAMP3_PYTHON
+    clamp3_python = $Clamp3Python
     steps = $Steps
 }
 
 $Report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $ReportPath -Encoding utf8
 
-Write-Host "`n=== LOCAL RETRIEVAL P0 GATE: $($Report.status) ===" -ForegroundColor Green
+$ResultColor = if ($OverallPass) { 'Green' } else { 'Red' }
+Write-Host "`n=== LOCAL RETRIEVAL P0 GATE: $($Report.status) ===" -ForegroundColor $ResultColor
 Write-Host "Report: $ReportPath"
 Write-Host "Commit: $GitCommit"
 Write-Host "GPU: $(if ($GpuInfo) { $GpuInfo } else { 'N/A' })"
+
+if (-not $OverallPass) {
+    exit 1
+}
