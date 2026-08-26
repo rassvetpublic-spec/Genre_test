@@ -70,7 +70,7 @@ jobs:
             echo 'Root launcher still shells through PowerShell for its fingerprint.' >&2
             exit 1
           fi
-          echo 'universal v0.4 launcher + first-run bootstrap gate PASS'
+          echo 'universal v0.4 launcher + unified retrieval entry point gate PASS'
       - name: Legacy retirement gate
         shell: bash
         run: |
