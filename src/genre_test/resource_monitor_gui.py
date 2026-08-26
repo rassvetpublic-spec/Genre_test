@@ -53,7 +53,7 @@ class ResourceMonitorWindow(tk.Toplevel):
         self._paused = False
         self._in_flight = False
         self._after_id: str | None = None
-        self._queue: queue.Queue[ResourceSnapshot | Exception] = queue.Queue()
+        self._queue: queue.Queue[ResourceSnapshot | None] = queue.Queue()
         self._bars: dict[str, ttk.Progressbar] = {}
         self._vars: dict[str, tk.StringVar] = {}
 
@@ -177,8 +177,10 @@ class ResourceMonitorWindow(tk.Toplevel):
                 break
             self._in_flight = False
             updated = True
-            if isinstance(item, Exception):
-                self._vars["status"].set(f"Ошибка мониторинга: {type(item).__name__}: {item}")
+            if item is None:
+                self._vars["status"].set(
+                    "Сбор ресурсов завершился внутренней ошибкой; повтор через ~1 s"
+                )
             else:
                 self._apply_snapshot(item)
 
@@ -192,10 +194,11 @@ class ResourceMonitorWindow(tk.Toplevel):
         self._in_flight = True
 
         def worker() -> None:
+            snapshot: ResourceSnapshot | None = None
             try:
-                self._queue.put(collect_resource_snapshot())
-            except Exception as exc:
-                self._queue.put(exc)
+                snapshot = collect_resource_snapshot()
+            finally:
+                self._queue.put(snapshot)
 
         threading.Thread(target=worker, name="genre-test-resource-monitor", daemon=True).start()
 
