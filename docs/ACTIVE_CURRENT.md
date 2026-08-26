@@ -31,7 +31,7 @@ The target is removal of audible defects and weak/raw generative production char
 
 Planned long-term phases:
 
-- v0.6 Repair & Stem Lab — #50, #51, #52;
+- v0.6 Repair & Stem Lab — #50, #51, #52; Apollo compatibility/restoration robustness is tracked in #63 under #50;
 - v0.7 Studio Finish / mastering orchestration — including #54 comparison lab;
 - v0.8 Metadata/Catalog/Delivery — #53, #56;
 - v0.9 ComfyUI/runtime orchestration — #46, #55;
