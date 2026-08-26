@@ -4,13 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from genre_test.retrieval import (
-    Clamp3SidecarBackend,
-    Clamp3SidecarError,
-    RetrievalBackendInfo,
-    SidecarRequest,
-    SidecarResponse,
-)
+from genre_test import retrieval
 
 
 _FAKE_SIDECAR = r'''
@@ -91,8 +85,8 @@ for raw in sys.stdin:
 '''
 
 
-def _test_info() -> RetrievalBackendInfo:
-    return RetrievalBackendInfo(
+def _test_info() -> retrieval.RetrievalBackendInfo:
+    return retrieval.RetrievalBackendInfo(
         backend_name="fake-clamp-sidecar",
         backend_version="test",
         clamp_code_revision="test-code",
@@ -108,10 +102,10 @@ def _test_info() -> RetrievalBackendInfo:
     )
 
 
-def _backend(tmp_path: Path) -> Clamp3SidecarBackend:
+def _backend(tmp_path: Path) -> retrieval.Clamp3SidecarBackend:
     script = tmp_path / "fake_sidecar.py"
     script.write_text(_FAKE_SIDECAR, encoding="utf-8")
-    return Clamp3SidecarBackend(
+    return retrieval.Clamp3SidecarBackend(
         python_executable=Path(sys.executable),
         script_path=script,
         runtime_root=tmp_path,
@@ -137,19 +131,19 @@ def test_real_sidecar_cli_help_imports_without_heavy_model_load() -> None:
 
 
 def test_sidecar_protocol_request_and_response_roundtrip_unicode() -> None:
-    request = SidecarRequest(
+    request = retrieval.SidecarRequest(
         op="embed_text",
         request_id="abc",
         payload={"text": "мрачный трек", "language": "ru"},
     )
-    assert SidecarRequest.from_json(request.to_json()) == request
+    assert retrieval.SidecarRequest.from_json(request.to_json()) == request
 
-    response = SidecarResponse(
+    response = retrieval.SidecarResponse(
         request_id="abc",
         ok=True,
         payload={"status": "OK"},
     )
-    assert SidecarResponse.from_json(response.to_json()) == response
+    assert retrieval.SidecarResponse.from_json(response.to_json()) == response
 
 
 def test_sidecar_backend_health_text_audio_and_shutdown(tmp_path: Path) -> None:
@@ -198,7 +192,7 @@ def test_sidecar_backend_propagates_structured_error(tmp_path: Path) -> None:
     with _backend(tmp_path) as backend:
         try:
             backend.embed_text("fail", language="en")
-        except Clamp3SidecarError as raised:
+        except retrieval.Clamp3SidecarError as raised:
             assert raised.code == "TEST_FAILURE"
             assert raised.message == "forced failure"
         else:
@@ -206,7 +200,7 @@ def test_sidecar_backend_propagates_structured_error(tmp_path: Path) -> None:
 
 
 def test_sidecar_backend_missing_runtime_is_na(tmp_path: Path) -> None:
-    backend = Clamp3SidecarBackend(
+    backend = retrieval.Clamp3SidecarBackend(
         python_executable=tmp_path / "missing-python.exe",
         script_path=tmp_path / "missing-sidecar.py",
         runtime_root=tmp_path,
