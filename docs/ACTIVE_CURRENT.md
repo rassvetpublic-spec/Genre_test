@@ -7,6 +7,36 @@ Active development: **v0.5 CLaMP 3 semantic retrieval**
 Epic: **#26**  
 Current first implementation issue: **#27**
 
+Long-term product epic: **#49 SUPERCOMBINE**  
+Long-term execution TODO: `docs/SUPERCOMBINE_TODO.md`  
+Geekatplay reuse audit: `docs/GEEKATPLAY_ORG_AUDIT.md`
+
+## Product north star
+
+Genre_test is no longer planned as only a genre analyzer. The post-v0.5 direction is a local-first finishing workstation for generative songs:
+
+```text
+Generated mix / stems
+  -> Analyze / Catalog / Search
+  -> Technical QC + markers
+  -> Repair artifacts
+  -> Vocal/stem post-processing
+  -> Mix/master orchestration
+  -> Synchronized A/B/X review
+  -> Metadata/tag audit
+  -> Delivery / studio-ready master
+```
+
+The target is removal of audible defects and weak/raw generative production characteristics while keeping immutable sources, evidence provenance and reproducible processing manifests. **AI-detector evasion / provenance concealment is not a product objective.**
+
+Planned long-term phases:
+
+- v0.6 Repair & Stem Lab — #50, #51, #52;
+- v0.7 Studio Finish / mastering orchestration — including #54 comparison lab;
+- v0.8 Metadata/Catalog/Delivery — #53, #56;
+- v0.9 ComfyUI/runtime orchestration — #46, #55;
+- v1.0 integrated SUPERCOMBINE.
+
 ## Stable v0.4 implementation
 
 Genre_test 0.4.0 remains a local Windows-first music profiling and regression system built around:
@@ -88,6 +118,8 @@ Detailed docs:
 - `docs/CLAMP3_OUTPUT_SCOPE.md`
 - `docs/FAR_TODO.md`
 - `docs/THIRD_PARTY_MODELS.md`
+- `docs/SUPERCOMBINE_TODO.md`
+- `docs/GEEKATPLAY_ORG_AUDIT.md`
 
 ## Retrieval runtime status
 
@@ -130,13 +162,15 @@ Promoted into active v0.5 work:
 
 - **#43 Core Sound** — deterministic evidence-aware human description;
 - **#44 Tempo / Structure Map** — conservative segment tempo/change-point output;
-- **#37 controlled descriptors** — mood/character/movement/energy plus small vocal and production-era experiments, but only after calibration.
+- **#37 controlled descriptors** — mood/character/movement/energy plus small vocal and production-era experiments, but only after calibration;
+- **#45 TechnicalProfile** — selective objective Music Suite metrics/markers;
+- **#48 Resource Monitor** — live CPU/RAM/GPU/VRAM telemetry.
 
 Explicitly deferred to `docs/FAR_TODO.md`:
 
 - rich vocal register/timbre/diction/spatial profile;
 - detailed kick/snare/hat/808 decomposition;
-- full production/mastering profile;
+- perceptual production/mastering labels beyond validated TechnicalProfile metrics;
 - plug-in/processor inference;
 - creative arrangement advice;
 - semantic Verse/Chorus/Bridge/Drop naming;
@@ -175,6 +209,8 @@ P1:
 - #34 GUI Catalog/Search
 - #35 CLI/export
 - #36 retrieval benchmark/regression
+- #45 TechnicalProfile foundation
+- #48 Resource Monitor
 
 P2:
 
@@ -196,6 +232,26 @@ The first real retrieval corpus is available from the completed v0.4 collection 
 ```
 
 This existing analysis/history should be reused as catalog metadata. CLaMP indexing should not unnecessarily rerun MAEST/AST.
+
+## Geekatplay integration status
+
+Forks exist:
+
+```text
+rassvetpublic-spec/music-suite
+rassvetpublic-spec/ComfyUI-MusicMapper-nodes
+```
+
+Selected ideas beyond the existing fork work are documented in `docs/GEEKATPLAY_ORG_AUDIT.md`.
+
+Especially useful directions:
+
+- Music Suite metadata/markers/mastering orchestration patterns;
+- Song Geometry Mapper time/feature/edge concepts;
+- Sonic Holodeck heavy-model cache concept;
+- ABCvers synchronized comparison UX;
+- Asset Vault integrity/provenance/lineage and safe-operation patterns;
+- Whisper-related transcription architectures as research references only.
 
 ## Stable v0.4 product behavior
 
@@ -253,3 +309,5 @@ v0.5 retrieval runtime/model weights are **not** yet part of the stable package.
 ## Current development rule
 
 No v0.5 feature PR is merged to `main` until explicit MTD. Runtime/model choices must be backed by measured compatibility, reproducibility, search-quality and licensing evidence.
+
+The same merge rule applies to SUPERCOMBINE work: no future repair/master/tag/runtime feature is merged without explicit MTD.
