@@ -24,6 +24,9 @@ def _backend_info() -> RetrievalBackendInfo:
         clamp_weight_sha256="a" * 64,
         mert_model_id="m-a-p/MERT-v1-95M",
         mert_revision="test-revision",
+        text_model_id="xlm-roberta-base",
+        text_model_revision="text-test-revision",
+        text_tokenizer_revision="tokenizer-test-revision",
         preprocessing_version="mert24k-v1",
         embedding_dim=3,
     )
@@ -42,16 +45,53 @@ def test_backend_fingerprint_is_stable_and_content_addressed() -> None:
     assert changed.fingerprint != first.fingerprint
 
 
+def test_backend_fingerprint_changes_with_text_model_identity() -> None:
+    first = _backend_info()
+    changed_model = RetrievalBackendInfo(
+        **{**first.to_dict(), "text_model_revision": "text-revision-2"}  # type: ignore[arg-type]
+    )
+    changed_tokenizer = RetrievalBackendInfo(
+        **{**first.to_dict(), "text_tokenizer_revision": "tokenizer-revision-2"}  # type: ignore[arg-type]
+    )
+
+    assert changed_model.fingerprint != first.fingerprint
+    assert changed_tokenizer.fingerprint != first.fingerprint
+
+
 def test_text_embedding_identity_supports_russian_unicode() -> None:
     identity = EmbeddingIdentity.for_text(
         _backend_info().fingerprint,
         "  мрачный кинематографичный электронный трек  ",
+        language="RU",
     )
 
     assert identity.scope == "text"
     assert identity.text_sha256 is not None
+    assert identity.language == "ru"
     assert len(identity.text_sha256) == 64
     assert len(identity.cache_key) == 64
+
+
+def test_text_embedding_identity_language_is_part_of_cache_key() -> None:
+    fingerprint = _backend_info().fingerprint
+    ru = EmbeddingIdentity.for_text(fingerprint, "одинаковый текст", language="ru")
+    en = EmbeddingIdentity.for_text(fingerprint, "одинаковый текст", language="en")
+    unspecified = EmbeddingIdentity.for_text(fingerprint, "одинаковый текст")
+
+    assert ru.text_sha256 == en.text_sha256 == unspecified.text_sha256
+    assert ru.cache_key != en.cache_key
+    assert ru.cache_key != unspecified.cache_key
+    assert en.cache_key != unspecified.cache_key
+
+
+def test_audio_embedding_identity_rejects_language() -> None:
+    with pytest.raises(ValueError, match="cannot carry language"):
+        EmbeddingIdentity(
+            backend_fingerprint=_backend_info().fingerprint,
+            scope="full",
+            track_id="track-1",
+            language="ru",
+        )
 
 
 def test_segment_identity_requires_valid_bounds() -> None:
@@ -150,8 +190,11 @@ class _FakeBackend:
         return EmbeddingVector.normalized(identity, [1.0, 0.0, 0.0], expected_dim=3)
 
     def embed_text(self, text: str, *, language: str | None = None) -> EmbeddingVector:
-        del language
-        identity = EmbeddingIdentity.for_text(self.info.fingerprint, text)
+        identity = EmbeddingIdentity.for_text(
+            self.info.fingerprint,
+            text,
+            language=language,
+        )
         return EmbeddingVector.normalized(identity, [0.0, 1.0, 0.0], expected_dim=3)
 
 
@@ -159,4 +202,6 @@ def test_fake_backend_conforms_to_protocol() -> None:
     backend = _FakeBackend()
 
     assert isinstance(backend, RetrievalBackend)
-    assert backend.embed_text("русский запрос", language="ru").dimension == 3
+    embedded = backend.embed_text("русский запрос", language="ru")
+    assert embedded.dimension == 3
+    assert embedded.identity.language == "ru"
