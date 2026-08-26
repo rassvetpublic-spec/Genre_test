@@ -155,7 +155,7 @@ def test_sidecar_protocol_and_f32_transport_round_trip() -> None:
     response = SidecarResponse.from_json(
         '{"protocol":"1","request_id":"req-1","ok":true,"payload":{"status":"OK"}}'
     )
-    assert response.ok is True
+    assert response.ok
     assert response.payload["status"] == "OK"
 
 
