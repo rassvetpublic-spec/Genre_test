@@ -4,12 +4,15 @@ import hashlib
 import math
 from pathlib import Path
 
+import pytest
+
 from genre_test.retrieval import (
     DenseCosineIndex,
     EmbeddingIdentity,
     EmbeddingVector,
     RetrievalBackendInfo,
     RetrievalStore,
+    SidecarProtocolError,
     SidecarRequest,
     SidecarResponse,
     decode_vector_f32,
@@ -157,6 +160,13 @@ def test_sidecar_protocol_and_f32_transport_round_trip() -> None:
     )
     assert response.ok
     assert response.payload["status"] == "OK"
+
+
+def test_sidecar_response_rejects_non_boolean_ok() -> None:
+    with pytest.raises(SidecarProtocolError, match="must be boolean"):
+        SidecarResponse.from_json(
+            '{"protocol":"1","request_id":"req-1","ok":"false","payload":{}}'
+        )
 
 
 def test_vector_digest_is_content_addressed(tmp_path: Path) -> None:
