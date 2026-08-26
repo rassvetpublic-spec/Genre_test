@@ -4,7 +4,7 @@ import hashlib
 import json
 import math
 from dataclasses import asdict, dataclass
-from typing import Literal
+from typing import Any, Literal
 
 RetrievalStatus = Literal["OK", "WARN", "FAIL", "N/A"]
 EmbeddingScope = Literal["full", "segment", "representative", "text"]
@@ -36,8 +36,12 @@ class RetrievalBackendInfo:
         if self.normalization != "l2":
             raise ValueError("v0.5 retrieval baseline requires l2 normalization")
 
-    def to_dict(self) -> dict[str, object]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> RetrievalBackendInfo:
+        return cls(**payload)
 
     @property
     def fingerprint(self) -> str:
@@ -107,10 +111,17 @@ class EmbeddingIdentity:
             language=normalized_language,
         )
 
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> EmbeddingIdentity:
+        return cls(**payload)
+
     @property
     def cache_key(self) -> str:
         payload = json.dumps(
-            asdict(self),
+            self.to_dict(),
             sort_keys=True,
             ensure_ascii=False,
             separators=(",", ":"),
@@ -158,6 +169,103 @@ class EmbeddingVector:
     @property
     def dimension(self) -> int:
         return len(self.values)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "identity": self.identity.to_dict(),
+            "values": list(self.values),
+        }
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> EmbeddingVector:
+        return cls(
+            identity=EmbeddingIdentity.from_dict(payload["identity"]),
+            values=tuple(float(value) for value in payload["values"]),
+        )
+
+
+@dataclass(frozen=True)
+class AudioEmbeddingRecord:
+    identity: EmbeddingIdentity
+    path: str
+    vector_sha256: str
+    created_at: str
+
+    def __post_init__(self) -> None:
+        if self.identity.scope not in {"full", "representative"}:
+            raise ValueError("audio record requires full or representative scope")
+        if not self.path.strip():
+            raise ValueError("path must not be empty")
+        if len(self.vector_sha256) != 64:
+            raise ValueError("vector_sha256 must be a SHA-256 hex digest")
+
+
+@dataclass(frozen=True)
+class SegmentEmbeddingRecord:
+    identity: EmbeddingIdentity
+    path: str
+    vector_sha256: str
+    created_at: str
+
+    def __post_init__(self) -> None:
+        if self.identity.scope != "segment":
+            raise ValueError("segment record requires segment scope")
+        if not self.path.strip():
+            raise ValueError("path must not be empty")
+        if len(self.vector_sha256) != 64:
+            raise ValueError("vector_sha256 must be a SHA-256 hex digest")
+
+
+@dataclass(frozen=True)
+class TextEmbeddingRecord:
+    identity: EmbeddingIdentity
+    query_text: str
+    vector_sha256: str
+    created_at: str
+
+    def __post_init__(self) -> None:
+        if self.identity.scope != "text":
+            raise ValueError("text record requires text scope")
+        if not self.query_text.strip():
+            raise ValueError("query_text must not be empty")
+        if len(self.vector_sha256) != 64:
+            raise ValueError("vector_sha256 must be a SHA-256 hex digest")
+
+
+@dataclass(frozen=True)
+class SearchFilter:
+    families: tuple[str, ...] = ()
+    genres: tuple[str, ...] = ()
+    bpm_min: float | None = None
+    bpm_max: float | None = None
+    min_confidence: float | None = None
+
+    def __post_init__(self) -> None:
+        if self.bpm_min is not None and self.bpm_min < 0:
+            raise ValueError("bpm_min must be non-negative")
+        if self.bpm_max is not None and self.bpm_max < 0:
+            raise ValueError("bpm_max must be non-negative")
+        if (
+            self.bpm_min is not None
+            and self.bpm_max is not None
+            and self.bpm_min > self.bpm_max
+        ):
+            raise ValueError("bpm_min must be <= bpm_max")
+        if self.min_confidence is not None and not 0.0 <= self.min_confidence <= 1.0:
+            raise ValueError("min_confidence must be in [0, 1]")
+
+
+@dataclass(frozen=True)
+class SearchQuery:
+    backend_fingerprint: str
+    top_k: int = 20
+    filters: SearchFilter = SearchFilter()
+
+    def __post_init__(self) -> None:
+        if not self.backend_fingerprint.strip():
+            raise ValueError("backend_fingerprint must not be empty")
+        if self.top_k <= 0:
+            raise ValueError("top_k must be positive")
 
 
 @dataclass(frozen=True)
