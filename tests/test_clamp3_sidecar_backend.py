@@ -6,12 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from genre_test.retrieval.clamp3_sidecar_backend import (
+from genre_test.retrieval import (
     Clamp3SidecarBackend,
     Clamp3SidecarError,
+    RetrievalBackendInfo,
+    SidecarRequest,
+    SidecarResponse,
 )
-from genre_test.retrieval.contracts import RetrievalBackendInfo
-from genre_test.retrieval.sidecar_protocol import SidecarRequest, SidecarResponse
 
 
 _FAKE_SIDECAR = r'''
@@ -196,9 +197,8 @@ def test_sidecar_backend_preserves_segment_identity(tmp_path: Path) -> None:
 
 
 def test_sidecar_backend_propagates_structured_error(tmp_path: Path) -> None:
-    with _backend(tmp_path) as backend:
-        with pytest.raises(Clamp3SidecarError) as raised:
-            backend.embed_text("fail", language="en")
+    with _backend(tmp_path) as backend, pytest.raises(Clamp3SidecarError) as raised:
+        backend.embed_text("fail", language="en")
 
     assert raised.value.code == "TEST_FAILURE"
     assert raised.value.message == "forced failure"
