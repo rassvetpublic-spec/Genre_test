@@ -97,7 +97,8 @@ if (-not (Invoke-Step 'Ruff' {
 if (-not (Invoke-Step 'Retrieval P0 regression tests' {
     $TestFiles = @(
         (Join-Path $RepoRoot 'tests\test_retrieval_foundation.py'),
-        (Join-Path $RepoRoot 'tests\test_retrieval_store.py')
+        (Join-Path $RepoRoot 'tests\test_retrieval_store.py'),
+        (Join-Path $RepoRoot 'tests\test_clamp3_sidecar_backend.py')
     )
     & $Python -m pytest -q @TestFiles
     if ($LASTEXITCODE -ne 0) { throw "retrieval pytest failed with exit code $LASTEXITCODE" }
