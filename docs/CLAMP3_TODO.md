@@ -18,10 +18,10 @@ Deferred ideas: [`FAR_TODO.md`](FAR_TODO.md)
 - [x] capture real Windows target inventory
 - [x] confirm RTX 5070 Ti / `sm_120` / Torch 2.12.1+cu130 baseline
 - [x] prioritize modern Python 3.12 Blackwell-capable isolated sidecar
-- [ ] choose exact CLaMP weight variant
-- [ ] pin weight revision and SHA-256
-- [ ] choose exact MERT revision compatible with CLaMP extractor
-- [ ] build modern isolated Windows runtime
+- [x] choose exact CLaMP weight variant: SAAS for audio retrieval
+- [x] pin SAAS weight revision, filename, size and SHA-256
+- [x] choose exact MERT revision compatible with the pinned CLaMP extractor
+- [ ] build modern isolated Windows runtime on the target machine
 - [ ] audio embedding smoke
 - [ ] Russian text embedding smoke
 - [ ] measure repeatability
@@ -35,12 +35,12 @@ Deferred ideas: [`FAR_TODO.md`](FAR_TODO.md)
 - [x] record CLaMP MIT metadata
 - [x] identify MERT CC-BY-NC-4.0 gate
 - [x] prohibit bundled MERT weights pending review
-- [ ] pin CLaMP selected weight license/revision
-- [ ] pin MERT license/revision
-- [ ] record XLM-R provenance/license
+- [x] pin CLaMP selected SAAS weight license/revision/SHA-256
+- [x] pin MERT revision and non-commercial license policy
+- [x] record XLM-R model/tokenizer revision and license
 - [ ] record inference-only dependency licenses
 - [ ] prepare attribution text
-- [ ] state v0.5 retrieval commercial/non-commercial policy
+- [ ] state final v0.5 retrieval commercial/non-commercial policy in release notes
 
 ### #28 Retrieval schema/protocol
 - [x] create pure-core retrieval package
@@ -57,7 +57,7 @@ Deferred ideas: [`FAR_TODO.md`](FAR_TODO.md)
 
 ### #29 Real CLaMP+MERT backend
 - [ ] MERT adapter
-- [ ] exact upstream-compatible preprocessing v1
+- [x] exact upstream-compatible preprocessing v1 pinned in runtime manifest
 - [ ] CLaMP audio adapter
 - [ ] CLaMP multilingual text adapter
 - [ ] subprocess handshake
