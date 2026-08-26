@@ -58,6 +58,16 @@ The objective is studio-ready audio with audible generative defects corrected. T
 - [ ] phase/mono instability detector
 - [ ] transient-smear diagnostic
 - [ ] candidate restoration backend inventory
+- [ ] Apollo compatibility/provenance/runtime spike (#63)
+- [ ] pin Apollo code revision, checkpoint identity, license and SHA-256
+- [ ] verify whether Timbrica MP3/Vocal/Universal variants map to public reproducible checkpoints
+- [ ] define optional isolated `ApolloRepairBackend` / sidecar contract
+- [ ] add source eligibility gate: lossy/suspected transcode vs clean lossless default-skip
+- [ ] create R0 Original / R1 Light / R2 Vocal Light / R3 Standard / R4 Aggressive Probe matrix
+- [ ] add `ROBUSTNESS AXIS: SOURCE_RESTORATION` for MAEST/AST/BPM/key/CLaMP comparisons
+- [ ] keep restoration-induced differences separate from analyzer-build `DRIFT`
+- [ ] benchmark real Windows Python 3.12 + Torch cu130 + RTX 5070 Ti sm_120
+- [ ] require immutable source, derived identity and processing manifest for Apollo outputs
 - [ ] backend license/provenance audit
 - [ ] Safe repair pass
 - [ ] Probe variants
