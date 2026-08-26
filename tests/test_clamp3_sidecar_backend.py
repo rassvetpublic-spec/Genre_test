@@ -4,8 +4,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
 from genre_test.retrieval import (
     Clamp3SidecarBackend,
     Clamp3SidecarError,
@@ -166,12 +164,12 @@ def test_sidecar_backend_health_text_audio_and_shutdown(tmp_path: Path) -> None:
         assert backend.is_running
 
         text = backend.embed_text("русский запрос", language="RU")
-        assert text.values == pytest.approx((0.0, 1.0, 0.0))
+        assert text.values == (0.0, 1.0, 0.0)
         assert text.identity.scope == "text"
         assert text.identity.language == "ru"
 
         audio_vector = backend.embed_audio(audio, track_id="track-1")
-        assert audio_vector.values == pytest.approx((1.0, 0.0, 0.0))
+        assert audio_vector.values == (1.0, 0.0, 0.0)
         assert audio_vector.identity.scope == "full"
     finally:
         backend.close()
@@ -197,11 +195,14 @@ def test_sidecar_backend_preserves_segment_identity(tmp_path: Path) -> None:
 
 
 def test_sidecar_backend_propagates_structured_error(tmp_path: Path) -> None:
-    with _backend(tmp_path) as backend, pytest.raises(Clamp3SidecarError) as raised:
-        backend.embed_text("fail", language="en")
-
-    assert raised.value.code == "TEST_FAILURE"
-    assert raised.value.message == "forced failure"
+    with _backend(tmp_path) as backend:
+        try:
+            backend.embed_text("fail", language="en")
+        except Clamp3SidecarError as raised:
+            assert raised.code == "TEST_FAILURE"
+            assert raised.message == "forced failure"
+        else:
+            raise AssertionError("expected Clamp3SidecarError")
 
 
 def test_sidecar_backend_missing_runtime_is_na(tmp_path: Path) -> None:
@@ -222,5 +223,9 @@ def test_sidecar_backend_rejects_partial_segment_bounds(tmp_path: Path) -> None:
     audio.write_bytes(b"fixture")
 
     backend = _backend(tmp_path)
-    with pytest.raises(ValueError, match="supplied together"):
+    try:
         backend.embed_audio(audio, track_id="track-1", start_s=10.0)
+    except ValueError as raised:
+        assert "supplied together" in str(raised)
+    else:
+        raise AssertionError("expected ValueError for partial segment bounds")
