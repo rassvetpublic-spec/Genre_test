@@ -4,6 +4,7 @@ param(
     [switch]$DownloadModels,
     [switch]$AcceptMertNonCommercialTerms,
     [switch]$RunSmoke,
+    [switch]$RunSidecarSmoke,
     [string]$AudioPath = "",
     [string]$TextQuery = "мрачный электронный трек с мощными барабанами и напряжённой энергией",
     [int]$Repeat = 2
@@ -25,9 +26,11 @@ $RuntimeRoot = Join-Path $RepoRoot ".genre_test\retrieval"
 $RuntimeDir = Join-Path $RuntimeRoot "runtime"
 $VenvDir = Join-Path $RuntimeDir ".venv"
 $PythonExe = Join-Path $VenvDir "Scripts\python.exe"
+$CorePythonExe = Join-Path $RepoRoot ".venv\Scripts\python.exe"
 $UpstreamDir = Join-Path $RuntimeRoot "upstream\clamp3"
 $EvidenceDir = Join-Path $RuntimeRoot "evidence"
 $SmokeScript = Join-Path $RepoRoot "scripts\clamp3_runtime_smoke.py"
+$SidecarClientSmokeScript = Join-Path $RepoRoot "scripts\clamp3_sidecar_client_smoke.py"
 
 function Write-Section([string]$Title) {
     Write-Host ""
@@ -72,7 +75,7 @@ Write-Host "CLaMP code   : $ClampRevision"
 Write-Host "Torch target : $TorchVersion / cu130"
 Write-Host "MERT terms   : $MertLicense (non-commercial model gate)"
 
-if (-not ($Install -or $DownloadModels -or $RunSmoke)) {
+if (-not ($Install -or $DownloadModels -or $RunSmoke -or $RunSidecarSmoke)) {
     Write-Host ""
     Write-Host "No mutation requested. Current state:"
     Write-Host "  venv       : $(Test-Path $PythonExe)"
@@ -81,7 +84,8 @@ if (-not ($Install -or $DownloadModels -or $RunSmoke)) {
     Write-Host ""
     Write-Host "Use -Install to create the isolated runtime."
     Write-Host "Use -DownloadModels -AcceptMertNonCommercialTerms for explicit model download."
-    Write-Host "Use -RunSmoke [-AudioPath <WAV>] for the real embedding smoke."
+    Write-Host "Use -RunSmoke [-AudioPath <WAV>] for direct isolated-runtime inference."
+    Write-Host "Use -RunSidecarSmoke [-AudioPath <WAV>] for core -> persistent sidecar integration."
     return
 }
 
@@ -162,7 +166,7 @@ if ($DownloadModels) {
 }
 
 if ($RunSmoke) {
-    Write-Section "Real embedding smoke"
+    Write-Section "Real direct-runtime embedding smoke"
     New-Item -ItemType Directory -Force -Path $EvidenceDir | Out-Null
     $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
     $evidencePath = Join-Path $EvidenceDir "clamp3_runtime_smoke_$stamp.json"
@@ -181,6 +185,35 @@ if ($RunSmoke) {
     }
     Invoke-Checked $PythonExe @args
     Write-Host "Evidence: $evidencePath" -ForegroundColor Green
+}
+
+if ($RunSidecarSmoke) {
+    Write-Section "Core -> persistent CLaMP sidecar smoke"
+    if (-not (Test-Path $CorePythonExe)) {
+        throw "Core Genre_test Python is missing: $CorePythonExe"
+    }
+    if (-not (Test-Path $SidecarClientSmokeScript)) {
+        throw "Sidecar client smoke script is missing: $SidecarClientSmokeScript"
+    }
+    New-Item -ItemType Directory -Force -Path $EvidenceDir | Out-Null
+    $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
+    $sidecarEvidencePath = Join-Path $EvidenceDir "clamp3_sidecar_smoke_$stamp.json"
+    $sidecarArgs = @(
+        $SidecarClientSmokeScript,
+        "--repo-root", $RepoRoot,
+        "--text", $TextQuery,
+        "--repeat", [string]$Repeat,
+        "--timeout", "300",
+        "--json-out", $sidecarEvidencePath
+    )
+    if (-not [string]::IsNullOrWhiteSpace($AudioPath)) {
+        if (-not (Test-Path $AudioPath)) {
+            throw "AudioPath does not exist: $AudioPath"
+        }
+        $sidecarArgs += @("--audio", (Resolve-Path $AudioPath).Path)
+    }
+    Invoke-Checked $CorePythonExe @sidecarArgs
+    Write-Host "Sidecar evidence: $sidecarEvidencePath" -ForegroundColor Green
 }
 
 Write-Section "Done"
