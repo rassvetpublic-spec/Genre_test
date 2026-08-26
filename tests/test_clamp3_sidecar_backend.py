@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-
 _FAKE_SIDECAR = r'''
 import base64
 import json
