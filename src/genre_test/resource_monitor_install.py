@@ -43,7 +43,7 @@ def _show_resource_monitor(root: tk.Misc) -> None:
         pass
 
     window = ResourceMonitorWindow(root)
-    setattr(root, "_genre_test_resource_monitor_window", window)
+    root._genre_test_resource_monitor_window = window
 
 
 def install_resource_monitor_button(root: tk.Misc) -> None:
