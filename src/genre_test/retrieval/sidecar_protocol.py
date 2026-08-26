@@ -47,6 +47,8 @@ class SidecarResponse:
             data = json.loads(raw)
         except json.JSONDecodeError as exc:
             raise SidecarProtocolError("sidecar returned invalid JSON") from exc
+        if not isinstance(data, dict):
+            raise SidecarProtocolError("sidecar response must be a JSON object")
         if data.get("protocol") != PROTOCOL_VERSION:
             raise SidecarProtocolError(
                 f"unsupported sidecar protocol {data.get('protocol')!r}"
@@ -54,7 +56,9 @@ class SidecarResponse:
         request_id = str(data.get("request_id", "")).strip()
         if not request_id:
             raise SidecarProtocolError("sidecar response missing request_id")
-        ok = bool(data.get("ok", False))
+        ok = data.get("ok")
+        if not isinstance(ok, bool):
+            raise SidecarProtocolError("sidecar response field 'ok' must be boolean")
         payload = data.get("payload")
         if not isinstance(payload, dict):
             payload = {}
