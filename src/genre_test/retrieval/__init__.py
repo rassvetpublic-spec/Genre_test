@@ -24,12 +24,12 @@ from .sidecar_protocol import (
 from .storage import RetrievalStore, StoredEmbedding
 
 __all__ = [
+    "PROTOCOL_VERSION",
     "AudioEmbeddingRecord",
     "DenseCosineIndex",
     "DenseIndexStats",
     "EmbeddingIdentity",
     "EmbeddingVector",
-    "PROTOCOL_VERSION",
     "RetrievalBackend",
     "RetrievalBackendInfo",
     "RetrievalHealth",
