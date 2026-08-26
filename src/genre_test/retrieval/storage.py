@@ -4,10 +4,10 @@ import hashlib
 import json
 import sqlite3
 import struct
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator
 
 from .contracts import EmbeddingIdentity, EmbeddingVector, RetrievalBackendInfo
 
