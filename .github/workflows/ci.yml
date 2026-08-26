@@ -52,7 +52,7 @@ jobs:
           grep -Fq 'retrieval-smoke' Genre_test_START.cmd
           grep -Fq 'retrieval-direct-smoke' Genre_test_START.cmd
           grep -Fq 'CC-BY-NC-4.0' Genre_test_START.cmd
-          grep -Fq 'Internal scripts under scripts\\ are implementation details' Genre_test_START.cmd
+          grep -Fq 'Internal scripts under scripts\ are implementation details' Genre_test_START.cmd
           grep -Fq '.\Genre_test_START.cmd retrieval-setup' docs/CLAMP3_RUNTIME_P0.md
           if grep -Fq 'pwsh -File .\scripts\setup_clamp3_runtime.ps1' docs/CLAMP3_RUNTIME_P0.md; then
             echo 'CLaMP runtime docs bypass the unified root launcher.' >&2
