@@ -175,6 +175,23 @@ Deferred ideas: [`FAR_TODO.md`](FAR_TODO.md)
 - [ ] timeline JSON/text output
 - [ ] keep global tempo-v2 backward compatibility
 
+### #61 Alternative multilingual retrieval backends
+Baseline remains **CLaMP 3 SAAS + MERT + XLM-R** until benchmark evidence supports a change.
+
+- [ ] pin ML-CLAP code/model identity and checkpoint license
+- [ ] implement experimental ML-CLAP/SONAR backend behind the Genre_test retrieval contract
+- [ ] explicitly test Russian Cyrillic queries; do not assume Russian support from multilingual claims
+- [ ] pin GLAP code/model identity and checkpoint license
+- [ ] implement experimental GLAP backend behind the same retrieval contract
+- [ ] explicitly test Russian Cyrillic queries for GLAP
+- [ ] reuse the same reviewed RU/EN query set and catalog slice as #36
+- [ ] compare Precision@10 / Recall@10 / nDCG@10 / MRR / RU↔EN overlap
+- [ ] compare text/audio latency, indexing throughput, VRAM/RAM and disk footprint
+- [ ] keep different backend identities in separate embedding matrices
+- [ ] allow an XLM-V experiment only with a valid learned audio↔text alignment; never swap XLM-V into old CLaMP weights directly
+- [ ] publish a backend comparison report before any default switch
+- [ ] require explicit MTD for changing the default retrieval backend
+
 ### #38 Windows/portable
 - [ ] optional retrieval installer
 - [ ] separate runtime lifecycle
