@@ -9,12 +9,12 @@ CLAMP3_PYTHON_ENV = "GENRE_TEST_CLAMP3_PYTHON"
 
 
 def detect_retrieval_health(env: dict[str, str] | None = None) -> RetrievalHealth:
-    """Probe the optional retrieval runtime without importing or downloading model code.
+    """Probe optional retrieval configuration without importing heavy model code.
 
-    This is intentionally conservative during the v0.5 compatibility spike:
-    - no configured sidecar -> N/A;
-    - configured path missing -> FAIL;
-    - configured interpreter exists -> WARN until the real sidecar protocol handshake exists.
+    This lightweight probe intentionally does not start CLaMP/MERT. It only reports
+    whether the configured isolated interpreter exists. A live protocol/model check
+    is performed by ``Clamp3SidecarBackend.health()`` when the retrieval backend is
+    actually opened.
     """
 
     values = os.environ if env is None else env
@@ -47,7 +47,7 @@ def detect_retrieval_health(env: dict[str, str] | None = None) -> RetrievalHealt
         status="WARN",
         value=str(interpreter),
         details=(
-            "Retrieval interpreter is configured, but CLaMP 3/MERT protocol handshake "
-            "is not implemented yet in the runtime-spike branch."
+            "Retrieval interpreter is configured. This lightweight probe does not start "
+            "the heavy runtime; use Clamp3SidecarBackend.health() for the live protocol/model check."
         ),
     )
