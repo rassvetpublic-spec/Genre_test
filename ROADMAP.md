@@ -1,5 +1,33 @@
 # Genre_test Roadmap
 
+## Product north star
+
+Genre_test is evolving from a genre/profile analyzer into a **local-first studio-finish supercombine for generative songs**.
+
+Long-term flow:
+
+```text
+Generated mix / stems
+  -> Analyze / Catalog / Search
+  -> Technical QC + timestamped markers
+  -> Stem separation when needed
+  -> Generative-artifact restoration
+  -> Vocal repair
+  -> Stem repair/post-processing
+  -> Mix/master orchestration
+  -> Synchronized A/B/X candidate review
+  -> Metadata/tag audit and reversible batch fixes
+  -> Delivery package / studio-ready master
+```
+
+Target outcome: remove audible defects, unstable synthetic artifacts and weak mix/master characteristics of raw generated material while preserving evidence, source lineage and reproducible processing manifests.
+
+**Boundary:** the project does not optimize audio to evade AI-origin/provenance detectors, strip provenance/watermarks for concealment, or treat detector-score reduction as a mastering objective.
+
+Long-term epic: **#49**  
+Execution TODO: [`docs/SUPERCOMBINE_TODO.md`](docs/SUPERCOMBINE_TODO.md)  
+Geekatplay org audit: [`docs/GEEKATPLAY_ORG_AUDIT.md`](docs/GEEKATPLAY_ORG_AUDIT.md)
+
 ## Current release
 
 **v0.4.0 — released**
@@ -57,7 +85,9 @@ Core capabilities planned for v0.5:
 - optional controlled zero-shot descriptor experiments;
 - migration/indexing of the existing 10,436-track analyzed catalog;
 - Windows bootstrap/portable integration;
-- explicit third-party model provenance/license handling.
+- explicit third-party model provenance/license handling;
+- optional TechnicalProfile foundation from vetted Music Suite metrics (#45);
+- live Resource Monitor (#48).
 
 ### v0.5 issue plan
 
@@ -78,6 +108,8 @@ P1 product/search:
 - **#34** Catalog + Search GUI
 - **#35** retrieval CLI / export
 - **#36** relevance benchmark / regression
+- **#45** TechnicalProfile selective Music Suite integration
+- **#48** live Resource Monitor
 
 P2 graduation/release:
 
@@ -145,7 +177,105 @@ For v0.5:
 - third-party license/provenance state explicit;
 - final MTD before release.
 
-## v0.4.x calibration work feeding v0.5
+## NEXT: v0.6 — Repair & Stem Lab
+
+Epic: **#49**
+
+Primary modules:
+
+- **#50 Generative artifact remediation** — detect and repair audible unstable/synthetic defects, clipping/discontinuities, harshness, phase/mono instability and transient damage; Safe/Probe/Refine with before/after metrics.
+- **#51 Vocal repair processor** — pitch stability diagnostics, de-essing/resonance repair, level consistency, optional denoise/dereverb/restoration backends, phrase-aware diagnostics later.
+- **#52 Stem repair/post-processing** — maintained source-separation backend evaluation plus per-stem cleanup, transient/low-end/phase repair and safe recombination.
+
+Supporting TODO:
+
+- lyrics transcription/alignment;
+- melody/pitch-event extraction;
+- stem-aware TechnicalProfile and marker maps;
+- stem-aware structure/geometry;
+- processing manifests and derived-asset lineage.
+
+No v0.6 feature may use AI-detector score reduction as a quality target.
+
+## PLANNED: v0.7 — Studio Finish / mastering orchestration
+
+Genre_test should orchestrate and validate mastering candidates rather than replace the separate OZONE12_MASTERING_LAB workflow with a simplistic DSP chain.
+
+Planned:
+
+- REAPER render-host bridge;
+- Ozone preset/XML integration boundary;
+- Safe / Probe / Refine candidate orchestration;
+- preflight and post-render TechnicalProfile gates;
+- delivery normalization/compliance profiles;
+- codec-preview validation;
+- drum-attack retention, mono loss and decoded codec peak checks;
+- candidate rejection/regeneration on hard technical failures;
+- **#54 synchronized A/B/X comparison lab** for 2–12 repair/mix/master variants with common transport, loudness-match, blind comparison, markers and render manifests.
+
+## PLANNED: v0.8 — Metadata, catalog and delivery operations
+
+- **#53 Media tag auditor / reversible batch fix** — `ffprobe` + `mutagen` ingestion, normalized tags, analyzer cross-check for BPM/key/genre, dry-run diff, atomic writes, re-read validation and rollback.
+- **#56 Local music asset vault** — source/stem/render lineage, integrity verdicts, processing/model provenance, storage footprint, cleanup candidates, lexical/semantic lookup and explicit truth-source badges.
+- final delivery package with WAV 24-bit/48 kHz canonical master, checksums, analysis/technical reports, tags and processing lineage.
+
+Metadata identity fields such as title/artist/album are never silently overwritten from model inference. Provenance-related metadata may be inventoried but the module is not designed to strip it for concealment.
+
+## PLANNED: v0.9 — ComfyUI, runtime and automation
+
+- **#46 Genre_test-owned ComfyUI bridge nodes** over stable local contracts;
+- **#55 shared GPU ModelRuntimeManager / VRAM scheduler** integrating Resource Monitor telemetry, model residency, acquire/release lifecycle, OOM policy and sidecar shutdown;
+- stable local job API with progress/heartbeat/Safe Stop;
+- optional MCP façade only after stable APIs exist;
+- workflow validation before heavy execution.
+
+## TARGET: v1.0 — SUPERCOMBINE
+
+One persistent project/session should support:
+
+```text
+INGEST
+ -> ANALYZE
+ -> SEARCH/REFERENCE
+ -> QC
+ -> STEMS (optional)
+ -> REPAIR
+ -> VOCAL/STEM POST
+ -> MIX/MASTER
+ -> A/B/X REVIEW
+ -> TAG AUDIT
+ -> DELIVERY
+```
+
+v1.0 principles:
+
+- immutable source;
+- every derived asset has parent hash + processing manifest;
+- resumable sessions;
+- heavy models optional and independently diagnosable;
+- all destructive operations previewable and reversible;
+- automatic repair has confidence/unknown semantics;
+- final technical QC and human listening review;
+- Russian-first documentation;
+- real generated-song end-to-end fixtures;
+- explicit model/code licenses and provenance;
+- no anti-detector-evasion objective;
+- explicit MTD before release.
+
+## GeekatplayStudio reuse directions
+
+Detailed audit: [`docs/GEEKATPLAY_ORG_AUDIT.md`](docs/GEEKATPLAY_ORG_AUDIT.md).
+
+Strong patterns selected for future adaptation:
+
+- `music-suite`: technical metrics/markers, metadata merge, mastering orchestration/self-check, interactive review;
+- `song-geometry-mapper`: frame geometry, spectral flux, temporal/similarity edges, stem-aware structure concepts;
+- `Ai-Music-Analytic-Mastering-Nodes`: global heavy-model cache / explicit VRAM release concept — reference only until license clarified;
+- `ABCvers-Studio`: synchronized multi-candidate review UX;
+- `ComfyUI-Asset-Vault`: integrity/provenance/lineage, measured-vs-inferred UI, safe plans/checksums/quarantine and storage inventory;
+- `ComfyUI-LipSync-GAP` / `video-indexing-ai`: Whisper/transcription architecture reference only; choose a maintained licensed backend separately.
+
+## v0.4.x calibration work feeding later releases
 
 These remain valid but no longer block starting retrieval architecture:
 
@@ -194,20 +324,7 @@ CLaMP zero-shot raw cosine similarity is not automatically a calibrated probabil
 
 ## FAR TODO
 
-Useful but non-blocking ideas are kept in [`docs/FAR_TODO.md`](docs/FAR_TODO.md) instead of inflating v0.5:
-
-- rich vocal register/timbre/diction/spatial profile;
-- detailed kick/snare/hat/808 decomposition;
-- full production/mastering profile;
-- plug-in/processor inference;
-- creative arrangement advice;
-- semantic Verse/Chorus/Bridge/Drop naming;
-- detailed motif/transcription analysis;
-- AI-origin detection;
-- million-track ANN/search infrastructure;
-- cloud/external integrations.
-
-Items move out of FAR TODO only after evidence source, license, schema, reviewed fixtures, precision/repeatability and failure semantics are defined.
+Useful but non-blocking ideas remain in [`docs/FAR_TODO.md`](docs/FAR_TODO.md). Items move out only after evidence source, license, schema, reviewed fixtures, precision/repeatability and failure semantics are defined.
 
 ## Architecture rules
 
@@ -217,4 +334,7 @@ Items move out of FAR TODO only after evidence source, license, schema, reviewed
 - different embedding backend identities are never mixed in one search matrix without an explicit migration;
 - third-party model licensing is tracked separately from Genre_test source licensing;
 - new model failure must not silently degrade existing stable outputs;
-- attractive natural-language output is never allowed to outrun the evidence that supports it.
+- attractive natural-language output is never allowed to outrun the evidence that supports it;
+- source audio is immutable; repairs/masters are derived assets with lineage;
+- destructive metadata/storage actions require dry-run + explicit confirmation + rollback where feasible;
+- no feature is optimized to bypass AI-origin/provenance detection.
