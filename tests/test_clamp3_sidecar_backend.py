@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 
@@ -119,6 +120,21 @@ def _backend(tmp_path: Path) -> Clamp3SidecarBackend:
         request_timeout_s=5.0,
         info=_test_info(),
     )
+
+
+def test_real_sidecar_cli_help_imports_without_heavy_model_load() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    completed = subprocess.run(
+        [sys.executable, str(repo_root / "scripts" / "clamp3_sidecar.py"), "--help"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=20.0,
+    )
+
+    assert "Persistent Genre_test CLaMP 3 sidecar" in completed.stdout
 
 
 def test_sidecar_protocol_request_and_response_roundtrip_unicode() -> None:
