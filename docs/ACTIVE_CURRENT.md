@@ -37,6 +37,25 @@ Stable core:
 - FFmpeg bootstrap and diagnostics included
 - public pinned Hugging Face analysis models work anonymously; token optional
 
+### Actual target workstation inventory — 2026-08-26
+
+```text
+Windows 11 Pro Insider Preview 10.0.26220
+Python 3.12 + 3.13 installed
+Python 3.10/3.11 not registered
+Core Python 3.12.10
+RTX 5070 Ti / 16303 MiB / driver 610.88
+compute capability 12.0
+Torch 2.12.1+cu130
+CUDA 13.0
+native sm_120 present
+FFmpeg available
+```
+
+Evidence: `docs/CLAMP3_WINDOWS_SPIKE_2026-08-26.md`.
+
+The current CLaMP spike therefore prioritizes a **modern isolated Python 3.12 Blackwell-capable sidecar**. The older upstream Python 3.10/CUDA 11.8 environment is reference evidence only and is not the target RTX 5070 Ti production route.
+
 ## Active v0.5 direction: CLaMP 3
 
 Selected backend family: **CLaMP 3**.
@@ -48,7 +67,9 @@ Purpose:
 - representative segment search;
 - custom segment search;
 - persistent local catalog embeddings;
-- later controlled zero-shot descriptors.
+- deterministic Core Sound summary;
+- later controlled zero-shot descriptors;
+- conservative tempo/structure timeline after segment foundation.
 
 Planned GUI surface:
 
@@ -63,6 +84,9 @@ Detailed docs:
 - `docs/CLAMP3_ROADMAP.md`
 - `docs/CLAMP3_ARCHITECTURE.md`
 - `docs/CLAMP3_RUNTIME.md`
+- `docs/CLAMP3_TODO.md`
+- `docs/CLAMP3_OUTPUT_SCOPE.md`
+- `docs/FAR_TODO.md`
 - `docs/THIRD_PARTY_MODELS.md`
 
 ## Retrieval runtime status
@@ -76,7 +100,7 @@ sanderwood/clamp3
 9016d2b0c8d12d1aa79c2e0ab201e6822bdc83a8
 ```
 
-Upstream research dependencies/runtime differ from stable Genre_test core. Current provisional architecture is an **optional isolated subprocess sidecar**, pending measurements.
+Current provisional architecture is an **optional isolated subprocess sidecar**, pending real MERT/CLaMP inference measurements.
 
 Expected optional health behavior:
 
@@ -100,6 +124,38 @@ Until #41 is resolved:
 - the MERT-backed stack is not described as commercially unrestricted;
 - exact model revisions/checksums/licenses must be shown in provenance diagnostics before release indexing.
 
+## v0.5 output scope
+
+Promoted into active v0.5 work:
+
+- **#43 Core Sound** — deterministic evidence-aware human description;
+- **#44 Tempo / Structure Map** — conservative segment tempo/change-point output;
+- **#37 controlled descriptors** — mood/character/movement/energy plus small vocal and production-era experiments, but only after calibration.
+
+Explicitly deferred to `docs/FAR_TODO.md`:
+
+- rich vocal register/timbre/diction/spatial profile;
+- detailed kick/snare/hat/808 decomposition;
+- full production/mastering profile;
+- plug-in/processor inference;
+- creative arrangement advice;
+- semantic Verse/Chorus/Bridge/Drop naming;
+- detailed motif/transcription analysis;
+- AI-origin detection;
+- million-track ANN infrastructure;
+- cloud/external integrations.
+
+Truth hierarchy:
+
+```text
+MEASURED / MODEL EVIDENCE
+  -> RESOLVED ANALYSIS
+  -> DETERMINISTIC DESCRIPTION
+  -> OPTIONAL CREATIVE RECOMMENDATIONS (future)
+```
+
+Descriptions must never outrun their evidence.
+
 ## v0.5 issue map
 
 P0:
@@ -115,6 +171,7 @@ P1:
 - #31 audio similarity
 - #32 Russian free-text search
 - #33 segment/representative search
+- #43 deterministic Core Sound
 - #34 GUI Catalog/Search
 - #35 CLI/export
 - #36 retrieval benchmark/regression
@@ -122,6 +179,7 @@ P1:
 P2:
 
 - #37 zero-shot descriptor experiments
+- #44 tempo/structure map
 - #38 Windows bootstrap/portable
 - #39 index current 10,436-track catalog
 - #40 docs/migration/release gate
@@ -163,6 +221,7 @@ This existing analysis/history should be reused as catalog metadata. CLaMP index
 - tempo-v2 handles half/double and short-loop 3:2 ambiguity
 - source sample rate / bit depth / channels / bitrate come from original source
 - independent BPM ground-truth remains future calibration work
+- #44 must preserve backward compatibility with global tempo-v2 until benchmark evidence justifies any replacement
 
 ## Validation / history
 
