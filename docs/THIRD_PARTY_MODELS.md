@@ -16,7 +16,7 @@ CLaMP 3: Universal Music Information Retrieval Across Unaligned Modalities and U
 https://github.com/sanderwood/clamp3
 ```
 
-Candidate code pin for the initial compatibility spike:
+Selected code pin for the v0.5 P0 audio-retrieval spike:
 
 ```text
 9016d2b0c8d12d1aa79c2e0ab201e6822bdc83a8
@@ -28,15 +28,20 @@ Public Hugging Face model repository:
 sander-wood/clamp3
 ```
 
-Observed license metadata:
+Selected first audio-retrieval weight:
 
 ```text
-MIT
+variant    SAAS
+revision   791815a04a3a2bd9ab64cf590ba8307930c179e6
+file       weights_clamp3_saas_h_size_768_t_model_FacebookAI_xlm-roberta-base_t_length_128_a_size_768_a_layers_12_a_length_128_s_size_768_s_layers_12_p_size_64_p_length_512.pth
+size       2571027658 bytes
+sha256     5033f868e3977be3945ee416b5a1718d5589a173c7ba8982231d8c94a6441d80
+license    MIT
 ```
 
-The model repository currently contains multiple multi-gigabyte weight variants. **The production weight variant is not yet selected.** #27 must benchmark and pin one exact filename/revision/SHA-256 before persistent embeddings are accepted.
+SAAS is selected for the first audio-catalog runtime because the upstream project identifies the SAAS checkpoint as the audio-oriented/recommended path and its extraction configuration defaults to that checkpoint. The symbolic C2 checkpoint is not part of this first audio runtime.
 
-One observed SAAS-weight LFS object is approximately 2.57 GB and exposes an LFS SHA-256 in the public model repository; this is research evidence only until the selected weight is finalized.
+The bootstrap verifies both the selected file size and SHA-256 before using the weight.
 
 ## MERT-v1-95M
 
@@ -51,52 +56,88 @@ Role:
 
 CLaMP 3's documented audio preprocessing extracts MERT-compatible features before CLaMP audio encoding.
 
-Observed model-card license:
+Selected compatibility pin for the first smoke:
 
 ```text
-CC-BY-NC-4.0
+revision   55fa29e5522049926c03d2ff9ae54d22c20e668f
 ```
 
-This is materially different from Genre_test's MIT source license and from the CLaMP 3 MIT metadata.
+This revision is used because MERT's own historical model documentation explicitly recommended that commit as a pinned loading example, and it is compatible with the custom MusicHuBERT loader used by the pinned CLaMP preprocessing source. The real Windows smoke remains the final compatibility gate.
+
+Current project licensing policy for this model:
+
+```text
+CC-BY-NC-4.0 / non-commercial gate
+```
+
+The project intentionally applies the stricter current MERT model-card terms to the selected runtime even though historical repository metadata may differ. This is materially different from Genre_test's MIT source license and from the CLaMP 3 MIT metadata.
 
 Implications for current development policy:
 
 - do not commit MERT weights into Genre_test;
 - do not package MERT weights in portable ZIPs;
 - download only when the user explicitly enables the retrieval component;
+- the bootstrap requires an explicit `AcceptMertNonCommercialTerms` switch before model download;
 - retain attribution/provenance;
 - treat the MERT-backed retrieval backend as experimental/non-commercial unless licensing is separately resolved;
-- do not state that the complete retrieval model stack is commercially unrestricted.
-
-### Revision choice
-
-The MERT model repository has evolved over time and uses custom model code. A revision must be pinned before reproducible indexing.
-
-The upstream MERT documentation historically recommended pinning a commit for security/reproducibility when `trust_remote_code=True`. #27 must select the exact revision after verifying compatibility with the CLaMP feature extractor.
-
-No unpinned `main` model is accepted for release indexing.
+- do not state that the complete retrieval model stack is commercially unrestricted;
+- no unpinned `main` model is accepted for release indexing.
 
 ## XLM-R
 
-CLaMP 3 uses an XLM-R text backbone (`FacebookAI/xlm-roberta-base`) according to its model metadata/configuration.
+CLaMP 3 uses an XLM-R text backbone.
 
-Before release, #41 must record:
+Selected identity:
 
-- exact model id/revision actually loaded by CLaMP;
-- license metadata;
-- whether tokenizer/model assets are downloaded indirectly;
-- attribution if required.
+```text
+model      FacebookAI/xlm-roberta-base
+revision   e73636d4f797dec63c3081bb6ed5c7b0bb3f2089
+license    MIT
+```
 
-## CLaMP research dependencies
+Both the model and tokenizer are loaded from this pinned local snapshot in the P0 runtime. The revision is part of the retrieval manifest/fingerprint so a future text-model or tokenizer change cannot silently reuse incompatible cached embeddings.
 
-The pinned upstream CLaMP snapshot references a research-oriented dependency set including older versions of Transformers/Accelerate and packages not needed by Genre_test core.
+## Preprocessing identity
+
+Selected preprocessing version:
+
+```text
+clamp3-mert-24k-mono-5s-mean-v1
+```
+
+Pinned behavior:
+
+```text
+sample rate                  24000 Hz
+channels                     mono
+raw waveform normalization   false
+feature processor normalize  true
+window                       5.0 s
+window overlap               0%
+final chunk < 1 s            discard
+MERT layer                   all layers
+MERT reduction               mean
+CLaMP audio max length       128 feature rows
+CLaMP text max length        128 tokens
+embedding dimension          768
+retrieval normalization      L2
+```
+
+Any change to these rules requires a new preprocessing identity and therefore a new embedding/cache identity.
+
+## CLaMP inference dependencies
+
+The upstream CLaMP repository contains a broader research/training dependency set. Genre_test does not copy that entire environment into core.
+
+The isolated P0 runtime currently installs only the inference-oriented subset required by the selected path, including pinned Torch/Torchaudio, Transformers, Accelerate, NumPy, Hugging Face Hub, nnAudio, SoundFile, SentencePiece and supporting packages.
 
 Policy:
 
-- do not copy all upstream research dependencies into core `pyproject.toml` by default;
+- do not copy all upstream research dependencies into core `pyproject.toml`;
 - install only runtime dependencies actually required by our inference adapter;
-- keep them isolated until #27 proves a safe consolidation route;
-- avoid dependencies used only for training/evaluation if inference does not require them.
+- keep them in the isolated Python 3.12 sidecar until #27 proves a safer consolidation route;
+- avoid training/evaluation-only dependencies;
+- complete a dependency-license inventory before v0.5 release.
 
 ## Model-download policy
 
@@ -115,30 +156,31 @@ They should not contain multi-gigabyte third-party model weights unless a future
 Future `retrieval-doctor` should show at minimum:
 
 ```text
-Backend: CLaMP 3
-Backend code revision: ...
-CLaMP weight: ...
-CLaMP weight SHA-256: ...
+Backend: CLaMP 3 SAAS
+Backend code revision: 9016d2b0c8d12d1aa79c2e0ab201e6822bdc83a8
+CLaMP weight revision: 791815a04a3a2bd9ab64cf590ba8307930c179e6
+CLaMP weight SHA-256: 5033f868e3977be3945ee416b5a1718d5589a173c7ba8982231d8c94a6441d80
 MERT model: m-a-p/MERT-v1-95M
-MERT revision: ...
-Text model: ...
-Preprocessing version: ...
-Embedding dim: ...
-License summary: ...
+MERT revision: 55fa29e5522049926c03d2ff9ae54d22c20e668f
+Text model: FacebookAI/xlm-roberta-base
+Text revision: e73636d4f797dec63c3081bb6ed5c7b0bb3f2089
+Preprocessing version: clamp3-mert-24k-mono-5s-mean-v1
+Embedding dim: 768
+License summary: CLaMP MIT; XLM-R MIT; MERT non-commercial gate
 ```
 
 ## Release gate
 
 Before v0.5 release:
 
-- [ ] CLaMP code revision selected;
-- [ ] CLaMP weight filename/revision/SHA selected;
-- [ ] CLaMP license recorded;
-- [ ] MERT revision selected;
-- [ ] MERT license recorded;
-- [ ] XLM-R provenance recorded;
+- [x] CLaMP code revision selected;
+- [x] CLaMP weight filename/revision/SHA selected;
+- [x] CLaMP license recorded;
+- [x] MERT revision selected;
+- [x] MERT license policy recorded;
+- [x] XLM-R provenance recorded;
 - [ ] runtime-only dependency licenses reviewed;
 - [ ] attribution text prepared;
-- [ ] installer does not redistribute prohibited weights;
+- [x] installer does not redistribute model weights and requires explicit MERT-term acceptance before model download;
 - [ ] README clearly states retrieval model terms;
-- [ ] commercial/non-commercial status of the shipped retrieval configuration is explicit.
+- [ ] commercial/non-commercial status of the shipped retrieval configuration is explicit in final release notes.
