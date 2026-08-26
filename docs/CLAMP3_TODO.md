@@ -49,34 +49,40 @@ Deferred ideas: [`FAR_TODO.md`](FAR_TODO.md)
 - [x] require L2-normalized vector contract
 - [x] add backend Protocol
 - [x] add fake-backend tests
-- [ ] add serialization round-trip helpers
-- [ ] finalize retrieval SQLite schema
-- [ ] add schema version/migration tests
-- [ ] define sidecar protocol version
-- [ ] define structured error codes
+- [x] add serialization round-trip helpers
+- [x] finalize retrieval SQLite schema v1
+- [ ] add explicit schema migration tests for future schema versions
+- [x] define sidecar protocol version 1
+- [x] define structured sidecar error codes
 
 ### #29 Real CLaMP+MERT backend
-- [ ] MERT adapter
+Implementation exists in PR #62; real RTX 5070 Ti evidence is still required before hardware-dependent items are considered accepted.
+
+- [x] MERT adapter implemented
 - [x] exact upstream-compatible preprocessing v1 pinned in runtime manifest
-- [ ] CLaMP audio adapter
-- [ ] CLaMP multilingual text adapter
-- [ ] subprocess handshake
-- [ ] binary/NPY vector transport
-- [ ] lazy loading
-- [ ] clean shutdown / GPU release
-- [ ] missing model / OOM / decode errors
-- [ ] repeatability evidence
+- [x] CLaMP audio adapter implemented
+- [x] CLaMP multilingual text adapter implemented
+- [x] persistent subprocess handshake implemented
+- [x] stable f32 little-endian/base64 vector transport
+- [x] lazy CLaMP/MERT loading
+- [x] clean shutdown / CUDA cache release path
+- [x] structured missing model / OOM / invalid request errors
+- [x] keep model/library stdout off JSON protocol stdout
+- [x] end-to-end core -> persistent sidecar smoke command implemented
+- [ ] real Windows text/audio sidecar smoke
+- [ ] repeatability evidence on target hardware
+- [ ] verify VRAM release after shutdown
 
 ### #30 Cache/index
-- [ ] retrieval.sqlite3
-- [ ] track embedding persistence
-- [ ] vector SHA-256
-- [ ] stale backend detection
-- [ ] atomic vector writes
+- [x] `retrieval.sqlite3` schema v1
+- [x] track/text/segment embedding persistence contract
+- [x] vector SHA-256 integrity
+- [x] stale backend separation by backend fingerprint
+- [x] transactional SQLite vector writes
 - [ ] cache hit/miss metrics
-- [ ] exact dense matrix index
-- [ ] stable cosine ranking
-- [ ] incremental update
+- [x] exact dense float32 cosine matrix index
+- [x] deterministic stable cosine ranking baseline
+- [ ] incremental catalog update orchestration
 - [ ] rebuild/stale-only commands
 
 ## P1 — product retrieval
@@ -93,7 +99,7 @@ Deferred ideas: [`FAR_TODO.md`](FAR_TODO.md)
 - [ ] JSON/CSV export
 
 ### #32 Russian text search
-- [ ] RU UTF-8 text embedding
+- [ ] RU UTF-8 text embedding on real CLaMP runtime
 - [ ] native RU baseline without LLM rewrite
 - [ ] text Top-K search
 - [ ] paired RU/EN benchmark
@@ -103,7 +109,7 @@ Deferred ideas: [`FAR_TODO.md`](FAR_TODO.md)
 ### #33 Segments
 - [ ] segment policy benchmark
 - [ ] 30 s baseline windows
-- [ ] segment persistence
+- [ ] segment persistence integration
 - [ ] centroid representative selector
 - [ ] representative search
 - [ ] custom interval search

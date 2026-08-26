@@ -152,14 +152,14 @@ def test_retrieval_health_fails_for_missing_configured_interpreter(tmp_path: Pat
     assert "does not exist" in health.details
 
 
-def test_retrieval_health_warns_for_unverified_existing_interpreter(tmp_path: Path) -> None:
+def test_retrieval_health_warns_for_lightweight_existing_interpreter_probe(tmp_path: Path) -> None:
     interpreter = tmp_path / "python.exe"
     interpreter.write_bytes(b"")
 
     health = detect_retrieval_health({"GENRE_TEST_CLAMP3_PYTHON": str(interpreter)})
 
     assert health.status == "WARN"
-    assert "protocol handshake is not implemented yet" in health.details
+    assert "Clamp3SidecarBackend.health()" in health.details
 
 
 class _FakeBackend:

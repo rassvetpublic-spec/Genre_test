@@ -133,7 +133,26 @@ pwsh -File .\scripts\setup_clamp3_runtime.ps1 `
   -Repeat 2
 ```
 
-The evidence JSON is written under:
+The command above checks the direct isolated runtime. For PR #62, run the actual persistent-sidecar path separately:
+
+```powershell
+pwsh -File .\scripts\setup_clamp3_runtime.ps1 `
+  -RunSidecarSmoke `
+  -AudioPath "D:\path\track.wav" `
+  -Repeat 2
+```
+
+This second command validates the complete boundary:
+
+```text
+Genre_test core .venv
+  -> Clamp3SidecarBackend
+  -> persistent JSON-lines sidecar
+  -> isolated Python 3.12 runtime
+  -> CLaMP 3 / MERT
+```
+
+Both commands write evidence JSON under:
 
 ```text
 .genre_test/retrieval/evidence/
