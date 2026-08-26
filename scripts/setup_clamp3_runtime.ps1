@@ -110,6 +110,7 @@ if ($Install) {
         "accelerate==0.34.0" `
         "numpy==1.26.4" `
         "huggingface_hub==0.24.7" `
+        "nnAudio==0.3.3" `
         "tqdm==4.66.5" `
         "unidecode==1.3.6" `
         "soundfile==0.12.1" `
@@ -142,15 +143,22 @@ Invoke-Checked $PythonExe -c "import sys, torch; print('python', sys.version.spl
 if ($DownloadModels) {
     Write-Section "Explicit pinned model download"
     Write-Host "Downloading CLaMP 3 SAAS + XLM-R + MERT. This can use several GB of disk/cache."
-    Invoke-Checked $PythonExe $SmokeScript --runtime-root $RuntimeRoot --download-models --manifest
-    # --manifest intentionally exits before loading; run a second command to trigger verified downloads.
     $downloadProbe = Join-Path $RuntimeRoot "download_probe.json"
-    if ([string]::IsNullOrWhiteSpace($AudioPath)) {
-        Invoke-Checked $PythonExe $SmokeScript --runtime-root $RuntimeRoot --download-models --text $TextQuery --repeat 1 --json-out $downloadProbe
+    $downloadArgs = @(
+        $SmokeScript,
+        "--runtime-root", $RuntimeRoot,
+        "--download-models",
+        "--text", $TextQuery,
+        "--repeat", "1",
+        "--json-out", $downloadProbe
+    )
+    if (-not [string]::IsNullOrWhiteSpace($AudioPath)) {
+        if (-not (Test-Path $AudioPath)) {
+            throw "AudioPath does not exist: $AudioPath"
+        }
+        $downloadArgs += @("--audio", (Resolve-Path $AudioPath).Path)
     }
-    else {
-        Invoke-Checked $PythonExe $SmokeScript --runtime-root $RuntimeRoot --download-models --audio $AudioPath --text $TextQuery --repeat 1 --json-out $downloadProbe
-    }
+    Invoke-Checked $PythonExe @downloadArgs
 }
 
 if ($RunSmoke) {
