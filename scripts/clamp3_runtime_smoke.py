@@ -96,8 +96,6 @@ def _download_assets(runtime_root: Path) -> dict[str, Path]:
         local_dir=mert_dir,
         allow_patterns=[
             "config.json",
-            "configuration_MERT.py",
-            "modeling_MERT.py",
             "preprocessor_config.json",
             "pytorch_model.bin",
         ],
@@ -151,7 +149,7 @@ def _existing_assets(runtime_root: Path) -> dict[str, Path]:
     }
 
 
-def _load_clamp(runtime_root: Path, upstream_root: Path, assets: dict[str, Path]):
+def _load_clamp(upstream_root: Path, assets: dict[str, Path]):
     import torch
     from transformers import AutoTokenizer, BertConfig
 
@@ -201,11 +199,34 @@ def _load_clamp(runtime_root: Path, upstream_root: Path, assets: dict[str, Path]
     return model, tokenizer, device, checkpoint
 
 
+def _load_mert_extractor(upstream_root: Path, mert_dir: Path, device):
+    audio_preprocess_dir = upstream_root / "preprocessing" / "audio"
+    if not audio_preprocess_dir.is_dir():
+        raise FileNotFoundError(
+            f"Pinned CLaMP audio preprocessing source not found at {audio_preprocess_dir}"
+        )
+    if str(audio_preprocess_dir) not in sys.path:
+        sys.path.insert(0, str(audio_preprocess_dir))
+
+    from hf_pretrains import HuBERTFeature
+
+    extractor = HuBERTFeature(
+        str(mert_dir),
+        TARGET_SAMPLE_RATE,
+        force_half=False,
+        processor_normalize=True,
+    ).to(device)
+    extractor.eval()
+    return extractor
+
+
 def _weighted_global(features: list[Any], weights: list[int]):
     import torch
 
     stacked = torch.cat(features, dim=0)
-    weight_tensor = torch.tensor(weights, device=stacked.device, dtype=stacked.dtype).view(-1, 1)
+    weight_tensor = torch.tensor(
+        weights, device=stacked.device, dtype=stacked.dtype
+    ).view(-1, 1)
     result = (stacked * weight_tensor).sum(dim=0) / weight_tensor.sum()
     return torch.nn.functional.normalize(result.reshape(-1), p=2, dim=0)
 
@@ -236,7 +257,9 @@ def _text_embedding(model, tokenizer, text: str, device):
                 )
             )
             padding = torch.full(
-                (CLAMP3_TEXT_MAX_LENGTH - actual,), tokenizer.pad_token_id, dtype=torch.long
+                (CLAMP3_TEXT_MAX_LENGTH - actual,),
+                tokenizer.pad_token_id,
+                dtype=torch.long,
             )
             padded = torch.cat((segment, padding), dim=0)
             output = model.get_text_features(
@@ -249,37 +272,41 @@ def _text_embedding(model, tokenizer, text: str, device):
     return _weighted_global(outputs, weights)
 
 
-def _mert_features(audio_path: Path, upstream_root: Path, mert_dir: Path, device):
+def _load_audio_for_mert(audio_path: Path, device):
+    import soundfile as sf
+    import torch
+    import torchaudio
+
+    data, sample_rate = sf.read(
+        str(audio_path), dtype="float32", always_2d=True
+    )
+    if data.shape[0] == 0:
+        raise ValueError("Audio file contains no samples")
+
+    waveform = torch.from_numpy(data.T.copy())
+    if waveform.shape[0] > 1:
+        waveform = waveform.mean(dim=0, keepdim=True)
+    waveform = waveform.to(device)
+
+    if sample_rate != TARGET_SAMPLE_RATE:
+        resampler = torchaudio.transforms.Resample(sample_rate, TARGET_SAMPLE_RATE).to(device)
+        waveform = resampler(waveform)
+
+    return waveform
+
+
+def _mert_features(audio_path: Path, extractor, device):
     import torch
 
-    audio_preprocess_dir = upstream_root / "preprocessing" / "audio"
-    if str(audio_preprocess_dir) not in sys.path:
-        sys.path.insert(0, str(audio_preprocess_dir))
-
-    from hf_pretrains import HuBERTFeature
-    from MERT_utils import load_audio
-
-    extractor = HuBERTFeature(
-        str(mert_dir),
-        TARGET_SAMPLE_RATE,
-        force_half=False,
-        processor_normalize=True,
-    ).to(device)
-    extractor.eval()
-
-    waveform = load_audio(
-        str(audio_path),
-        target_sr=TARGET_SAMPLE_RATE,
-        is_mono=True,
-        is_normalize=False,
-        crop_to_length_in_sec=None,
-        crop_randomly=False,
-        device=device,
-    )
+    waveform = _load_audio_for_mert(audio_path, device)
     processed = extractor.process_wav(waveform).to(device)
+    if processed.ndim == 1:
+        processed = processed.unsqueeze(0)
+    if processed.ndim != 2:
+        raise ValueError(f"Unexpected processed waveform shape: {tuple(processed.shape)}")
+
     window_samples = int(TARGET_SAMPLE_RATE * WINDOW_SECONDS)
     min_final_samples = int(TARGET_SAMPLE_RATE * MIN_FINAL_WINDOW_SECONDS)
-
     chunks = [
         processed[:, start : start + window_samples]
         for start in range(0, processed.shape[-1], window_samples)
@@ -293,7 +320,10 @@ def _mert_features(audio_path: Path, upstream_root: Path, mert_dir: Path, device
     with torch.no_grad():
         for chunk in chunks:
             chunk_features.append(extractor(chunk, layer=None, reduction="mean"))
+
     features = torch.cat(chunk_features, dim=1)
+    # Upstream `--mean_features` averages the all-layer tensor over layer axis,
+    # preserving one 768-D feature row per valid 5-second audio window.
     return features.mean(dim=0, keepdim=True).reshape(-1, EMBEDDING_DIMENSION)
 
 
@@ -342,7 +372,6 @@ def _cosine(left, right) -> float:
 
 
 def _run_smoke(
-    runtime_root: Path,
     upstream_root: Path,
     assets: dict[str, Path],
     text: str,
@@ -357,9 +386,9 @@ def _run_smoke(
     if torch.cuda.is_available():
         torch.cuda.reset_peak_memory_stats()
 
-    load_started = time.perf_counter()
-    model, tokenizer, device, checkpoint = _load_clamp(runtime_root, upstream_root, assets)
-    load_seconds = time.perf_counter() - load_started
+    clamp_load_started = time.perf_counter()
+    model, tokenizer, device, checkpoint = _load_clamp(upstream_root, assets)
+    clamp_load_seconds = time.perf_counter() - clamp_load_started
 
     text_vectors = []
     text_latencies = []
@@ -376,7 +405,7 @@ def _run_smoke(
         "checkpoint_min_eval_loss": checkpoint.get("min_eval_loss"),
         "device": str(device),
         "runtime_versions": _runtime_versions(),
-        "model_load_seconds": load_seconds,
+        "clamp_model_load_seconds": clamp_load_seconds,
         "text": {
             "query": text,
             "repeat": repeat,
@@ -392,21 +421,35 @@ def _run_smoke(
     if audio_path is not None:
         if not audio_path.is_file():
             raise FileNotFoundError(audio_path)
+
+        mert_load_started = time.perf_counter()
+        mert_extractor = _load_mert_extractor(
+            upstream_root, assets["mert_dir"], device
+        )
+        mert_model_load_seconds = time.perf_counter() - mert_load_started
+
         audio_vectors = []
         audio_latencies = []
-        mert_latencies = []
+        mert_inference_latencies = []
+        clamp_audio_latencies = []
         for _ in range(repeat):
-            started = time.perf_counter()
+            total_started = time.perf_counter()
             mert_started = time.perf_counter()
-            features = _mert_features(audio_path, upstream_root, assets["mert_dir"], device)
-            mert_latencies.append(time.perf_counter() - mert_started)
+            features = _mert_features(audio_path, mert_extractor, device)
+            mert_inference_latencies.append(time.perf_counter() - mert_started)
+
+            clamp_audio_started = time.perf_counter()
             audio_vectors.append(_audio_embedding(model, features, device).detach().cpu())
-            audio_latencies.append(time.perf_counter() - started)
+            clamp_audio_latencies.append(time.perf_counter() - clamp_audio_started)
+            audio_latencies.append(time.perf_counter() - total_started)
+
         report["audio"] = {
             "path": str(audio_path),
             "repeat": repeat,
-            "mert_latency_seconds": mert_latencies,
-            "total_latency_seconds": audio_latencies,
+            "mert_model_load_seconds": mert_model_load_seconds,
+            "mert_inference_seconds": mert_inference_latencies,
+            "clamp_audio_seconds": clamp_audio_latencies,
+            "total_inference_seconds": audio_latencies,
             "norm": float(audio_vectors[0].norm().item()),
             "repeat_cosine": (
                 _cosine(audio_vectors[0], audio_vectors[-1]) if repeat > 1 else None
@@ -469,7 +512,6 @@ def main() -> int:
         else _existing_assets(runtime_root)
     )
     report = _run_smoke(
-        runtime_root=runtime_root,
         upstream_root=upstream_root,
         assets=assets,
         text=args.text,
