@@ -6,7 +6,7 @@ import threading
 import uuid
 from collections import deque
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 from .contracts import (
     EmbeddingIdentity,
@@ -87,7 +87,7 @@ class Clamp3SidecarBackend:
         self.request_timeout_s = float(request_timeout_s)
         self._info = info or default_clamp3_backend_info()
         self._process: subprocess.Popen[str] | None = None
-        self._responses: queue.Queue[str | BaseException] = queue.Queue()
+        self._responses: queue.Queue[str | Exception] = queue.Queue()
         self._request_lock = threading.Lock()
         self._stderr_tail: deque[str] = deque(maxlen=50)
         self._stdout_thread: threading.Thread | None = None
@@ -178,7 +178,7 @@ class Clamp3SidecarBackend:
                 stripped = line.strip()
                 if stripped:
                     self._responses.put(stripped)
-        except BaseException as exc:  # pragma: no cover - defensive thread boundary
+        except (OSError, ValueError) as exc:  # pragma: no cover - defensive thread boundary
             self._responses.put(exc)
 
     def _read_stderr(self) -> None:
@@ -190,7 +190,7 @@ class Clamp3SidecarBackend:
                 stripped = line.rstrip()
                 if stripped:
                     self._stderr_tail.append(stripped)
-        except BaseException:  # pragma: no cover - diagnostics must never crash the client
+        except (OSError, ValueError):  # pragma: no cover - diagnostics must not crash client
             return
 
     def _request(self, op: str, payload: dict[str, Any]) -> SidecarResponse:
@@ -211,7 +211,7 @@ class Clamp3SidecarBackend:
             except queue.Empty as exc:
                 self._raise_process_failure("SIDECAR_TIMEOUT", exc)
 
-            if isinstance(raw, BaseException):
+            if isinstance(raw, Exception):
                 raise Clamp3SidecarError("SIDECAR_READER_FAILED", str(raw))
             response = SidecarResponse.from_json(raw)
             if response.request_id != request.request_id:
@@ -225,7 +225,7 @@ class Clamp3SidecarBackend:
                 )
             return response
 
-    def _raise_process_failure(self, code: str, cause: BaseException) -> None:
+    def _raise_process_failure(self, code: str, cause: Exception) -> None:
         process = self._process
         return_code = process.poll() if process is not None else None
         stderr = "\n".join(self._stderr_tail[-10:])
@@ -355,7 +355,7 @@ class Clamp3SidecarBackend:
                 process.wait(timeout=5.0)
         self._process = None
 
-    def __enter__(self) -> Clamp3SidecarBackend:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
