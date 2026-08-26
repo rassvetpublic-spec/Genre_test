@@ -20,6 +20,30 @@ CPU-only supported
 
 This baseline is already part of v0.4 release evidence and must not be destabilized merely to accommodate retrieval.
 
+## Target workstation evidence — 2026-08-26
+
+A read-only inventory was captured from the actual development machine and is stored in [`CLAMP3_WINDOWS_SPIKE_2026-08-26.md`](CLAMP3_WINDOWS_SPIKE_2026-08-26.md).
+
+Observed:
+
+```text
+Windows 11 Pro Insider Preview 10.0.26220
+Python 3.12 available
+Python 3.13 available
+Python 3.10/3.11 not registered
+Core Python: 3.12.10
+GPU: NVIDIA GeForce RTX 5070 Ti
+Driver: 610.88
+VRAM: 16303 MiB
+Compute capability: 12.0
+Core Torch: 2.12.1+cu130
+Torch CUDA: 13.0
+Compiled native architecture: sm_120
+FFmpeg: available
+```
+
+This changes the experiment order: the first serious GPU candidate is now an **isolated modern Python 3.12 / Blackwell-capable sidecar**, not a blind recreation of the old CUDA 11.8 recipe. The upstream environment remains useful as behavioral/reference evidence, but it is not the desired production GPU runtime for `sm_120` hardware.
+
 ## Captured CLaMP 3 upstream baseline
 
 Repository:
@@ -152,7 +176,7 @@ At minimum test:
 
 | Case | Core | Retrieval | Expected |
 |---|---|---|---|
-| GPU healthy | cu130 | official-compatible | both usable |
+| GPU healthy | cu130 | modern isolated candidate | both usable |
 | GPU healthy, retrieval absent | cu130 | absent | Analyze OK, Retrieval N/A |
 | GPU healthy, retrieval broken | cu130 | fail | Analyze OK, Retrieval FAIL |
 | CPU-only | CPU | CPU candidate | Analyze OK, Retrieval measured |
@@ -188,34 +212,47 @@ For audio also record by duration:
 
 ## Compatibility experiments
 
-### Experiment 1 — upstream-compatible isolated env
+### Experiment 1 — modern isolated Windows sidecar
 
-Goal: establish known-good reference before modernizing dependencies.
+Goal: prove the real target machine first.
+
+Start with:
+
+```text
+Python 3.12
+Blackwell-capable PyTorch/CUDA
+pinned CLaMP code
+pinned CLaMP weights
+pinned MERT identity
+minimum compatible dependency set
+```
 
 Verify:
 
-- Python creation;
+- Python environment creation;
 - CLaMP import;
 - MERT feature extraction;
 - CLaMP audio embedding;
 - Russian text embedding;
-- cosine self-match.
+- vector normalization;
+- cosine self-match;
+- clean process shutdown and GPU memory release.
 
-### Experiment 2 — modern Torch under isolated Python
+Every compatibility patch must be explicit and versioned.
 
-Keep CLaMP code constant while moving only minimum runtime packages toward currently supported Torch.
+### Experiment 2 — upstream-reference behavior
 
-Record every required patch.
+Only if necessary to distinguish an upstream-code problem from a modernization problem.
 
-If unmodified upstream works, that is evidence for future consolidation. If patches are needed, preserve them explicitly in our adapter instead of silently editing vendored research code.
+Reproduce as much of the documented research environment as practical, potentially CPU-only if the old CUDA route cannot serve the Blackwell GPU correctly. This environment is a **reference**, not the default production choice.
 
 ### Experiment 3 — core-native import
 
-Only after the first two experiments.
+Only after isolated inference works.
 
 Try current Genre_test core environment without changing its pins first.
 
-Failure is acceptable and likely means sidecar remains the correct design.
+Failure is acceptable and likely means sidecar remains the correct design. Never downgrade the released core just to force CLaMP into the same environment.
 
 ## Model loading rules
 
@@ -253,8 +290,10 @@ FAIL installed/configured but not operational
 
 ## Spike completion checklist
 
-- [ ] upstream reference env works;
-- [ ] CLaMP code revision pinned;
+- [x] target Windows hardware inventory captured;
+- [x] CLaMP code revision candidate recorded;
+- [x] Blackwell-native core route confirmed;
+- [ ] modern isolated sidecar works;
 - [ ] selected weight pinned;
 - [ ] MERT source/revision pinned;
 - [ ] third-party licenses recorded;
@@ -265,4 +304,4 @@ FAIL installed/configured but not operational
 - [ ] core-native compatibility tested;
 - [ ] final runtime architecture decision written;
 - [ ] bootstrap approach drafted;
-- [ ] fake backend tests green in normal CI.
+- [x] fake backend tests green in normal CI.
