@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import gc
 import sys
+from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Any
 
@@ -27,11 +28,13 @@ from clamp3_runtime_smoke import (  # noqa: E402
     _text_embedding,
 )
 from genre_test.retrieval.model_pins import (  # noqa: E402
+    CLAMP3_WEIGHT_FILENAME,
     EMBEDDING_DIMENSION,
     MIN_FINAL_WINDOW_SECONDS,
     TARGET_SAMPLE_RATE,
     WINDOW_SECONDS,
     manifest_fingerprint,
+    verify_clamp3_weight,
 )
 from genre_test.retrieval.sidecar_protocol import (  # noqa: E402
     SidecarProtocolError,
@@ -55,9 +58,9 @@ class Clamp3RuntimeEngine:
     def _presence(self) -> tuple[bool, list[str]]:
         missing: list[str] = []
         models_root = self.runtime_root / "models"
-        clamp_dir = models_root / "clamp3-saas"
-        if not clamp_dir.is_dir() or not any(clamp_dir.glob("*.pth")):
-            missing.append("CLaMP SAAS weight")
+        clamp_weight = models_root / "clamp3-saas" / CLAMP3_WEIGHT_FILENAME
+        if not verify_clamp3_weight(clamp_weight):
+            missing.append("pinned CLaMP SAAS weight (missing/corrupt)")
         if not (models_root / "mert-v1-95m" / "config.json").is_file():
             missing.append("MERT snapshot")
         if not (models_root / "xlm-roberta-base" / "config.json").is_file():
@@ -72,7 +75,7 @@ class Clamp3RuntimeEngine:
         if ready:
             status = "OK"
             value = "CLaMP 3 sidecar ready"
-            details = "Pinned runtime assets are present."
+            details = "Pinned runtime assets are present and CLaMP weight checksum is valid."
         else:
             status = "WARN"
             value = "CLaMP 3 sidecar installed; models/source incomplete"
@@ -335,7 +338,10 @@ def main() -> int:
             continue
         try:
             request = SidecarRequest.from_json(raw)
-            response, keep_running = _handle(engine, request)
+            # Third-party model code may print progress/status lines. Keep protocol stdout
+            # reserved exclusively for one JSON response per request.
+            with redirect_stdout(sys.stderr):
+                response, keep_running = _handle(engine, request)
         except SidecarProtocolError as exc:
             response = SidecarResponse(
                 request_id="protocol-error",
@@ -346,7 +352,8 @@ def main() -> int:
             )
         sys.stdout.write(response.to_json() + "\n")
         sys.stdout.flush()
-    engine.close()
+    with redirect_stdout(sys.stderr):
+        engine.close()
     return 0
 
 
