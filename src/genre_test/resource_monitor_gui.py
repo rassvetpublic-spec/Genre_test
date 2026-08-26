@@ -53,7 +53,7 @@ class ResourceMonitorWindow(tk.Toplevel):
         self._paused = False
         self._in_flight = False
         self._after_id: str | None = None
-        self._queue: queue.Queue[ResourceSnapshot | BaseException] = queue.Queue()
+        self._queue: queue.Queue[ResourceSnapshot | Exception] = queue.Queue()
         self._bars: dict[str, ttk.Progressbar] = {}
         self._vars: dict[str, tk.StringVar] = {}
 
@@ -177,12 +177,12 @@ class ResourceMonitorWindow(tk.Toplevel):
                 break
             self._in_flight = False
             updated = True
-            if isinstance(item, BaseException):
+            if isinstance(item, Exception):
                 self._vars["status"].set(f"Ошибка мониторинга: {type(item).__name__}: {item}")
             else:
                 self._apply_snapshot(item)
 
-        if not self._paused and not self._in_flight and (updated or self._queue.empty()):
+        if not self._paused and not self._in_flight and not updated:
             self._start_worker()
         self._schedule(REFRESH_MS if updated else POLL_MS)
 
@@ -194,7 +194,7 @@ class ResourceMonitorWindow(tk.Toplevel):
         def worker() -> None:
             try:
                 self._queue.put(collect_resource_snapshot())
-            except BaseException as exc:  # monitor must never kill the main GUI
+            except Exception as exc:
                 self._queue.put(exc)
 
         threading.Thread(target=worker, name="genre-test-resource-monitor", daemon=True).start()
@@ -215,7 +215,9 @@ class ResourceMonitorWindow(tk.Toplevel):
             self._request_refresh()
 
     def _apply_snapshot(self, snapshot: ResourceSnapshot) -> None:
-        stamp = dt.datetime.fromtimestamp(snapshot.sampled_at).strftime("%H:%M:%S")
+        stamp = dt.datetime.fromtimestamp(snapshot.sampled_at, tz=dt.UTC).astimezone().strftime(
+            "%H:%M:%S"
+        )
         self._vars["sample_time"].set(f"Обновлено: {stamp}")
         self._vars["status"].set(
             f"System: {snapshot.system_status} | GPU: {snapshot.gpu_status} | ~1 s"
