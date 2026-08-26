@@ -187,6 +187,13 @@ Primary modules:
 - **#51 Vocal repair processor** — pitch stability diagnostics, de-essing/resonance repair, level consistency, optional denoise/dereverb/restoration backends, phrase-aware diagnostics later.
 - **#52 Stem repair/post-processing** — maintained source-separation backend evaluation plus per-stem cleanup, transient/low-end/phase repair and safe recombination.
 
+### Apollo restoration research
+
+- **#63 Apollo restoration backend and analysis robustness** — evaluate upstream Apollo as an optional local repair backend for lossy/codec-like artifacts; verify checkpoint provenance and licenses; run a real RTX 5070 Ti compatibility/performance spike; define source eligibility and Safe/Probe/Refine candidate matrices; measure repair quality; and add a separate `SOURCE_RESTORATION` robustness axis for MAEST, AST, BPM/key and CLaMP.
+- Apollo output is always a derived repair candidate, never source truth or a silent replacement for ordinary analysis input.
+- Timbrica is reference evidence for product/variant ideas; the target implementation must use pinned reproducible upstream code/checkpoints. Transfer from MP3 restoration to SUNO/neural-codec artifacts remains an experiment until project-owned fixtures confirm it.
+- Restoration robustness results must not be mixed with analyzer-version `DRIFT`.
+
 Supporting TODO:
 
 - lyrics transcription/alignment;
