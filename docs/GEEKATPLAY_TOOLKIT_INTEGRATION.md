@@ -55,9 +55,12 @@ Pinned snapshot:
 ```text
 repo:   GeekatplayStudio/ComfyUI-MusicMapper-nodes
 commit: 0fda892fddfbaf50ba384c34f2b2d73c68d64208
-license metadata: null
+published OSS license metadata: null
 root LICENSE: not found during inspection
+permission: direct author permission for non-commercial use, reported by project owner
 ```
+
+The project owner reports that the upstream author explicitly granted use of this repository for **non-commercial purposes** in direct written correspondence. This is treated as project-specific permission, not as a published MIT/Apache/GPL-style software license.
 
 This repository is valuable primarily as a ComfyUI integration reference and a small audio-analysis sandbox.
 
@@ -75,7 +78,14 @@ Observed useful patterns:
 
 Important limitation: the inspected LAION-CLAP path compares the track against a small hard-coded candidate list and softmaxes only those candidates. That is not a general genre classifier and its softmax must not be interpreted as calibrated genre confidence.
 
-Because explicit software licensing was not found, do not copy substantial source from this standalone repository into Genre_test until licensing is clarified. Forking/tracking it as an upstream reference is separate from relicensing or vendoring its code.
+Permission boundary for Genre_test:
+
+- non-commercial research/integration is allowed under the author's direct permission;
+- preserve attribution and pinned upstream provenance;
+- do not claim a standard OSS license that upstream has not published;
+- do not assume commercial-use or relicensing rights;
+- prefer thin integration/adaptation rather than wholesale vendoring;
+- if substantial public redistribution becomes necessary, retain a permission note and archive/clarify the written grant covering that scope.
 
 ## Integration decision
 
@@ -213,7 +223,7 @@ Genre_test is not a mastering application. Objective technical metrics may be sh
 
 ## Fork/provenance policy — #47
 
-Preferred forks:
+Forks:
 
 ```text
 rassvetpublic-spec/music-suite
@@ -226,8 +236,12 @@ Rules:
 - document the upstream remote;
 - pin upstream SHA for every integration batch;
 - preserve MIT notice where Music Suite code is copied/substantially reused;
-- do not vendor/relicense standalone MusicMapper source while license remains unclear;
+- for MusicMapper, operate inside the direct **non-commercial permission** boundary and preserve attribution;
+- do not describe MusicMapper as carrying a standard OSS license unless upstream publishes one;
+- do not assume commercial or relicensing rights;
 - Genre_test never depends on an unpinned moving fork `main`.
+
+Issue #47 is complete after creation/pinning of both forks and recording the direct permission boundary.
 
 ## Cross-project value
 
@@ -244,10 +258,9 @@ Do not couple the repositories yet. First stabilize a shared metric definition o
 
 ## Immediate execution order
 
-1. create/pin forks (#47);
-2. finish CLaMP runtime foundation (#27/#29);
-3. map Music Suite DSP against existing Genre_test/Ozone metrics (#45);
-4. create `TechnicalProfileOutputV1` contract and tests;
-5. connect selected frame features to segment/change-point work (#33/#44);
-6. implement Genre_test ComfyUI thin bridge (#46);
-7. only then consider optional Ollama/visual/MCP extensions.
+1. finish CLaMP runtime foundation (#27/#29);
+2. map Music Suite DSP against existing Genre_test/Ozone metrics (#45);
+3. create `TechnicalProfileOutputV1` contract and tests;
+4. connect selected frame features to segment/change-point work (#33/#44);
+5. implement Genre_test ComfyUI thin bridge (#46), using MusicMapper patterns within the recorded non-commercial permission boundary;
+6. only then consider optional Ollama/visual/MCP extensions.
