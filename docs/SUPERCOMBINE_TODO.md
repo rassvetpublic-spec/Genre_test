@@ -36,6 +36,9 @@ The objective is studio-ready audio with audible generative defects corrected. T
 - [ ] complete `TechnicalProfileOutputV1` (#45)
 - [ ] implement `GenerativeDefectProfileV1` from `docs/GENERATIVE_DEFECT_PROFILE.md`
 - [ ] validate corpus manifest/annotation schemas from `docs/GENERATIVE_AUDIO_REPAIR_BENCHMARK.md`
+- [x] capture ranked GitHub/Reddit evidence in `docs/GENERATIVE_AUDIO_REPAIR_SOURCE_REGISTRY.md`
+- [x] audit top-10 upstream terms, weights, runtime and maintenance in `docs/GENERATIVE_AUDIO_REPAIR_TOP10_AUDIT.md`
+- [ ] recheck the pinned-revision audit before any backend graduates from experimental
 - [ ] build private-local 50–100 excerpt corpus; target v1 = 80 real SUNO excerpts plus clean controls
 - [ ] freeze pilot/calibration/test/challenge splits by parent source
 - [ ] establish two-reviewer annotation and disagreement/adjudication protocol
@@ -62,7 +65,7 @@ The objective is studio-ready audio with audible generative defects corrected. T
 - [ ] unstable harsh/high-frequency texture detector
 - [ ] phase/mono instability detector
 - [ ] transient-smear diagnostic
-- [ ] candidate restoration backend inventory
+- [x] candidate restoration backend inventory (`docs/GENERATIVE_AUDIO_REPAIR_SOURCE_REGISTRY.md`)
 - [ ] deterministic DSP Safe/Probe baselines
 - [ ] A2SB bandwidth-extension/local-inpainting spike
 - [ ] compare Apollo vs A2SB vs DSP vs stem-assisted routes by defect class
