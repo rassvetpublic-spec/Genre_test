@@ -101,11 +101,19 @@ class Clamp3SidecarBackend:
         request_timeout_s: float = 120.0,
     ) -> Clamp3SidecarBackend:
         repo_root = Path(repo_root)
-        runtime_root = repo_root / ".genre_test" / "retrieval"
+        state_root = repo_root / ".genre_test"
         return cls(
-            python_executable=runtime_root / "runtime" / ".venv" / "Scripts" / "python.exe",
+            python_executable=(
+                state_root
+                / "runtimes"
+                / "clamp3"
+                / ".venv"
+                / "Scripts"
+                / "python.exe"
+            ),
             script_path=repo_root / "scripts" / "clamp3_sidecar.py",
-            runtime_root=runtime_root,
+            runtime_root=state_root,
+            upstream_root=state_root / "upstream" / "clamp3",
             request_timeout_s=request_timeout_s,
         )
 
@@ -116,6 +124,10 @@ class Clamp3SidecarBackend:
     @property
     def is_running(self) -> bool:
         return self._process is not None and self._process.poll() is None
+
+    @property
+    def process_id(self) -> int | None:
+        return self._process.pid if self._process is not None else None
 
     @property
     def stderr_tail(self) -> tuple[str, ...]:
@@ -135,8 +147,13 @@ class Clamp3SidecarBackend:
                 f"sidecar script not found: {self.script_path}",
             )
 
+        # Parent transport is explicitly UTF-8. Force the isolated Windows Python
+        # child into UTF-8 mode too, otherwise redirected stdin/stdout can use the
+        # active ANSI code page and corrupt non-ASCII retrieval queries.
         command = [
             str(self.python_executable),
+            "-X",
+            "utf8",
             "-u",
             str(self.script_path),
             "--runtime-root",

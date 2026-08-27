@@ -40,7 +40,9 @@ from genre_test.retrieval.model_pins import (  # noqa: E402
 
 
 def _default_runtime_root() -> Path:
-    return REPO_ROOT / ".genre_test" / "retrieval"
+    # Historical name retained for the internal CLI argument. The value is the
+    # shared Genre_test state root; there is no physical `.genre_test/retrieval` container.
+    return REPO_ROOT / ".genre_test"
 
 
 def _package_version(name: str) -> str | None:
@@ -200,6 +202,11 @@ def _load_clamp(upstream_root: Path, assets: dict[str, Path]):
 
 
 def _load_mert_extractor(upstream_root: Path, mert_dir: Path, device):
+    import torch
+    from transformers import Wav2Vec2FeatureExtractor
+
+    from genre_test.retrieval.mert_compat import load_mert_compatible_state_dict
+
     audio_preprocess_dir = upstream_root / "preprocessing" / "audio"
     if not audio_preprocess_dir.is_dir():
         raise FileNotFoundError(
@@ -208,14 +215,72 @@ def _load_mert_extractor(upstream_root: Path, mert_dir: Path, device):
     if str(audio_preprocess_dir) not in sys.path:
         sys.path.insert(0, str(audio_preprocess_dir))
 
-    from hf_pretrains import HuBERTFeature
+    from MusicHubert import MusicHubertModel
 
-    extractor = HuBERTFeature(
+    state_dict, compat_report = load_mert_compatible_state_dict(mert_dir)
+    model, loading_info = MusicHubertModel.from_pretrained(
         str(mert_dir),
-        TARGET_SAMPLE_RATE,
-        force_half=False,
-        processor_normalize=True,
-    ).to(device)
+        state_dict=state_dict,
+        local_files_only=True,
+        output_loading_info=True,
+    )
+    missing = list(loading_info.get("missing_keys") or [])
+    unexpected = list(loading_info.get("unexpected_keys") or [])
+    mismatched = list(loading_info.get("mismatched_keys") or [])
+    if missing or unexpected or mismatched:
+        raise RuntimeError(
+            "MERT compatibility load is not exact: "
+            f"missing={missing}, unexpected={unexpected}, mismatched={mismatched}"
+        )
+
+    class CompatHuBERTFeature(torch.nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.sample_rate = TARGET_SAMPLE_RATE
+            self.processor = Wav2Vec2FeatureExtractor(
+                feature_size=1,
+                sampling_rate=TARGET_SAMPLE_RATE,
+                padding_value=0.0,
+                return_attention_mask=True,
+                do_normalize=True,
+            )
+            self.model = model
+            self.genre_test_mert_compat = {
+                **compat_report,
+                "loading_info": {
+                    "missing_keys": missing,
+                    "unexpected_keys": unexpected,
+                    "mismatched_keys": mismatched,
+                },
+            }
+            self.model.eval()
+            for parameter in self.model.parameters():
+                parameter.requires_grad = False
+
+        @torch.no_grad()
+        def process_wav(self, waveform):
+            return self.processor(
+                waveform,
+                return_tensors="pt",
+                sampling_rate=self.sample_rate,
+                padding=True,
+            ).input_values[0]
+
+        def forward(self, input_values, layer=-1, reduction="mean"):
+            outputs = self.model(input_values, output_hidden_states=True).hidden_states
+            if layer is not None:
+                selected = outputs[layer]
+            else:
+                selected = torch.stack(outputs)
+            if reduction == "mean":
+                return selected.mean(-2)
+            if reduction == "max":
+                return selected.max(-2)[0]
+            if reduction == "none":
+                return selected
+            raise NotImplementedError(reduction)
+
+    extractor = CompatHuBERTFeature().to(device)
     extractor.eval()
     return extractor
 
@@ -453,6 +518,7 @@ def _run_smoke(
             "path": str(audio_path),
             "repeat": repeat,
             "mert_model_load_seconds": mert_model_load_seconds,
+            "mert_compat": getattr(mert_extractor, "genre_test_mert_compat", None),
             "mert_inference_seconds": mert_inference_latencies,
             "clamp_audio_seconds": clamp_audio_latencies,
             "total_inference_seconds": audio_latencies,

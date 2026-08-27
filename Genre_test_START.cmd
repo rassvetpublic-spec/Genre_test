@@ -28,6 +28,7 @@ if /I "%~1"=="retrieval-status" goto WORKING_RETRIEVAL_STATUS
 if /I "%~1"=="retrieval-setup" goto WORKING_RETRIEVAL_SETUP
 if /I "%~1"=="retrieval-smoke" goto WORKING_RETRIEVAL_SMOKE
 if /I "%~1"=="retrieval-direct-smoke" goto WORKING_RETRIEVAL_DIRECT_SMOKE
+if /I "%~1"=="retrieval-p0-gate" goto WORKING_RETRIEVAL_P0_GATE
 if /I "%~1"=="help" goto WORKING_HELP
 if not "%~1"=="" goto WORKING_UNKNOWN_COMMAND
 
@@ -130,7 +131,7 @@ exit /b %ERRORLEVEL%
 :WORKING_RETRIEVAL_SETUP
 call :WORKING_RETRIEVAL_PREPARE
 if errorlevel 1 exit /b 1
-echo [INFO] Preparing the optional v0.5 retrieval development runtime...
+echo [INFO] Preparing optional v0.5 retrieval runtime in flat .genre_test state layout...
 "%PWSH%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\setup_clamp3_runtime.ps1" -Install
 if errorlevel 1 exit /b %ERRORLEVEL%
 "%PWSH%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\setup_clamp3_runtime.ps1" -DownloadModels -AcceptMertNonCommercialTerms
@@ -160,6 +161,27 @@ if not defined RETRIEVAL_AUDIO (
 "%PWSH%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\setup_clamp3_runtime.ps1" -RunSmoke -AudioPath "%RETRIEVAL_AUDIO%" -Repeat 2
 exit /b %ERRORLEVEL%
 
+:WORKING_RETRIEVAL_P0_GATE
+call :WORKING_RETRIEVAL_PREPARE
+if errorlevel 1 exit /b 1
+set "RETRIEVAL_AUDIO=%~2"
+if not defined RETRIEVAL_AUDIO set /p "RETRIEVAL_AUDIO=Full path to a WAV file: "
+if not defined RETRIEVAL_AUDIO (
+  echo [FAIL] A WAV path is required.
+  exit /b 2
+)
+if not exist "%ROOT%.venv\Scripts\python.exe" (
+  echo [FAIL] Core Python is missing. Run Genre_test_START.cmd once without arguments first.
+  exit /b 1
+)
+if not exist "%ROOT%scripts\clamp3_p0_gate.py" (
+  echo [FAIL] P0 gate script is missing: scripts\clamp3_p0_gate.py
+  exit /b 1
+)
+echo [INFO] Running complete CLaMP 3 #27/#29 hardware P0 gate...
+"%ROOT%.venv\Scripts\python.exe" "%ROOT%scripts\clamp3_p0_gate.py" --audio "%RETRIEVAL_AUDIO%" --repeat 2
+exit /b %ERRORLEVEL%
+
 :WORKING_HELP
 echo Usage:
 echo   Genre_test_START.cmd
@@ -167,6 +189,15 @@ echo   Genre_test_START.cmd retrieval-status
 echo   Genre_test_START.cmd retrieval-setup
 echo   Genre_test_START.cmd retrieval-smoke "D:\path\track.wav"
 echo   Genre_test_START.cmd retrieval-direct-smoke "D:\path\track.wav"
+echo   Genre_test_START.cmd retrieval-p0-gate "D:\path\track.wav"
+echo.
+echo State layout:
+echo   .genre_test\logs                    all logs/diagnostics
+echo   .genre_test\models                  model assets
+echo   .genre_test\runtimes\clamp3        isolated CLaMP runtime
+echo   .genre_test\upstream\clamp3        pinned upstream source
+echo   .genre_test\retrieval.sqlite3       retrieval cache/index DB when used
+echo   .genre_test\retrieval               obsolete; migration removes it
 echo.
 echo Internal scripts under scripts\ are implementation details, not user entry points.
 exit /b 0
@@ -229,7 +260,7 @@ if "%RC%"=="0" exit /b 0
 
 echo.
 echo [FAIL] Genre_test release could not be started.
-echo See diagnostics under: %ROOT%.genre_test\
+echo See diagnostics under: %ROOT%.genre_test\logs\
 echo.
 pause
 exit /b %RC%

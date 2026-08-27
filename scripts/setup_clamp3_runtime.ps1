@@ -22,13 +22,16 @@ if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
     $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 }
 $RepoRoot = (Resolve-Path $RepoRoot).Path
-$RuntimeRoot = Join-Path $RepoRoot ".genre_test\retrieval"
-$RuntimeDir = Join-Path $RuntimeRoot "runtime"
+$StateDir = Join-Path $RepoRoot ".genre_test"
+$RuntimeDir = Join-Path $StateDir "runtimes\clamp3"
 $VenvDir = Join-Path $RuntimeDir ".venv"
 $PythonExe = Join-Path $VenvDir "Scripts\python.exe"
 $CorePythonExe = Join-Path $RepoRoot ".venv\Scripts\python.exe"
-$UpstreamDir = Join-Path $RuntimeRoot "upstream\clamp3"
-$EvidenceDir = Join-Path $RuntimeRoot "evidence"
+$ModelsDir = Join-Path $StateDir "models"
+$UpstreamDir = Join-Path $StateDir "upstream\clamp3"
+$LogDir = Join-Path $StateDir "logs"
+$RetrievalDb = Join-Path $StateDir "retrieval.sqlite3"
+$LegacyRoot = Join-Path $StateDir "retrieval"
 $SmokeScript = Join-Path $RepoRoot "scripts\clamp3_runtime_smoke.py"
 $SidecarClientSmokeScript = Join-Path $RepoRoot "scripts\clamp3_sidecar_client_smoke.py"
 
@@ -45,6 +48,89 @@ function Invoke-Checked {
     & $FilePath @ArgumentList
     if ($LASTEXITCODE -ne 0) {
         throw "Command failed ($LASTEXITCODE): $FilePath $($ArgumentList -join ' ')"
+    }
+}
+
+function Move-LegacyDirectory {
+    param(
+        [Parameter(Mandatory = $true)][string]$Source,
+        [Parameter(Mandatory = $true)][string]$Destination,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
+    if (-not (Test-Path -LiteralPath $Source -PathType Container)) {
+        return
+    }
+    if (Test-Path -LiteralPath $Destination) {
+        throw "Cannot migrate ${Label}: both legacy and new paths exist. Legacy=$Source New=$Destination"
+    }
+    New-Item -ItemType Directory -Force -Path (Split-Path $Destination -Parent) | Out-Null
+    Move-Item -LiteralPath $Source -Destination $Destination
+    Write-Host "[MIGRATE] $Label -> $Destination" -ForegroundColor Yellow
+}
+
+function Move-LegacyFile {
+    param(
+        [Parameter(Mandatory = $true)][string]$Source,
+        [Parameter(Mandatory = $true)][string]$Destination,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
+    if (-not (Test-Path -LiteralPath $Source -PathType Leaf)) {
+        return
+    }
+    if (Test-Path -LiteralPath $Destination) {
+        throw "Cannot migrate ${Label}: both legacy and new paths exist. Legacy=$Source New=$Destination"
+    }
+    New-Item -ItemType Directory -Force -Path (Split-Path $Destination -Parent) | Out-Null
+    Move-Item -LiteralPath $Source -Destination $Destination
+    Write-Host "[MIGRATE] $Label -> $Destination" -ForegroundColor Yellow
+}
+
+function Move-LegacyDiagnostics {
+    $legacyEvidence = Join-Path $LegacyRoot "evidence"
+    if (-not (Test-Path -LiteralPath $legacyEvidence -PathType Container)) {
+        return
+    }
+    New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
+    Get-ChildItem -LiteralPath $legacyEvidence -Recurse -File | ForEach-Object {
+        $relative = $_.FullName.Substring($legacyEvidence.Length).TrimStart('\')
+        $safeName = "legacy_" + ($relative -replace '[\\/:*?"<>| ]', '_')
+        $destination = Join-Path $LogDir $safeName
+        $suffix = 1
+        while (Test-Path -LiteralPath $destination) {
+            $destination = Join-Path $LogDir ("legacy_{0}_{1}" -f $suffix, ($relative -replace '[\\/:*?"<>| ]', '_'))
+            $suffix++
+        }
+        Move-Item -LiteralPath $_.FullName -Destination $destination
+    }
+    Remove-Item -LiteralPath $legacyEvidence -Recurse -Force
+    Write-Host "[MIGRATE] legacy diagnostics -> $LogDir" -ForegroundColor Yellow
+}
+
+function Migrate-LegacyLayout {
+    if (-not (Test-Path -LiteralPath $LegacyRoot -PathType Container)) {
+        return
+    }
+
+    Write-Section "Migrate legacy .genre_test\retrieval layout"
+    Move-LegacyDirectory -Source (Join-Path $LegacyRoot "runtime") -Destination $RuntimeDir -Label "CLaMP runtime"
+    Move-LegacyDirectory -Source (Join-Path $LegacyRoot "models") -Destination $ModelsDir -Label "models"
+    Move-LegacyDirectory -Source (Join-Path $LegacyRoot "upstream\clamp3") -Destination $UpstreamDir -Label "pinned CLaMP source"
+    Move-LegacyFile -Source (Join-Path $LegacyRoot "retrieval.sqlite3") -Destination $RetrievalDb -Label "retrieval database"
+    Move-LegacyFile -Source (Join-Path $LegacyRoot "download_probe.json") -Destination (Join-Path $LogDir "legacy_clamp3_download_probe.json") -Label "download probe"
+    Move-LegacyDiagnostics
+
+    $legacyUpstream = Join-Path $LegacyRoot "upstream"
+    if ((Test-Path -LiteralPath $legacyUpstream -PathType Container) -and -not (Get-ChildItem -LiteralPath $legacyUpstream -Force | Select-Object -First 1)) {
+        Remove-Item -LiteralPath $legacyUpstream -Force
+    }
+
+    if (-not (Get-ChildItem -LiteralPath $LegacyRoot -Force | Select-Object -First 1)) {
+        Remove-Item -LiteralPath $LegacyRoot -Force
+        Write-Host "[MIGRATE] removed obsolete $LegacyRoot" -ForegroundColor Yellow
+    }
+    else {
+        $remaining = (Get-ChildItem -LiteralPath $LegacyRoot -Force | Select-Object -ExpandProperty Name) -join ', '
+        throw "Legacy retrieval directory still contains unclassified data: $remaining. Refusing to delete it automatically."
     }
 }
 
@@ -68,18 +154,32 @@ function Get-Python312 {
     throw "Python 3.12 x64 is required for the first CLaMP 3 sidecar spike."
 }
 
+$MutationRequested = $Install -or $DownloadModels -or $RunSmoke -or $RunSidecarSmoke
+if ($MutationRequested) {
+    New-Item -ItemType Directory -Force -Path $StateDir | Out-Null
+    Migrate-LegacyLayout
+}
+
 Write-Section "Genre_test CLaMP 3 P0 runtime"
 Write-Host "Repo root    : $RepoRoot"
-Write-Host "Runtime root : $RuntimeRoot"
+Write-Host "State root   : $StateDir"
+Write-Host "Runtime      : $RuntimeDir"
+Write-Host "Models       : $ModelsDir"
+Write-Host "Upstream     : $UpstreamDir"
+Write-Host "Logs         : $LogDir"
 Write-Host "CLaMP code   : $ClampRevision"
 Write-Host "Torch target : $TorchVersion / cu130"
 
-if (-not ($Install -or $DownloadModels -or $RunSmoke -or $RunSidecarSmoke)) {
+if (-not $MutationRequested) {
     Write-Host ""
     Write-Host "No mutation requested. Current state:"
     Write-Host "  venv       : $(Test-Path $PythonExe)"
     Write-Host "  upstream   : $(Test-Path (Join-Path $UpstreamDir '.git'))"
-    Write-Host "  models dir : $(Test-Path (Join-Path $RuntimeRoot 'models'))"
+    Write-Host "  models dir : $(Test-Path $ModelsDir)"
+    Write-Host "  legacy dir : $(Test-Path $LegacyRoot)"
+    if (Test-Path $LegacyRoot) {
+        Write-Host "  NOTE       : run retrieval-setup once to migrate the obsolete .genre_test\retrieval layout."
+    }
     Write-Host ""
     Write-Host "Use -Install to create the isolated runtime."
     Write-Host "Use -DownloadModels -AcceptMertNonCommercialTerms for explicit model download."
@@ -93,9 +193,8 @@ if ($DownloadModels -and -not $AcceptMertNonCommercialTerms) {
 }
 
 if ($Install) {
-    Write-Section "Create isolated Python 3.12 runtime"
+    Write-Section "Create/verify isolated Python 3.12 runtime"
     New-Item -ItemType Directory -Force -Path $RuntimeDir | Out-Null
-    # Force a clean array boundary: native probe stdout must never become launcher arguments.
     $python312 = @(Get-Python312)
     if (-not (Test-Path $PythonExe)) {
         $launcher = $python312[0]
@@ -105,6 +204,11 @@ if ($Install) {
         }
         $launcherArgs += @("-m", "venv", $VenvDir)
         Invoke-Checked $launcher @launcherArgs
+    }
+
+    & $PythonExe -c "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)"
+    if ($LASTEXITCODE -ne 0) {
+        throw "Migrated/new CLaMP virtual environment is not runnable at $PythonExe"
     }
 
     Invoke-Checked $PythonExe -m pip install --upgrade pip
@@ -146,13 +250,17 @@ Write-Section "Runtime doctor"
 Write-Host "MERT terms   : $MertLicense (recorded provenance; development setup prompt deferred)"
 Invoke-Checked $PythonExe -c "import sys, torch; print('python', sys.version.split()[0]); print('torch', torch.__version__); print('cuda_runtime', torch.version.cuda); print('cuda_available', torch.cuda.is_available()); print('device', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'); print('arch_list', torch.cuda.get_arch_list() if torch.cuda.is_available() else [])"
 
+New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
+
 if ($DownloadModels) {
     Write-Section "Explicit pinned model download"
-    Write-Host "Downloading CLaMP 3 SAAS + XLM-R + MERT. This can use several GB of disk/cache."
-    $downloadProbe = Join-Path $RuntimeRoot "download_probe.json"
+    Write-Host "Downloading CLaMP 3 SAAS + XLM-R + MERT. Existing files are reused."
+    $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
+    $downloadProbe = Join-Path $LogDir "clamp3_download_probe_$stamp.json"
     $downloadArgs = @(
         $SmokeScript,
-        "--runtime-root", $RuntimeRoot,
+        "--runtime-root", $StateDir,
+        "--upstream-root", $UpstreamDir,
         "--download-models",
         "--text", $TextQuery,
         "--repeat", "1",
@@ -165,16 +273,17 @@ if ($DownloadModels) {
         $downloadArgs += @("--audio", (Resolve-Path $AudioPath).Path)
     }
     Invoke-Checked $PythonExe @downloadArgs
+    Write-Host "Log: $downloadProbe" -ForegroundColor Green
 }
 
 if ($RunSmoke) {
     Write-Section "Real direct-runtime embedding smoke"
-    New-Item -ItemType Directory -Force -Path $EvidenceDir | Out-Null
     $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
-    $evidencePath = Join-Path $EvidenceDir "clamp3_runtime_smoke_$stamp.json"
+    $evidencePath = Join-Path $LogDir "clamp3_runtime_smoke_$stamp.json"
     $args = @(
         $SmokeScript,
-        "--runtime-root", $RuntimeRoot,
+        "--runtime-root", $StateDir,
+        "--upstream-root", $UpstreamDir,
         "--text", $TextQuery,
         "--repeat", [string]$Repeat,
         "--json-out", $evidencePath
@@ -186,7 +295,7 @@ if ($RunSmoke) {
         $args += @("--audio", (Resolve-Path $AudioPath).Path)
     }
     Invoke-Checked $PythonExe @args
-    Write-Host "Evidence: $evidencePath" -ForegroundColor Green
+    Write-Host "Log: $evidencePath" -ForegroundColor Green
 }
 
 if ($RunSidecarSmoke) {
@@ -197,9 +306,8 @@ if ($RunSidecarSmoke) {
     if (-not (Test-Path $SidecarClientSmokeScript)) {
         throw "Sidecar client smoke script is missing: $SidecarClientSmokeScript"
     }
-    New-Item -ItemType Directory -Force -Path $EvidenceDir | Out-Null
     $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
-    $sidecarEvidencePath = Join-Path $EvidenceDir "clamp3_sidecar_smoke_$stamp.json"
+    $sidecarEvidencePath = Join-Path $LogDir "clamp3_sidecar_smoke_$stamp.json"
     $sidecarArgs = @(
         $SidecarClientSmokeScript,
         "--repo-root", $RepoRoot,
@@ -215,8 +323,11 @@ if ($RunSidecarSmoke) {
         $sidecarArgs += @("--audio", (Resolve-Path $AudioPath).Path)
     }
     Invoke-Checked $CorePythonExe @sidecarArgs
-    Write-Host "Sidecar evidence: $sidecarEvidencePath" -ForegroundColor Green
+    Write-Host "Log: $sidecarEvidencePath" -ForegroundColor Green
 }
 
 Write-Section "Done"
-Write-Host "Core .venv was not modified. Retrieval runtime remains isolated under .genre_test\retrieval."
+Write-Host "Core .venv was not modified. CLaMP runtime is isolated under .genre_test\runtimes\clamp3."
+Write-Host "Models are under .genre_test\models; pinned source under .genre_test\upstream\clamp3."
+Write-Host "All CLaMP diagnostics are stored under .genre_test\logs."
+Write-Host "Obsolete .genre_test\retrieval directory: $(Test-Path $LegacyRoot)"

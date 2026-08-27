@@ -23,12 +23,13 @@ CLAMP3_LICENSE = "MIT"
 MERT_MODEL_ID = "m-a-p/MERT-v1-95M"
 MERT_REVISION = "55fa29e5522049926c03d2ff9ae54d22c20e668f"
 MERT_LICENSE = "CC-BY-NC-4.0"
+MERT_WEIGHT_NORM_COMPAT = "mert-weight-norm-key-remap-v1"
 
 TEXT_MODEL_ID = "FacebookAI/xlm-roberta-base"
 TEXT_MODEL_REVISION = "e73636d4f797dec63c3081bb6ed5c7b0bb3f2089"
 TEXT_MODEL_LICENSE = "MIT"
 
-PREPROCESSING_VERSION = "clamp3-mert-24k-mono-scipy-polyphase-5s-mean-v2"
+PREPROCESSING_VERSION = "clamp3-mert-24k-mono-scipy-polyphase-5s-mean-v3"
 TARGET_SAMPLE_RATE = 24_000
 RESAMPLER = "scipy.signal.resample_poly-1.13.1"
 MONO = True
@@ -64,6 +65,7 @@ def selected_model_manifest() -> dict[str, Any]:
             "model_id": MERT_MODEL_ID,
             "revision": MERT_REVISION,
             "license": MERT_LICENSE,
+            "weight_norm_compat": MERT_WEIGHT_NORM_COMPAT,
         },
         "text": {
             "model_id": TEXT_MODEL_ID,

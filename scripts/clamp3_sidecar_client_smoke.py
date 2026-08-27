@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import shutil
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -27,6 +29,67 @@ def _cosine(left: tuple[float, ...], right: tuple[float, ...]) -> float:
 
 def _norm(values: tuple[float, ...]) -> float:
     return math.sqrt(sum(value * value for value in values))
+
+
+def _process_rss_bytes(pid: int | None) -> int | None:
+    if pid is None:
+        return None
+    try:
+        import psutil
+    except ImportError:
+        return None
+    try:
+        return int(psutil.Process(pid).memory_info().rss)
+    except psutil.Error:
+        return None
+
+
+def _gpu_memory_mib(pid: int | None) -> int | None:
+    """Best-effort external NVIDIA per-process memory.
+
+    On Windows/WDDM nvidia-smi may return no compute-process row even while the
+    CUDA process owns memory. P0 therefore also records authoritative in-process
+    torch.cuda counters from the sidecar itself.
+    """
+
+    if pid is None:
+        return 0
+    nvidia_smi = shutil.which("nvidia-smi")
+    if nvidia_smi is None:
+        return None
+    try:
+        completed = subprocess.run(
+            [
+                nvidia_smi,
+                "--query-compute-apps=pid,used_gpu_memory",
+                "--format=csv,noheader,nounits",
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+            timeout=10.0,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if completed.returncode != 0:
+        return None
+    for raw in completed.stdout.splitlines():
+        parts = [part.strip() for part in raw.split(",")]
+        if len(parts) < 2:
+            continue
+        try:
+            row_pid = int(parts[0])
+        except ValueError:
+            continue
+        if row_pid != pid:
+            continue
+        try:
+            return int(float(parts[1]))
+        except ValueError:
+            return None
+    return 0
 
 
 def _parse_args() -> argparse.Namespace:
@@ -73,6 +136,7 @@ def main() -> int:
         backend.close()
         return 2
 
+    sidecar_pid = backend.process_id
     try:
         text_vectors: list[tuple[float, ...]] = []
         text_latencies: list[float] = []
@@ -116,10 +180,30 @@ def main() -> int:
                 "vector_head": list(audio_vectors[0][:8]),
             }
 
+        # Internal smoke is intentionally allowed to use the protocol primitive
+        # directly. It captures authoritative process-local RAM/CUDA counters,
+        # avoiding Windows/WDDM nvidia-smi per-process reporting gaps.
+        metrics_response = backend._request("metrics", {})  # noqa: SLF001
+        report["runtime_metrics_before_close"] = dict(metrics_response.payload)
         report["stderr_tail"] = list(backend.stderr_tail)
         report["status"] = "OK"
+        report["lifecycle"] = {
+            "pid": sidecar_pid,
+            "rss_bytes_before_close": _process_rss_bytes(sidecar_pid),
+            "gpu_memory_mib_before_close": _gpu_memory_mib(sidecar_pid),
+        }
     finally:
         backend.close()
+
+    time.sleep(0.5)
+    report.setdefault("lifecycle", {})
+    report["lifecycle"].update(
+        {
+            "running_after_close": backend.is_running,
+            "rss_bytes_after_close": _process_rss_bytes(sidecar_pid),
+            "gpu_memory_mib_after_close": _gpu_memory_mib(sidecar_pid),
+        }
+    )
 
     rendered = json.dumps(report, ensure_ascii=False, indent=2)
     print(rendered)

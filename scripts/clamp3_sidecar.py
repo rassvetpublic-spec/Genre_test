@@ -55,6 +55,7 @@ class Clamp3RuntimeEngine:
         self.device: Any = None
         self.checkpoint: dict[str, Any] | None = None
         self.mert_extractor: Any = None
+        self.mert_compat: dict[str, Any] | None = None
 
     def _presence(self) -> tuple[bool, list[str]]:
         missing: list[str] = []
@@ -91,6 +92,35 @@ class Clamp3RuntimeEngine:
             "device": str(self.device) if self.device is not None else None,
         }
 
+    def metrics_payload(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "loaded": self.model is not None,
+            "mert_loaded": self.mert_extractor is not None,
+            "mert_compat": self.mert_compat,
+        }
+        try:
+            import psutil
+
+            payload["rss_bytes"] = int(psutil.Process().memory_info().rss)
+        except (ImportError, OSError):
+            payload["rss_bytes"] = None
+
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                payload["cuda"] = {
+                    "device_name": torch.cuda.get_device_name(0),
+                    "allocated_bytes": int(torch.cuda.memory_allocated()),
+                    "reserved_bytes": int(torch.cuda.memory_reserved()),
+                    "peak_allocated_bytes": int(torch.cuda.max_memory_allocated()),
+                }
+            else:
+                payload["cuda"] = None
+        except ImportError:
+            payload["cuda"] = None
+        return payload
+
     def _ensure_clamp(self) -> None:
         if self.model is not None:
             return
@@ -113,6 +143,11 @@ class Clamp3RuntimeEngine:
             self.upstream_root,
             self.assets["mert_dir"],
             self.device,
+        )
+        self.mert_compat = getattr(
+            self.mert_extractor,
+            "genre_test_mert_compat",
+            None,
         )
 
     def embed_text(self, text: str) -> tuple[float, ...]:
@@ -221,6 +256,7 @@ class Clamp3RuntimeEngine:
 
     def close(self) -> None:
         self.mert_extractor = None
+        self.mert_compat = None
         self.model = None
         self.tokenizer = None
         self.checkpoint = None
@@ -253,6 +289,15 @@ def _handle(engine: Clamp3RuntimeEngine, request: SidecarRequest) -> tuple[Sidec
                     request_id=request.request_id,
                     ok=True,
                     payload=engine.health_payload(),
+                ),
+                True,
+            )
+        if request.op == "metrics":
+            return (
+                SidecarResponse(
+                    request_id=request.request_id,
+                    ok=True,
+                    payload=engine.metrics_payload(),
                 ),
                 True,
             )
