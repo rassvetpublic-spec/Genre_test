@@ -50,7 +50,7 @@ def ensure_mert_weight_norm_compat(mert_dir: Path) -> dict[str, Any]:
     sha_before = _sha256_file(checkpoint_path)
     state = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
     if not isinstance(state, dict):
-        raise RuntimeError("Pinned MERT checkpoint is not a plain state_dict mapping")
+        raise TypeError("Pinned MERT checkpoint is not a plain state_dict mapping")
 
     migrated: list[dict[str, str]] = []
     verified: list[str] = []
