@@ -131,7 +131,7 @@ exit /b %ERRORLEVEL%
 :WORKING_RETRIEVAL_SETUP
 call :WORKING_RETRIEVAL_PREPARE
 if errorlevel 1 exit /b 1
-echo [INFO] Preparing the optional v0.5 retrieval development runtime...
+echo [INFO] Preparing optional v0.5 retrieval runtime in flat .genre_test state layout...
 "%PWSH%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\setup_clamp3_runtime.ps1" -Install
 if errorlevel 1 exit /b %ERRORLEVEL%
 "%PWSH%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\setup_clamp3_runtime.ps1" -DownloadModels -AcceptMertNonCommercialTerms
@@ -190,6 +190,14 @@ echo   Genre_test_START.cmd retrieval-setup
 echo   Genre_test_START.cmd retrieval-smoke "D:\path\track.wav"
 echo   Genre_test_START.cmd retrieval-direct-smoke "D:\path\track.wav"
 echo   Genre_test_START.cmd retrieval-p0-gate "D:\path\track.wav"
+echo.
+echo State layout:
+echo   .genre_test\logs                    all logs/diagnostics
+echo   .genre_test\models                  model assets
+echo   .genre_test\runtimes\clamp3        isolated CLaMP runtime
+echo   .genre_test\upstream\clamp3        pinned upstream source
+echo   .genre_test\retrieval.sqlite3       retrieval cache/index DB when used
+echo   .genre_test\retrieval               obsolete; migration removes it
 echo.
 echo Internal scripts under scripts\ are implementation details, not user entry points.
 exit /b 0
@@ -252,7 +260,7 @@ if "%RC%"=="0" exit /b 0
 
 echo.
 echo [FAIL] Genre_test release could not be started.
-echo See diagnostics under: %ROOT%.genre_test\
+echo See diagnostics under: %ROOT%.genre_test\logs\
 echo.
 pause
 exit /b %RC%
