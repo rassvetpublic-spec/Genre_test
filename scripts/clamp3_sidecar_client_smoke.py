@@ -45,6 +45,13 @@ def _process_rss_bytes(pid: int | None) -> int | None:
 
 
 def _gpu_memory_mib(pid: int | None) -> int | None:
+    """Best-effort external NVIDIA per-process memory.
+
+    On Windows/WDDM nvidia-smi may return no compute-process row even while the
+    CUDA process owns memory. P0 therefore also records authoritative in-process
+    torch.cuda counters from the sidecar itself.
+    """
+
     if pid is None:
         return 0
     nvidia_smi = shutil.which("nvidia-smi")
@@ -173,6 +180,11 @@ def main() -> int:
                 "vector_head": list(audio_vectors[0][:8]),
             }
 
+        # Internal smoke is intentionally allowed to use the protocol primitive
+        # directly. It captures authoritative process-local RAM/CUDA counters,
+        # avoiding Windows/WDDM nvidia-smi per-process reporting gaps.
+        metrics_response = backend._request("metrics", {})  # noqa: SLF001
+        report["runtime_metrics_before_close"] = dict(metrics_response.payload)
         report["stderr_tail"] = list(backend.stderr_tail)
         report["status"] = "OK"
         report["lifecycle"] = {
