@@ -78,7 +78,7 @@ set "RC=%ERRORLEVEL%"
 if not "%RC%"=="0" goto WORKING_NO_PWSH
 
 set "WINGET="
-for /f "delims=" %%W in ('where winget.exe 2^>nul') do if not defined WINGET set "WINGET=%%P"
+for /f "delims=" %%W in ('where winget.exe 2^>nul') do if not defined WINGET set "WINGET=%%W"
 if not defined WINGET if exist "%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe" set "WINGET=%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe"
 if not defined WINGET goto WORKING_NO_PWSH
 
@@ -116,7 +116,8 @@ set "RC=%ERRORLEVEL%"
 exit /b %RC%
 
 :WORKING_RETRIEVAL_PREPARE
-set "PWSH="nfor /f "delims=" %%P in ('where pwsh.exe 2^>nul') do if not defined PWSH set "PWSH=%%P"
+set "PWSH="
+for /f "delims=" %%P in ('where pwsh.exe 2^>nul') do if not defined PWSH set "PWSH=%%P"
 if not defined PWSH if exist "%ProgramFiles%\PowerShell\7\pwsh.exe" set "PWSH=%ProgramFiles%\PowerShell\7\pwsh.exe"
 if not defined PWSH (
   echo [FAIL] PowerShell 7 is required. Run Genre_test_START.cmd once without arguments to bootstrap the core environment.
