@@ -139,6 +139,9 @@ jobs:
           if ($clampSetup -match 'print\(sys\.executable\)' -or $clampSetup -notmatch '\$python312 = @\(Get-Python312\)') {
             throw 'CLaMP Python launcher probe can leak native stdout into venv launcher arguments.'
           }
+          if ($clampSetup -match 'torchaudio==\$TorchVersion' -or $clampSetup -notmatch 'scipy==1\.13\.1') {
+            throw 'CLaMP bootstrap must use the pinned SciPy resampler without a mismatched torchaudio wheel.'
+          }
           Write-Host 'setup/release/regression/retrieval parser/CUDA13/Python3.13 gate PASS'
       - name: Pinned retrieval manifest smoke
         shell: bash
