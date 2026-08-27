@@ -109,7 +109,7 @@ if ($Install) {
     }
 
     Invoke-Checked $PythonExe -m pip install --upgrade pip
-    Invoke-Checked $PythonExe -m pip install --index-url $TorchIndex "torch==$TorchVersion" "torchaudio==$TorchVersion"
+    Invoke-Checked $PythonExe -m pip install --index-url $TorchIndex "torch==$TorchVersion"
     Invoke-Checked $PythonExe -m pip install `
         "transformers==4.40.0" `
         "accelerate==0.34.0" `
@@ -119,6 +119,7 @@ if ($Install) {
         "tqdm==4.66.5" `
         "unidecode==1.3.6" `
         "soundfile==0.12.1" `
+        "scipy==1.13.1" `
         "sentencepiece==0.2.0" `
         "safetensors>=0.4.3,<1"
 
