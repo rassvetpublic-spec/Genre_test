@@ -57,7 +57,7 @@ def test_new_root_launcher_aliases_have_explicit_entrypoint_mapping() -> None:
     }
 
 
-def test_root_launcher_forwards_product_commands_without_internal_scripts() -> None:
+def test_root_launcher_forwards_product_commands_from_current_source() -> None:
     launcher = (ROOT / "Genre_test_START.cmd").read_text(encoding="utf-8")
     for command in (
         "retrieval-index",
@@ -74,7 +74,11 @@ def test_root_launcher_forwards_product_commands_without_internal_scripts() -> N
         "retrieval-exit-codes",
     ):
         assert f'if /I "%~1"=="{command}" goto WORKING_RETRIEVAL_PRODUCT' in launcher
-    assert '"%ROOT%.venv\\Scripts\\genre-test-retrieval.exe" %*' in launcher
+    assert (
+        '"%ROOT%.venv\\Scripts\\python.exe" -m genre_test.retrieval.entrypoint %*'
+        in launcher
+    )
+    assert 'if not exist "%ROOT%.venv\\Scripts\\python.exe" (' in launcher
     assert 'if not exist "%ROOT%.venv\\Scripts\\genre-test-retrieval.exe" set "NEED_SETUP=1"' in launcher
 
 
