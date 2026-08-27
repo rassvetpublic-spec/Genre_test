@@ -31,6 +31,11 @@ def test_p0_gate_requires_real_core_cuda_cross_path_and_shutdown_checks() -> Non
     assert '"ast_cuda"' in gate
     assert '"ast_windows_positive"' in gate
     assert '"flat_state_layout"' in gate
+    assert '"mert_compat_status_ok"' in gate
+    assert '"mert_compat_numerical_weights_unchanged"' in gate
+    assert '"mert_compat_modern_keys_verified"' in gate
+    assert '"direct_mert_no_newly_initialized"' in gate
+    assert '"sidecar_mert_no_newly_initialized"' in gate
     assert '"direct_text_repeatable"' in gate
     assert '"direct_audio_repeatable"' in gate
     assert '"sidecar_text_repeatable"' in gate
@@ -38,6 +43,10 @@ def test_p0_gate_requires_real_core_cuda_cross_path_and_shutdown_checks() -> Non
     assert '"cross_text_head_match"' in gate
     assert '"cross_audio_head_match"' in gate
     assert '"cross_text_audio_cosine_match"' in gate
+    assert '"sidecar_mert_compat_ok"' in gate
+    assert '"sidecar_ram_measured_before_close"' in gate
+    assert '"sidecar_cuda_allocated_before_close"' in gate
+    assert '"sidecar_cuda_peak_measured"' in gate
     assert '"sidecar_shutdown"' in gate
     assert '"sidecar_vram_released"' in gate
 
@@ -106,9 +115,40 @@ def test_p0_subprocesses_force_utf8_capture() -> None:
     assert 'env["PYTHONIOENCODING"] = "utf-8"' in gate
 
 
-def test_sidecar_smoke_records_lifecycle_memory_evidence() -> None:
+def test_sidecar_smoke_records_authoritative_and_external_memory_evidence() -> None:
     smoke = (ROOT / "scripts" / "clamp3_sidecar_client_smoke.py").read_text(encoding="utf-8")
+    assert 'backend._request("metrics", {})' in smoke
+    assert '"runtime_metrics_before_close"' in smoke
     assert '"rss_bytes_before_close"' in smoke
     assert '"gpu_memory_mib_before_close"' in smoke
     assert '"running_after_close"' in smoke
     assert '"gpu_memory_mib_after_close"' in smoke
+
+
+def test_sidecar_exposes_internal_cuda_metrics_and_mert_compat() -> None:
+    sidecar = (ROOT / "scripts" / "clamp3_sidecar.py").read_text(encoding="utf-8")
+    assert "def metrics_payload(self)" in sidecar
+    assert '"allocated_bytes": int(torch.cuda.memory_allocated())' in sidecar
+    assert '"peak_allocated_bytes": int(torch.cuda.max_memory_allocated())' in sidecar
+    assert 'ensure_mert_weight_norm_compat(self.assets["mert_dir"])' in sidecar
+    assert 'if request.op == "metrics":' in sidecar
+
+
+def test_mert_compat_is_versioned_and_key_only() -> None:
+    compat = (
+        ROOT / "src" / "genre_test" / "retrieval" / "mert_compat.py"
+    ).read_text(encoding="utf-8")
+    pins = (
+        ROOT / "src" / "genre_test" / "retrieval" / "model_pins.py"
+    ).read_text(encoding="utf-8")
+    gate = (ROOT / "scripts" / "clamp3_p0_gate.py").read_text(encoding="utf-8")
+
+    assert 'MERT_WEIGHT_NORM_COMPAT_VERSION = "mert-weight-norm-key-remap-v1"' in compat
+    assert '"encoder.pos_conv_embed.conv.weight_g"' in compat
+    assert '"encoder.pos_conv_embed.conv.weight_v"' in compat
+    assert '"encoder.pos_conv_embed.conv.parametrizations.weight.original0"' in compat
+    assert '"encoder.pos_conv_embed.conv.parametrizations.weight.original1"' in compat
+    assert '"numerical_weights_changed": False' in compat
+    assert 'MERT_WEIGHT_NORM_COMPAT = "mert-weight-norm-key-remap-v1"' in pins
+    assert 'PREPROCESSING_VERSION = "clamp3-mert-24k-mono-scipy-polyphase-5s-mean-v3"' in pins
+    assert 'clamp3_mert_compat.py' in gate
