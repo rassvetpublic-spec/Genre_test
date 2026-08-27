@@ -236,6 +236,12 @@ class TextEmbeddingRecord:
 class SearchFilter:
     families: tuple[str, ...] = ()
     genres: tuple[str, ...] = ()
+    keys: tuple[str, ...] = ()
+    vocals: tuple[str, ...] = ()
+    moods: tuple[str, ...] = ()
+    instruments: tuple[str, ...] = ()
+    production: tuple[str, ...] = ()
+    source_folders: tuple[str, ...] = ()
     bpm_min: float | None = None
     bpm_max: float | None = None
     min_confidence: float | None = None
@@ -253,6 +259,19 @@ class SearchFilter:
             raise ValueError("bpm_min must be <= bpm_max")
         if self.min_confidence is not None and not 0.0 <= self.min_confidence <= 1.0:
             raise ValueError("min_confidence must be in [0, 1]")
+        for field_name in (
+            "families",
+            "genres",
+            "keys",
+            "vocals",
+            "moods",
+            "instruments",
+            "production",
+            "source_folders",
+        ):
+            values = getattr(self, field_name)
+            if any(not value.strip() for value in values):
+                raise ValueError(f"{field_name} must not contain empty values")
 
 
 @dataclass(frozen=True)
