@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
-import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -48,6 +47,19 @@ def _require_ok(step: str, result: dict[str, Any]) -> None:
 
 def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _single_analysis_json(out_dir: Path) -> Path:
+    candidates = sorted(out_dir.glob("*.genre.*.json"))
+    if len(candidates) != 1:
+        raise RuntimeError(
+            f"Expected exactly one core analysis JSON under {out_dir}, found {len(candidates)}"
+        )
+    return candidates[0]
+
+
+def _uses_cuda(value: Any) -> bool:
+    return "cuda" in str(value or "").lower()
 
 
 def _parse_args() -> argparse.Namespace:
@@ -102,7 +114,7 @@ def main() -> int:
         "gate": "CLAMP3_P0_27_29",
     }
 
-    # Gate A: prove MAEST + AudioSet AST have exercised CUDA before retrieval.
+    # Gate A: prove both MAEST and AudioSet AST actually exercised CUDA first.
     core_out = session_dir / "core_cuda_probe"
     core_result = _run(
         [
@@ -126,6 +138,25 @@ def main() -> int:
     )
     report["core_cuda_probe"] = core_result
     _require_ok("MAEST+AST CUDA probe", core_result)
+    core_analysis_path = _single_analysis_json(core_out)
+    core_analysis = _load_json(core_analysis_path)
+    report["core_analysis"] = core_analysis
+
+    semantic = core_analysis.get("semantic_evidence") or {}
+    core_checks = {
+        "maest_cuda": _uses_cuda(core_analysis.get("device")),
+        "maest_windows_positive": int(core_analysis.get("windows_analyzed") or 0) > 0,
+        "ast_present": bool(semantic),
+        "ast_status_ok": str(semantic.get("status") or "").lower() == "ok",
+        "ast_cuda": _uses_cuda(semantic.get("device")),
+        "ast_windows_positive": int(semantic.get("windows_analyzed") or 0) > 0,
+    }
+    report["core_cuda_checks"] = core_checks
+    if not all(core_checks.values()):
+        raise RuntimeError(
+            "Core CUDA precondition failed: the WAV must produce real MAEST + AudioSet AST CUDA evidence. "
+            f"Checks: {core_checks}"
+        )
 
     direct_json = session_dir / "direct_runtime.json"
     direct_result = _run(
@@ -174,6 +205,7 @@ def main() -> int:
     direct = report["direct_runtime"]
     sidecar = report["sidecar"]
     checks = {
+        **core_checks,
         "direct_status_ok": direct.get("status") == "OK",
         "sidecar_status_ok": sidecar.get("status") == "OK",
         "direct_text_repeatable": float(direct["text"]["repeat_cosine"]) >= 0.99999,
@@ -185,7 +217,7 @@ def main() -> int:
         "sidecar_text_norm": abs(float(sidecar["text"]["norm"]) - 1.0) <= 1e-5,
         "sidecar_audio_norm": abs(float(sidecar["audio"]["norm"]) - 1.0) <= 1e-5,
         "sidecar_shutdown": sidecar.get("lifecycle", {}).get("running_after_close") is False,
-        "sidecar_vram_released": sidecar.get("lifecycle", {}).get("gpu_memory_mib_after_close", 0) == 0,
+        "sidecar_vram_released": sidecar.get("lifecycle", {}).get("gpu_memory_mib_after_close") == 0,
     }
     report["checks"] = checks
     report["status"] = "PASS" if all(checks.values()) else "FAIL"
