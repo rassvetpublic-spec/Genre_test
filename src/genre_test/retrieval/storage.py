@@ -310,6 +310,24 @@ class RetrievalStore:
             ).fetchall()
         return [self._row_to_embedding(row) for row in rows]
 
+    def audio_track_ids(
+        self,
+        *,
+        backend_fingerprint: str,
+        scope: str = "full",
+    ) -> set[str]:
+        with self.connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT DISTINCT track_id FROM embeddings
+                WHERE backend_fingerprint = ?
+                  AND scope = ?
+                  AND track_id IS NOT NULL
+                """,
+                (backend_fingerprint, scope),
+            ).fetchall()
+        return {str(row["track_id"]) for row in rows}
+
     def backend_fingerprints(self, *, scope: str | None = None) -> tuple[str, ...]:
         sql = "SELECT DISTINCT backend_fingerprint FROM embeddings"
         params: tuple[str, ...] = ()
@@ -328,18 +346,22 @@ class RetrievalStore:
         scope: str = "full",
         track_ids: Sequence[str] | None = None,
     ) -> int:
-        clauses = ["scope = ?", "backend_fingerprint != ?"]
-        params: list[Any] = [scope, active_backend_fingerprint]
-        if track_ids:
-            placeholders = ",".join("?" for _ in track_ids)
-            clauses.append(f"track_id IN ({placeholders})")
-            params.extend(track_ids)
+        if track_ids is not None and not track_ids:
+            return 0
         with self.connect() as connection:
-            row = connection.execute(
-                "SELECT COUNT(*) AS n FROM embeddings WHERE " + " AND ".join(clauses),
-                params,
-            ).fetchone()
-        return int(row["n"]) if row is not None else 0
+            rows = connection.execute(
+                """
+                SELECT track_id FROM embeddings
+                WHERE scope = ?
+                  AND backend_fingerprint != ?
+                  AND track_id IS NOT NULL
+                """,
+                (scope, active_backend_fingerprint),
+            ).fetchall()
+        if track_ids is None:
+            return len(rows)
+        requested = set(track_ids)
+        return sum(1 for row in rows if str(row["track_id"]) in requested)
 
     def corrupt_keys(self) -> tuple[str, ...]:
         corrupt: list[str] = []
