@@ -1,10 +1,11 @@
 # Genre_test
 
-**Current version: 0.4.0**
+**Current development version: 0.5.0.dev0**  
+**Latest stable release: 0.4.0**
 
 Genre_test is a local Windows-first music profiler and regression lab. Ordinary analysis combines **MAEST Discogs519 + pinned AudioSet AST + DSP** into an `AudioProfile`; Validation remains a dedicated reproducibility/drift workflow.
 
-## What v0.4.0 outputs
+## Stable v0.4.0 analysis baseline
 
 Ordinary analysis can produce all three views from one inference pass:
 

@@ -23,8 +23,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest ruff numpy librosa typer rich soundfile
           pip install -e . --no-deps
-      - name: CLI version smoke
-        run: genre-test --version
+      - name: Development version gate
+        shell: bash
+        run: |
+          grep -Fq 'version = "0.5.0.dev0"' pyproject.toml
+          grep -Fq '__version__ = "0.5.0.dev0"' src/genre_test/__init__.py
+          test "$(genre-test --version)" = "Genre_test 0.5.0.dev0"
+          echo 'v0.5 development version gate PASS'
       - name: Python support metadata gate
         shell: bash
         run: |
@@ -70,7 +75,7 @@ jobs:
             echo 'Root launcher still shells through PowerShell for its fingerprint.' >&2
             exit 1
           fi
-          echo 'universal v0.4 launcher + unified retrieval entry point gate PASS'
+          echo 'universal launcher + unified retrieval entry point gate PASS'
       - name: Legacy retirement gate
         shell: bash
         run: |
