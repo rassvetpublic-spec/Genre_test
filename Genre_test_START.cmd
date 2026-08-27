@@ -35,6 +35,14 @@ if /I "%~1"=="retrieval-rebuild" goto WORKING_RETRIEVAL_PRODUCT
 if /I "%~1"=="retrieval-search-audio" goto WORKING_RETRIEVAL_PRODUCT
 if /I "%~1"=="retrieval-search-text" goto WORKING_RETRIEVAL_PRODUCT
 if /I "%~1"=="retrieval-search-history" goto WORKING_RETRIEVAL_PRODUCT
+if /I "%~1"=="retrieval-segment-status" goto WORKING_RETRIEVAL_PRODUCT
+if /I "%~1"=="retrieval-segment-index" goto WORKING_RETRIEVAL_PRODUCT
+if /I "%~1"=="retrieval-search-representative" goto WORKING_RETRIEVAL_PRODUCT
+if /I "%~1"=="retrieval-search-segment" goto WORKING_RETRIEVAL_PRODUCT
+if /I "%~1"=="retrieval-catalog-audit" goto WORKING_RETRIEVAL_PRODUCT
+if /I "%~1"=="retrieval-retry-missing" goto WORKING_RETRIEVAL_PRODUCT
+if /I "%~1"=="retrieval-benchmark-run" goto WORKING_RETRIEVAL_PRODUCT
+if /I "%~1"=="retrieval-exit-codes" goto WORKING_RETRIEVAL_PRODUCT
 if /I "%~1"=="help" goto WORKING_HELP
 if not "%~1"=="" goto WORKING_UNKNOWN_COMMAND
 
@@ -212,9 +220,21 @@ echo   Genre_test_START.cmd retrieval-rebuild
 echo   Genre_test_START.cmd retrieval-search-audio "D:\path\track.wav" [options]
 echo   Genre_test_START.cmd retrieval-search-text "Russian text query" [options]
 echo   Genre_test_START.cmd retrieval-search-history [--limit N]
+echo   Genre_test_START.cmd retrieval-segment-status
+echo   Genre_test_START.cmd retrieval-segment-index [--limit N] [--all]
+echo   Genre_test_START.cmd retrieval-search-representative TRACK_ID [--target-scope full^|representative]
+echo   Genre_test_START.cmd retrieval-search-segment "D:\path\track.wav" START_S END_S [options]
+echo   Genre_test_START.cmd retrieval-catalog-audit [--out-prefix PATH]
+echo   Genre_test_START.cmd retrieval-retry-missing [--limit N]
+echo   Genre_test_START.cmd retrieval-benchmark-run SUITE.json [--top-k N]
+echo   Genre_test_START.cmd retrieval-exit-codes
+echo.
+echo Segment safety:
+echo   retrieval-segment-index defaults to a 50-track subset.
+echo   Use --all only after reviewing subset timing/storage evidence.
 echo.
 echo State layout:
-echo   .genre_test\logs                    all logs/diagnostics
+echo   .genre_test\logs                    all logs/diagnostics/retrieval reports
 echo   .genre_test\models                  model assets
 echo   .genre_test\runtimes\clamp3        isolated CLaMP runtime
 echo   .genre_test\upstream\clamp3        pinned upstream source
