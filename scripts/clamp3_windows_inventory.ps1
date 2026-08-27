@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($OutDir)) {
-    $OutDir = Join-Path $repoRoot "results\clamp3_spike"
+    $OutDir = Join-Path $repoRoot ".genre_test\logs"
 }
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 
@@ -141,7 +141,8 @@ else {
     $inventory.notes += "Core .venv Python not found at $corePython"
 }
 
-$outPath = Join-Path $OutDir "clamp3_windows_inventory.json"
+$stamp = Get-Date -Format "yyyyMMdd_HHmmss"
+$outPath = Join-Path $OutDir "clamp3_windows_inventory_$stamp.json"
 $inventory | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $outPath -Encoding utf8
 
 Write-Host "CLaMP 3 Windows inventory completed."
