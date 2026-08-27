@@ -99,15 +99,11 @@ CUDA 13.0 / cu130
 Python 3.12
 ```
 
-## Explicit model-download gate
+## Development model-download behavior
 
-The bootstrap refuses the model-download step unless the user passes:
+During the v0.5 hardware/debug phase, the root launcher performs model download without an interactive confirmation prompt. The internal bootstrap flag remains an implementation detail, while the user-facing distribution/install acceptance flow is deferred to the v1.0 installer.
 
-```powershell
--AcceptMertNonCommercialTerms
-```
-
-This is intentional. Model files are not bundled in Git or in the portable package.
+Model files are not bundled in Git or in the portable package. License/provenance remains recorded in the manifest, runtime doctor and `docs/THIRD_PARTY_MODELS.md`.
 
 ## First hardware test
 
@@ -125,7 +121,7 @@ Create the isolated Python 3.12 runtime and download the pinned model set:
 .\Genre_test_START.cmd retrieval-setup
 ```
 
-The launcher displays the MERT CC-BY-NC-4.0 non-commercial gate and continues only after explicit `YES` acceptance.
+The development launcher runs unattended and does not stop for an interactive license prompt.
 
 For the required real audio + Russian text smoke, use a normal readable WAV:
 

@@ -130,14 +130,7 @@ exit /b %ERRORLEVEL%
 :WORKING_RETRIEVAL_SETUP
 call :WORKING_RETRIEVAL_PREPARE
 if errorlevel 1 exit /b 1
-echo [LICENSE] Retrieval uses MERT under CC-BY-NC-4.0 and is experimental/non-commercial.
-echo Review: https://creativecommons.org/licenses/by-nc/4.0/
-set "MERT_ACCEPT="
-set /p "MERT_ACCEPT=Type YES to accept the MERT non-commercial terms and continue: "
-if /I not "%MERT_ACCEPT%"=="YES" (
-  echo [INFO] Retrieval setup cancelled. Core Genre_test was not changed.
-  exit /b 2
-)
+echo [INFO] Preparing the optional v0.5 retrieval development runtime...
 "%PWSH%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\setup_clamp3_runtime.ps1" -Install
 if errorlevel 1 exit /b %ERRORLEVEL%
 "%PWSH%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\setup_clamp3_runtime.ps1" -DownloadModels -AcceptMertNonCommercialTerms

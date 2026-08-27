@@ -77,7 +77,7 @@ Implications for current development policy:
 - do not commit MERT weights into Genre_test;
 - do not package MERT weights in portable ZIPs;
 - download only when the user explicitly enables the retrieval component;
-- the bootstrap requires an explicit `AcceptMertNonCommercialTerms` switch before model download;
+- the v0.5 development launcher downloads only when `retrieval-setup` is explicitly invoked and does not show an interactive prompt;
 - retain attribution/provenance;
 - treat the MERT-backed retrieval backend as experimental/non-commercial unless licensing is separately resolved;
 - do not state that the complete retrieval model stack is commercially unrestricted;
@@ -181,6 +181,7 @@ Before v0.5 release:
 - [x] XLM-R provenance recorded;
 - [ ] runtime-only dependency licenses reviewed;
 - [ ] attribution text prepared;
-- [x] installer does not redistribute model weights and requires explicit MERT-term acceptance before model download;
+- [x] development bootstrap does not redistribute model weights;
+- [ ] v1.0 distribution installer adds the final user-facing model-term acceptance flow;
 - [ ] README clearly states retrieval model terms;
 - [ ] commercial/non-commercial status of the shipped retrieval configuration is explicit in final release notes.
