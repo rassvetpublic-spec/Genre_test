@@ -10,6 +10,17 @@ def test_launcher_exposes_p0_gate_command() -> None:
     assert 'scripts\\clamp3_p0_gate.py' in launcher
 
 
+def test_launcher_does_not_pass_trailing_slash_repo_root_to_python() -> None:
+    launcher = (ROOT / "Genre_test_START.cmd").read_text(encoding="utf-8")
+    gate_line = next(
+        line
+        for line in launcher.splitlines()
+        if 'clamp3_p0_gate.py" --audio' in line
+    )
+    assert '--repo-root "%ROOT%"' not in gate_line
+    assert '--audio "%RETRIEVAL_AUDIO%"' in gate_line
+
+
 def test_p0_gate_requires_real_core_cuda_repeatability_and_shutdown_checks() -> None:
     gate = (ROOT / "scripts" / "clamp3_p0_gate.py").read_text(encoding="utf-8")
     assert "MAEST+AST CUDA probe" in gate
