@@ -101,11 +101,19 @@ class Clamp3SidecarBackend:
         request_timeout_s: float = 120.0,
     ) -> Clamp3SidecarBackend:
         repo_root = Path(repo_root)
-        runtime_root = repo_root / ".genre_test" / "retrieval"
+        state_root = repo_root / ".genre_test"
         return cls(
-            python_executable=runtime_root / "runtime" / ".venv" / "Scripts" / "python.exe",
+            python_executable=(
+                state_root
+                / "runtimes"
+                / "clamp3"
+                / ".venv"
+                / "Scripts"
+                / "python.exe"
+            ),
             script_path=repo_root / "scripts" / "clamp3_sidecar.py",
-            runtime_root=runtime_root,
+            runtime_root=state_root,
+            upstream_root=state_root / "upstream" / "clamp3",
             request_timeout_s=request_timeout_s,
         )
 
