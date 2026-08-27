@@ -187,6 +187,24 @@ Primary modules:
 - **#51 Vocal repair processor** — pitch stability diagnostics, de-essing/resonance repair, level consistency, optional denoise/dereverb/restoration backends, phrase-aware diagnostics later.
 - **#52 Stem repair/post-processing** — maintained source-separation backend evaluation plus per-stem cleanup, transient/low-end/phase repair and safe recombination.
 
+### Generative Audio Repair Lab foundation
+
+Before a repair backend can graduate, v0.6 uses two shared specifications:
+
+- [`docs/GENERATIVE_DEFECT_PROFILE.md`](docs/GENERATIVE_DEFECT_PROFILE.md) — versioned `GenerativeDefectProfileV1`, timestamped defect evidence, repair eligibility and before/after damage guards; independent from `AudioProfile`, analyzer-build `DRIFT`, mastering and AI-origin detection;
+- [`docs/GENERATIVE_AUDIO_REPAIR_BENCHMARK.md`](docs/GENERATIVE_AUDIO_REPAIR_BENCHMARK.md) — reviewed 50–100 real-SUNO-excerpt corpus (target v1: 80) with clean controls and locked test split for Apollo, A2SB, deterministic DSP and stem-assisted candidates.
+
+The benchmark keeps Ozone/mastering outside the repair candidate matrix. Ozone/REAPER renders may later be compared by #54 through the same loudness-matched A/B/X contract.
+
+Required shared gates:
+
+- immutable source and private-local storage for non-redistributable audio;
+- hashes, annotations, backend/checkpoint/license/runtime identity and processing manifests;
+- separate ratings for artifact reduction and musical damage;
+- `FULL_MIX_WINS` and `REGENERATE_SOURCE` are valid outcomes;
+- no backend becomes Safe from marker reduction alone;
+- restoration robustness remains `SOURCE_RESTORATION`, never analyzer-version `DRIFT`.
+
 ### Apollo restoration research
 
 - **#63 Apollo restoration backend and analysis robustness** — evaluate upstream Apollo as an optional local repair backend for lossy/codec-like artifacts; verify checkpoint provenance and licenses; run a real RTX 5070 Ti compatibility/performance spike; define source eligibility and Safe/Probe/Refine candidate matrices; measure repair quality; and add a separate `SOURCE_RESTORATION` robustness axis for MAEST, AST, BPM/key and CLaMP.
