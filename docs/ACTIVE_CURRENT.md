@@ -3,7 +3,8 @@
 Stable version: **0.4.0**  
 Stable status: **released**  
 Main release tag: `v0.4.0`  
-Active development: **v0.5 CLaMP 3 semantic retrieval**  
+Active development version: **0.5.0.dev0**  
+Active development scope: **v0.5 CLaMP 3 semantic retrieval**  
 Epic: **#26**  
 Current first implementation issue: **#27**
 
