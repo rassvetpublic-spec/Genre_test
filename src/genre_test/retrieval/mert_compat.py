@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 from pathlib import Path
 from typing import Any
 
@@ -27,17 +26,14 @@ def _sha256_file(path: Path, chunk_size: int = 8 * 1024 * 1024) -> str:
     return digest.hexdigest()
 
 
-def ensure_mert_weight_norm_compat(mert_dir: Path) -> dict[str, Any]:
-    """Make the pinned legacy MERT checkpoint load correctly on modern PyTorch.
+def load_mert_compatible_state_dict(mert_dir: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Load the pinned MERT checkpoint with a key-only weight_norm remap in memory.
 
-    PyTorch's modern weight_norm parametrization names the two tensors
+    Modern PyTorch represents weight_norm tensors as
     ``parametrizations.weight.original0/original1`` while the pinned MERT checkpoint
-    stores the numerically identical tensors as ``weight_g/weight_v``. Older
-    Transformers loading code does not reliably apply that key migration before
-    reporting the modern tensors as newly initialized.
-
-    This function rewrites only the two state-dict *keys*. Tensor values are copied
-    byte-for-byte by torch and no numerical model parameter is altered.
+    stores the numerically identical tensors as ``weight_g/weight_v``. The original
+    HuggingFace snapshot is never modified on disk; only the in-memory state-dict
+    keys are remapped before ``MusicHubertModel.from_pretrained`` consumes them.
     """
 
     import torch
@@ -47,14 +43,13 @@ def ensure_mert_weight_norm_compat(mert_dir: Path) -> dict[str, Any]:
     if not checkpoint_path.is_file():
         raise FileNotFoundError(checkpoint_path)
 
-    sha_before = _sha256_file(checkpoint_path)
+    source_sha256 = _sha256_file(checkpoint_path)
     state = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
     if not isinstance(state, dict):
         raise TypeError("Pinned MERT checkpoint is not a plain state_dict mapping")
 
-    migrated: list[dict[str, str]] = []
+    remapped: list[dict[str, str]] = []
     verified: list[str] = []
-    changed = False
 
     for legacy_key, modern_key in LEGACY_TO_MODERN_WEIGHT_NORM_KEYS.items():
         has_legacy = legacy_key in state
@@ -67,15 +62,13 @@ def ensure_mert_weight_norm_compat(mert_dir: Path) -> dict[str, Any]:
                     f"{legacy_key} vs {modern_key}"
                 )
             del state[legacy_key]
-            changed = True
-            migrated.append({"from": legacy_key, "to": modern_key})
+            remapped.append({"from": legacy_key, "to": modern_key})
             verified.append(modern_key)
             continue
 
         if has_legacy:
             state[modern_key] = state.pop(legacy_key)
-            changed = True
-            migrated.append({"from": legacy_key, "to": modern_key})
+            remapped.append({"from": legacy_key, "to": modern_key})
             verified.append(modern_key)
             continue
 
@@ -88,27 +81,13 @@ def ensure_mert_weight_norm_compat(mert_dir: Path) -> dict[str, Any]:
             f"{legacy_key} / {modern_key}"
         )
 
-    action = "already-compatible"
-    if changed:
-        temporary = checkpoint_path.with_suffix(".bin.genre-test-tmp")
-        try:
-            torch.save(state, temporary)
-            os.replace(temporary, checkpoint_path)
-        finally:
-            if temporary.exists():
-                temporary.unlink()
-        action = "patched"
-
-    sha_after = _sha256_file(checkpoint_path)
-
-    verify_state = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
     missing_modern = [
         key
         for key in LEGACY_TO_MODERN_WEIGHT_NORM_KEYS.values()
-        if key not in verify_state
+        if key not in state
     ]
     remaining_legacy = [
-        key for key in LEGACY_TO_MODERN_WEIGHT_NORM_KEYS if key in verify_state
+        key for key in LEGACY_TO_MODERN_WEIGHT_NORM_KEYS if key in state
     ]
     if missing_modern or remaining_legacy:
         raise RuntimeError(
@@ -116,22 +95,30 @@ def ensure_mert_weight_norm_compat(mert_dir: Path) -> dict[str, Any]:
             f"missing_modern={missing_modern}, remaining_legacy={remaining_legacy}"
         )
 
-    return {
+    report = {
         "status": "OK",
         "compat_version": MERT_WEIGHT_NORM_COMPAT_VERSION,
-        "action": action,
+        "action": "in-memory-remap" if remapped else "already-modern",
         "checkpoint": str(checkpoint_path),
-        "sha256_before": sha_before,
-        "sha256_after": sha_after,
-        "migrated_keys": migrated,
+        "source_sha256": source_sha256,
+        "remapped_keys": remapped,
         "verified_modern_keys": verified,
         "numerical_weights_changed": False,
+        "source_checkpoint_modified": False,
     }
+    return state, report
+
+
+def ensure_mert_weight_norm_compat(mert_dir: Path) -> dict[str, Any]:
+    """Validate that the pinned MERT checkpoint can be remapped without mutation."""
+
+    _, report = load_mert_compatible_state_dict(mert_dir)
+    return report
 
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Apply/verify the Genre_test MERT modern-PyTorch weight_norm compatibility remap."
+        description="Validate Genre_test MERT modern-PyTorch weight_norm compatibility."
     )
     parser.add_argument("--mert-dir", type=Path, required=True)
     parser.add_argument("--json-out", type=Path)
