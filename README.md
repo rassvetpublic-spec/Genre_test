@@ -78,6 +78,18 @@ Genre_test_START.cmd
 
 The launcher prepares/updates the private project `.venv`, reuses compatible Python/PyTorch when possible and starts the GUI.
 
+`Genre_test_START.cmd` is the only supported user entry point for environment checks, dependency installation, optional retrieval runtime management and application startup. Scripts under `scripts/` are internal implementation details.
+
+Working-copy retrieval commands:
+
+```powershell
+.\Genre_test_START.cmd retrieval-status
+.\Genre_test_START.cmd retrieval-setup
+.\Genre_test_START.cmd retrieval-smoke "D:\path\track.wav"
+```
+
+`retrieval-setup` explicitly asks for acceptance of the MERT CC-BY-NC-4.0 non-commercial terms before downloading models.
+
 ### Portable release
 
 Current supported package:

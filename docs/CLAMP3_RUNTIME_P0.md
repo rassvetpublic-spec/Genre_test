@@ -110,39 +110,29 @@ This is intentional. Model files are not bundled in Git or in the portable packa
 
 ## First hardware test
 
-From the repository root on the target Windows machine:
+All user-facing runtime operations go through the repository root launcher. PowerShell scripts under `scripts/` are internal implementation details and are not documented as user entry points.
+
+From the repository root on the target Windows machine, inspect the optional retrieval state:
 
 ```powershell
-pwsh -File .\scripts\setup_clamp3_runtime.ps1 -Install
+.\Genre_test_START.cmd retrieval-status
 ```
 
-Then explicitly download the pinned model set:
+Create the isolated Python 3.12 runtime and download the pinned model set:
 
 ```powershell
-pwsh -File .\scripts\setup_clamp3_runtime.ps1 `
-  -DownloadModels `
-  -AcceptMertNonCommercialTerms
+.\Genre_test_START.cmd retrieval-setup
 ```
+
+The launcher displays the MERT CC-BY-NC-4.0 non-commercial gate and continues only after explicit `YES` acceptance.
 
 For the required real audio + Russian text smoke, use a normal readable WAV:
 
 ```powershell
-pwsh -File .\scripts\setup_clamp3_runtime.ps1 `
-  -RunSmoke `
-  -AudioPath "D:\path\track.wav" `
-  -Repeat 2
+.\Genre_test_START.cmd retrieval-smoke "D:\path\track.wav"
 ```
 
-The command above checks the direct isolated runtime. For PR #62, run the actual persistent-sidecar path separately:
-
-```powershell
-pwsh -File .\scripts\setup_clamp3_runtime.ps1 `
-  -RunSidecarSmoke `
-  -AudioPath "D:\path\track.wav" `
-  -Repeat 2
-```
-
-This second command validates the complete boundary:
+This command validates the complete boundary:
 
 ```text
 Genre_test core .venv
@@ -152,7 +142,13 @@ Genre_test core .venv
   -> CLaMP 3 / MERT
 ```
 
-Both commands write evidence JSON under:
+A direct isolated-runtime diagnostic remains available through the same launcher:
+
+```powershell
+.\Genre_test_START.cmd retrieval-direct-smoke "D:\path\track.wav"
+```
+
+Evidence JSON is written under:
 
 ```text
 .genre_test/retrieval/evidence/

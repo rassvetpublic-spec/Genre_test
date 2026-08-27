@@ -24,6 +24,13 @@ echo Mode   : Git working tree
 echo Version: %VERSION%
 echo.
 
+if /I "%~1"=="retrieval-status" goto WORKING_RETRIEVAL_STATUS
+if /I "%~1"=="retrieval-setup" goto WORKING_RETRIEVAL_SETUP
+if /I "%~1"=="retrieval-smoke" goto WORKING_RETRIEVAL_SMOKE
+if /I "%~1"=="retrieval-direct-smoke" goto WORKING_RETRIEVAL_DIRECT_SMOKE
+if /I "%~1"=="help" goto WORKING_HELP
+if not "%~1"=="" goto WORKING_UNKNOWN_COMMAND
+
 set "NEED_SETUP=0"
 set "INSTALLED_VERSION="
 set "PYPROJECT_STAMP="
@@ -99,6 +106,82 @@ echo [OK] Starting working GUI...
 "%ROOT%.venv\Scripts\genre-test-gui.exe"
 set "RC=%ERRORLEVEL%"
 exit /b %RC%
+
+:WORKING_RETRIEVAL_PREPARE
+set "PWSH="
+for /f "delims=" %%P in ('where pwsh.exe 2^>nul') do if not defined PWSH set "PWSH=%%P"
+if not defined PWSH if exist "%ProgramFiles%\PowerShell\7\pwsh.exe" set "PWSH=%ProgramFiles%\PowerShell\7\pwsh.exe"
+if not defined PWSH (
+  echo [FAIL] PowerShell 7 is required. Run Genre_test_START.cmd once without arguments to bootstrap the core environment.
+  exit /b 1
+)
+if not exist "%ROOT%scripts\setup_clamp3_runtime.ps1" (
+  echo [FAIL] Internal retrieval bootstrap is missing: scripts\setup_clamp3_runtime.ps1
+  exit /b 1
+)
+exit /b 0
+
+:WORKING_RETRIEVAL_STATUS
+call :WORKING_RETRIEVAL_PREPARE
+if errorlevel 1 exit /b 1
+"%PWSH%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\setup_clamp3_runtime.ps1"
+exit /b %ERRORLEVEL%
+
+:WORKING_RETRIEVAL_SETUP
+call :WORKING_RETRIEVAL_PREPARE
+if errorlevel 1 exit /b 1
+echo [LICENSE] Retrieval uses MERT under CC-BY-NC-4.0 and is experimental/non-commercial.
+echo Review: https://creativecommons.org/licenses/by-nc/4.0/
+set "MERT_ACCEPT="
+set /p "MERT_ACCEPT=Type YES to accept the MERT non-commercial terms and continue: "
+if /I not "%MERT_ACCEPT%"=="YES" (
+  echo [INFO] Retrieval setup cancelled. Core Genre_test was not changed.
+  exit /b 2
+)
+"%PWSH%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\setup_clamp3_runtime.ps1" -Install
+if errorlevel 1 exit /b %ERRORLEVEL%
+"%PWSH%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\setup_clamp3_runtime.ps1" -DownloadModels -AcceptMertNonCommercialTerms
+exit /b %ERRORLEVEL%
+
+:WORKING_RETRIEVAL_SMOKE
+call :WORKING_RETRIEVAL_PREPARE
+if errorlevel 1 exit /b 1
+set "RETRIEVAL_AUDIO=%~2"
+if not defined RETRIEVAL_AUDIO set /p "RETRIEVAL_AUDIO=Full path to a WAV file: "
+if not defined RETRIEVAL_AUDIO (
+  echo [FAIL] A WAV path is required.
+  exit /b 2
+)
+"%PWSH%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\setup_clamp3_runtime.ps1" -RunSidecarSmoke -AudioPath "%RETRIEVAL_AUDIO%" -Repeat 2
+exit /b %ERRORLEVEL%
+
+:WORKING_RETRIEVAL_DIRECT_SMOKE
+call :WORKING_RETRIEVAL_PREPARE
+if errorlevel 1 exit /b 1
+set "RETRIEVAL_AUDIO=%~2"
+if not defined RETRIEVAL_AUDIO set /p "RETRIEVAL_AUDIO=Full path to a WAV file: "
+if not defined RETRIEVAL_AUDIO (
+  echo [FAIL] A WAV path is required.
+  exit /b 2
+)
+"%PWSH%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\setup_clamp3_runtime.ps1" -RunSmoke -AudioPath "%RETRIEVAL_AUDIO%" -Repeat 2
+exit /b %ERRORLEVEL%
+
+:WORKING_HELP
+echo Usage:
+echo   Genre_test_START.cmd
+echo   Genre_test_START.cmd retrieval-status
+echo   Genre_test_START.cmd retrieval-setup
+echo   Genre_test_START.cmd retrieval-smoke "D:\path\track.wav"
+echo   Genre_test_START.cmd retrieval-direct-smoke "D:\path\track.wav"
+echo.
+echo Internal scripts under scripts\ are implementation details, not user entry points.
+exit /b 0
+
+:WORKING_UNKNOWN_COMMAND
+echo [FAIL] Unknown command: %~1
+echo Run Genre_test_START.cmd help
+exit /b 2
 
 :WORKING_NO_PWSH
 echo [FAIL] PowerShell 7 could not be prepared automatically.

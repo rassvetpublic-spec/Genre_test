@@ -308,6 +308,8 @@ v0.5 retrieval runtime/model weights are **not** yet part of the stable package.
 
 ## Current development rule
 
+`Genre_test_START.cmd` is the single supported user entry point for dependency installation, environment checks, optional retrieval runtime management and application startup. Files under `scripts/` are internal implementation details invoked by the launcher.
+
 No v0.5 feature PR is merged to `main` until explicit MTD. Runtime/model choices must be backed by measured compatibility, reproducibility, search-quality and licensing evidence.
 
 The same merge rule applies to SUPERCOMBINE work: no future repair/master/tag/runtime feature is merged without explicit MTD.
