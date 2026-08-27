@@ -3,13 +3,12 @@ from __future__ import annotations
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Callable
 
-from genre_test.track_identity import identify_track
-
+from ..track_identity import identify_track
 from .backend import RetrievalBackend
-from .catalog import CatalogTrack, catalog_by_track_id, filter_track_ids, load_catalog_tracks
-from .contracts import EmbeddingIdentity, SearchFilter, SearchHit
+from .catalog import CatalogTrack, filter_track_ids, load_catalog_tracks
+from .contracts import EmbeddingIdentity, EmbeddingVector, SearchFilter, SearchHit
 from .index import DenseCosineIndex
 from .storage import RetrievalStore
 
@@ -21,6 +20,7 @@ ProgressCallback = Callable[[int, int, str], None]
 class IndexRunReport:
     backend_fingerprint: str
     catalog_tracks: int
+    selected_tracks: int
     available_paths: int
     missing_paths: int
     cache_hits: int
@@ -30,13 +30,14 @@ class IndexRunReport:
     stale_embeddings: int
     path_updates: int
     failures: int
+    failed_track_ids: tuple[str, ...]
     elapsed_seconds: float
 
     @property
     def recomputed(self) -> int:
         return self.embedded
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, object]:
         return asdict(self)
 
 
@@ -52,7 +53,7 @@ class IndexStatus:
     stale_embeddings: int
     corrupt_embeddings: int
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, object]:
         return asdict(self)
 
 
@@ -73,7 +74,7 @@ class CatalogSearchHit:
     instruments: tuple[str, ...]
     production: tuple[str, ...]
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, object]:
         payload = asdict(self)
         payload["moods"] = list(self.moods)
         payload["instruments"] = list(self.instruments)
@@ -95,7 +96,7 @@ class SearchResult:
     filters: SearchFilter
     hits: tuple[CatalogSearchHit, ...]
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "query_type": self.query_type,
             "backend_fingerprint": self.backend_fingerprint,
@@ -119,6 +120,20 @@ def _active_identity(backend: RetrievalBackend, track_id: str) -> EmbeddingIdent
     )
 
 
+def _safe_cached(
+    store: RetrievalStore,
+    identity: EmbeddingIdentity,
+) -> tuple[EmbeddingVector | None, bool]:
+    try:
+        stored = store.get(identity)
+    except ValueError:
+        store.delete_identity(identity)
+        return None, False
+    if stored is None:
+        return None, False
+    return stored.vector, True
+
+
 def index_status(
     *,
     store: RetrievalStore,
@@ -126,11 +141,24 @@ def index_status(
     backend_fingerprint: str,
 ) -> IndexStatus:
     tracks = load_catalog_tracks(history_path)
-    current = store.stats(backend_fingerprint=backend_fingerprint).get("full", 0)
+    catalog_ids = {track.track_id for track in tracks}
+    corrupt = len(store.corrupt_keys())
+    current_records = []
+    for record in store.iter_audio(
+        backend_fingerprint=backend_fingerprint,
+        scope="full",
+    ):
+        if record.identity.track_id in catalog_ids:
+            current_records.append(record)
+    current_ids = {
+        record.identity.track_id
+        for record in current_records
+        if record.identity.track_id is not None
+    }
     stale = store.count_stale(
         active_backend_fingerprint=backend_fingerprint,
         scope="full",
-        track_ids=[track.track_id for track in tracks],
+        track_ids=tuple(sorted(catalog_ids)),
     )
     available = sum(1 for track in tracks if track.path_exists)
     return IndexStatus(
@@ -139,10 +167,10 @@ def index_status(
         catalog_tracks=len(tracks),
         available_paths=available,
         missing_paths=len(tracks) - available,
-        current_embeddings=current,
-        current_missing=max(0, len(tracks) - current),
+        current_embeddings=len(current_ids),
+        current_missing=max(0, len(catalog_ids) - len(current_ids)),
         stale_embeddings=stale,
-        corrupt_embeddings=len(store.corrupt_keys()),
+        corrupt_embeddings=corrupt,
     )
 
 
@@ -152,21 +180,28 @@ def index_catalog(
     history_path: Path,
     backend: RetrievalBackend,
     progress: ProgressCallback | None = None,
+    limit: int | None = None,
 ) -> IndexRunReport:
     """Incrementally embed the current history catalog for one backend identity.
 
     Cache identity is content-addressed by track_id + backend fingerprint. A path move
     therefore updates only the stored path and never re-embeds byte-identical audio.
+    Every successful vector is committed independently, so an interrupted long catalog
+    run can resume without recomputing completed tracks.
     """
 
+    if limit is not None and limit <= 0:
+        raise ValueError("limit must be positive")
+
     started = time.perf_counter()
-    tracks = load_catalog_tracks(history_path)
+    all_tracks = load_catalog_tracks(history_path)
+    tracks = all_tracks if limit is None else all_tracks[:limit]
     store.register_backend(backend.info)
     corrupt_removed = store.delete_corrupt()
     stale = store.count_stale(
         active_backend_fingerprint=backend.info.fingerprint,
         scope="full",
-        track_ids=[track.track_id for track in tracks],
+        track_ids=[track.track_id for track in all_tracks],
     )
 
     available_paths = 0
@@ -175,7 +210,7 @@ def index_catalog(
     cache_misses = 0
     embedded = 0
     path_updates = 0
-    failures = 0
+    failed_track_ids: list[str] = []
 
     total = len(tracks)
     for index, track in enumerate(tracks, 1):
@@ -209,11 +244,12 @@ def index_catalog(
             store.put(vector, backend=backend.info, path=track.path)
             embedded += 1
         except Exception:
-            failures += 1
+            failed_track_ids.append(track.track_id)
 
     return IndexRunReport(
         backend_fingerprint=backend.info.fingerprint,
-        catalog_tracks=total,
+        catalog_tracks=len(all_tracks),
+        selected_tracks=total,
         available_paths=available_paths,
         missing_paths=missing_paths,
         cache_hits=cache_hits,
@@ -222,7 +258,8 @@ def index_catalog(
         corrupt_removed=corrupt_removed,
         stale_embeddings=stale,
         path_updates=path_updates,
-        failures=failures,
+        failures=len(failed_track_ids),
+        failed_track_ids=tuple(failed_track_ids),
         elapsed_seconds=time.perf_counter() - started,
     )
 
@@ -233,12 +270,17 @@ def rebuild_catalog(
     history_path: Path,
     backend: RetrievalBackend,
     progress: ProgressCallback | None = None,
+    limit: int | None = None,
 ) -> IndexRunReport:
     """Rebuild only the active backend's full-track embeddings.
 
     Old backend fingerprints are deliberately retained as forensic/stale records.
+    A limited rebuild is rejected because deleting all current vectors and rebuilding
+    only a pilot prefix would leave a misleading partially rebuilt active index.
     """
 
+    if limit is not None:
+        raise ValueError("rebuild does not accept limit; use incremental index for pilots")
     store.delete_backend_scope(backend.info.fingerprint, scope="full")
     return index_catalog(
         store=store,
@@ -273,7 +315,7 @@ def _rank(
     store: RetrievalStore,
     history_path: Path,
     backend: RetrievalBackend,
-    query_vector: Any,
+    query_vector: EmbeddingVector,
     filters: SearchFilter,
     top_k: int,
     exclude_track_id: str | None,
@@ -312,12 +354,11 @@ def search_audio(
     query_identity = _active_identity(backend, identity.track_id)
 
     started = time.perf_counter()
-    cached = store.get(query_identity)
-    cache_hit = cached is not None
-    if cached is not None:
-        vector = cached.vector
-    else:
+    vector, cache_hit = _safe_cached(store, query_identity)
+    if vector is None:
         vector = backend.embed_audio(Path(audio_path), track_id=identity.track_id)
+        if vector.identity != query_identity:
+            raise ValueError("backend returned unexpected audio query embedding identity")
     embedding_seconds = time.perf_counter() - started
 
     hits, ranking_seconds = _rank(
@@ -380,11 +421,8 @@ def search_text(
         language=language,
     )
     started = time.perf_counter()
-    cached = store.get(identity)
-    cache_hit = cached is not None
-    if cached is not None:
-        vector = cached.vector
-    else:
+    vector, cache_hit = _safe_cached(store, identity)
+    if vector is None:
         vector = backend.embed_text(normalized, language=language)
         if vector.identity != identity:
             raise ValueError("backend returned unexpected text embedding identity")
