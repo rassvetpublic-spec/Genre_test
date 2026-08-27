@@ -156,18 +156,60 @@ def catalog_by_track_id(history_path: Path) -> dict[str, CatalogTrack]:
     return {track.track_id: track for track in load_catalog_tracks(history_path)}
 
 
+def _fold_set(values: tuple[str, ...]) -> set[str]:
+    return {value.casefold() for value in values}
+
+
+def _matches_any(values: tuple[str, ...], requested: set[str]) -> bool:
+    if not requested:
+        return True
+    return bool({value.casefold() for value in values} & requested)
+
+
+def _matches_source_folder(path: str | None, folders: tuple[str, ...]) -> bool:
+    if not folders:
+        return True
+    if path is None:
+        return False
+    normalized_path = path.casefold().replace("\\", "/")
+    for folder in folders:
+        normalized_folder = folder.casefold().replace("\\", "/").rstrip("/")
+        if normalized_path == normalized_folder or normalized_path.startswith(
+            normalized_folder + "/"
+        ):
+            return True
+    return False
+
+
 def filter_track_ids(
     tracks: list[CatalogTrack],
     filters: SearchFilter,
 ) -> set[str]:
-    families = {value.casefold() for value in filters.families}
-    genres = {value.casefold() for value in filters.genres}
+    families = _fold_set(filters.families)
+    genres = _fold_set(filters.genres)
+    keys = _fold_set(filters.keys)
+    vocals = _fold_set(filters.vocals)
+    moods = _fold_set(filters.moods)
+    instruments = _fold_set(filters.instruments)
+    production = _fold_set(filters.production)
     allowed: set[str] = set()
 
     for track in tracks:
         if families and (track.family is None or track.family.casefold() not in families):
             continue
         if genres and (track.genre is None or track.genre.casefold() not in genres):
+            continue
+        if keys and (track.key is None or track.key.casefold() not in keys):
+            continue
+        if vocals and (track.vocal is None or track.vocal.casefold() not in vocals):
+            continue
+        if not _matches_any(track.moods, moods):
+            continue
+        if not _matches_any(track.instruments, instruments):
+            continue
+        if not _matches_any(track.production, production):
+            continue
+        if not _matches_source_folder(track.path, filters.source_folders):
             continue
         if filters.bpm_min is not None and (track.bpm is None or track.bpm < filters.bpm_min):
             continue
