@@ -10,6 +10,7 @@ import soundfile as sf
 
 from genre_test.retrieval.benchmark import (
     BenchmarkQuery,
+    BenchmarkReport,
     BenchmarkSuite,
     QueryMetrics,
     _paired_overlap,
@@ -22,6 +23,7 @@ from genre_test.retrieval.contracts import (
     EmbeddingVector,
     RetrievalBackendInfo,
     RetrievalHealth,
+    SearchFilter,
 )
 from genre_test.retrieval.segment_store import SegmentMetadataStore
 from genre_test.retrieval.segments import (
@@ -31,7 +33,7 @@ from genre_test.retrieval.segments import (
     segment_status,
     select_representative,
 )
-from genre_test.retrieval.service import SearchResult
+from genre_test.retrieval.service import CatalogSearchHit, SearchResult
 from genre_test.retrieval.storage import RetrievalStore, StoredEmbedding
 
 
@@ -96,7 +98,7 @@ class FakeSegmentBackend:
 
 def _write_wav(path: Path, duration_s: float) -> None:
     sample_rate = 8_000
-    frames = max(1, int(round(duration_s * sample_rate)))
+    frames = max(1, round(duration_s * sample_rate))
     sf.write(path, np.zeros(frames, dtype=np.float32), sample_rate)
 
 
@@ -273,8 +275,6 @@ def test_catalog_acceptance_reports_retry_and_coverage(tmp_path: Path) -> None:
 
 
 def _search_result(track_ids: list[str]) -> SearchResult:
-    from genre_test.retrieval.contracts import SearchHit
-
     backend = _backend_info()
     return SearchResult(
         query_type="text",
@@ -286,9 +286,9 @@ def _search_result(track_ids: list[str]) -> SearchResult:
         query_text="query",
         language="ru",
         query_track_id=None,
-        filters=__import__("genre_test.retrieval.contracts", fromlist=["SearchFilter"]).SearchFilter(),
+        filters=SearchFilter(),
         hits=tuple(
-            __import__("genre_test.retrieval.service", fromlist=["CatalogSearchHit"]).CatalogSearchHit(
+            CatalogSearchHit(
                 rank=index,
                 track_id=track_id,
                 path=f"{track_id}.wav",
@@ -347,8 +347,6 @@ def test_benchmark_metrics_and_reports(tmp_path: Path) -> None:
     )
     overlap = _paired_overlap(suite, {"ru-1": left, "en-1": right})
     assert overlap == 0.5
-
-    from genre_test.retrieval.benchmark import BenchmarkReport
 
     report = BenchmarkReport(
         suite_name="pair",
