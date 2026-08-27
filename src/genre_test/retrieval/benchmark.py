@@ -131,17 +131,17 @@ class BenchmarkReport:
 def load_benchmark_suite(path: Path) -> BenchmarkSuite:
     payload = json.loads(Path(path).read_text(encoding="utf-8-sig"))
     if not isinstance(payload, dict):
-        raise ValueError("benchmark suite root must be an object")
+        raise TypeError("benchmark suite root must be an object")
     raw_queries = payload.get("queries")
     if not isinstance(raw_queries, list):
-        raise ValueError("benchmark suite queries must be a list")
+        raise TypeError("benchmark suite queries must be a list")
     queries: list[BenchmarkQuery] = []
     for raw in raw_queries:
         if not isinstance(raw, dict):
-            raise ValueError("benchmark query must be an object")
+            raise TypeError("benchmark query must be an object")
         relevance_raw = raw.get("relevance")
         if not isinstance(relevance_raw, dict):
-            raise ValueError("benchmark query relevance must be an object")
+            raise TypeError("benchmark query relevance must be an object")
         queries.append(
             BenchmarkQuery(
                 query_id=str(raw.get("query_id", "")),
