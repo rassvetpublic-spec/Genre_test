@@ -1,6 +1,6 @@
 # CLaMP 3 P0 — selected runtime and real Windows smoke
 
-Status: **hardware P0 PASS on RTX 5070 Ti; implementation PR #72 remains open pending MTD**.
+Status: **initial RTX 5070 Ti gate completed, but final P0 revalidation is required after the UTF-8 sidecar fix and new direct↔sidecar equivalence checks. PR #72 remains open pending MTD.**
 
 Related: #26, #27, #29, #41.
 
@@ -38,8 +38,6 @@ Text encoder/tokenizer base:
 
 ## Preprocessing identity v2
 
-The first smoke reproduces the upstream audio policy deliberately:
-
 ```text
 sample rate                  24000 Hz
 channels                     mono
@@ -63,18 +61,18 @@ Version string:
 clamp3-mert-24k-mono-scipy-polyphase-5s-mean-v2
 ```
 
-The v2 identity replaces the un-runnable v1 bootstrap, which incorrectly required a nonexistent `torchaudio==2.12.1` cu130 wheel. Pinned upstream CLaMP/MERT does not import torchaudio. Any future change to these rules requires a new preprocessing identity and therefore a new embedding/cache identity.
+Any future change to these rules requires a new preprocessing identity and therefore a new embedding/cache identity.
 
 ## Runtime architecture
 
-The selected runtime remains an isolated persistent sidecar:
+The selected candidate remains an isolated persistent sidecar:
 
 ```text
 Genre_test core .venv
   Python 3.11–3.13
   MAEST / AST runtime
           |
-          | versioned protocol
+          | versioned UTF-8 JSON-lines protocol
           v
 .genre_test/retrieval/
   runtime/.venv      Python 3.12
@@ -99,10 +97,6 @@ CUDA 13.0
 Python 3.12.10 retrieval runtime
 ```
 
-## Development model-download behavior
-
-During the v0.5 hardware/debug phase, the root launcher performs model download without an interactive confirmation prompt. Model files are not bundled in Git or in the portable package; provenance remains recorded in the specialized manifest/runtime documentation.
-
 ## Hardware gate command
 
 All user-facing runtime operations go through the repository root launcher.
@@ -115,7 +109,7 @@ All user-facing runtime operations go through the repository root launcher.
 .\Genre_test_START.cmd retrieval-p0-gate "D:\path\track.wav"
 ```
 
-The P0 command validates the complete boundary:
+The P0 command validates:
 
 ```text
 MAEST CUDA + AudioSet AST CUDA
@@ -123,6 +117,7 @@ MAEST CUDA + AudioSet AST CUDA
   -> repeated Russian text embedding
   -> repeated full-track audio embedding
   -> Genre_test core -> persistent sidecar
+  -> direct ↔ sidecar representation equivalence
   -> process shutdown
   -> per-process VRAM release
 ```
@@ -135,23 +130,19 @@ All generated JSON diagnostics are written directly under:
 
 No test-specific result directories are created.
 
-## RTX 5070 Ti P0 result — 2026-08-27
+## Initial RTX 5070 Ti run — 2026-08-27
 
 Input: `C:\GIT\TEST.wav`, 330.92 s, WAV PCM 24-bit / 48 kHz stereo.
 
-Gate result: **PASS**.
-
-Confirmed:
-- MAEST executed on CUDA, 3 windows;
-- AudioSet AST executed on CUDA, 3 windows, semantic status `ok`;
-- CLaMP 3 direct runtime status `OK`;
-- persistent sidecar status `OK`;
-- Russian text repeat cosine `1.0`;
-- direct audio repeat cosine `0.9999998808`;
-- sidecar audio repeat cosine effectively `1.0`;
-- text/audio vectors remained L2 normalized;
-- sidecar shut down cleanly;
-- sidecar per-process GPU memory after shutdown was `0 MiB`.
+The first version of the gate reported `PASS` and confirmed:
+- MAEST on CUDA, 3 windows;
+- AudioSet AST on CUDA, 3 windows, semantic status `ok`;
+- direct CLaMP 3 runtime `OK`;
+- persistent sidecar `OK`;
+- within-process text/audio repeatability;
+- normalized vectors;
+- clean sidecar shutdown;
+- zero sidecar PID VRAM after shutdown.
 
 Direct runtime baseline:
 
@@ -177,19 +168,35 @@ shutdown                   clean
 VRAM after shutdown        0 MiB for sidecar PID
 ```
 
-The hardware P0 evidence is sufficient to select the **isolated persistent sidecar** architecture for v0.5.
+### Defect found during evidence review
+
+The direct and sidecar **audio** vector heads matched within float precision, but the direct and sidecar **Russian text** vector heads and text↔audio cosine did not match. The original gate checked repeatability inside each process but did not compare the two execution paths, so that result is not sufficient to close #29.
+
+Root cause candidate and fix: the parent transport explicitly encoded JSON-lines as UTF-8, while the isolated Windows Python child was not forced into UTF-8 mode for redirected standard streams. `Clamp3SidecarBackend` now starts the child with Python `-X utf8`; P0 subprocess capture also forces `PYTHONUTF8=1` and `PYTHONIOENCODING=utf-8`.
+
+The gate now additionally requires:
+
+```text
+cross_text_head_match              true
+cross_audio_head_match             true
+cross_text_audio_cosine_match      true
+```
+
+A new real hardware run is required after this fix. Only that strengthened gate may close #27/#29 P0.
 
 ## Gate invariants
 
 ```text
-text norm          ~1.0
-audio norm         ~1.0
-repeat cosine      >= 0.99999
-vector dimension   768
-MAEST device       cuda
-AST device         cuda
-sidecar shutdown   true
-sidecar VRAM exit  0 MiB
+text norm                    ~1.0
+audio norm                   ~1.0
+repeat cosine                >= 0.99999
+direct/sidecar heads         match within 1e-5
+text↔audio cosine            match within 1e-5
+vector dimension             768
+MAEST device                 cuda
+AST device                   cuda
+sidecar shutdown             true
+sidecar VRAM exit            0 MiB
 no core .venv mutation
 ```
 
@@ -197,11 +204,13 @@ no core .venv mutation
 
 CI must never download multi-GB model assets.
 
-CI only checks:
+CI checks:
 - immutable pin metadata;
 - SHA helpers;
 - launcher/script regression gates;
 - central log-directory policy;
+- UTF-8 sidecar launch policy;
+- direct↔sidecar gate invariants in static tests;
 - fake backend/storage/protocol behavior.
 
 The real model/GPU smoke remains a local release gate.
