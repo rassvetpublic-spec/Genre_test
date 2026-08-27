@@ -56,7 +56,11 @@ jobs:
           grep -Fq 'retrieval-setup' Genre_test_START.cmd
           grep -Fq 'retrieval-smoke' Genre_test_START.cmd
           grep -Fq 'retrieval-direct-smoke' Genre_test_START.cmd
-          grep -Fq 'CC-BY-NC-4.0' Genre_test_START.cmd
+          if grep -Eq 'CC-BY-NC-4\.0|MERT_ACCEPT|Type YES' Genre_test_START.cmd; then
+            echo 'Development launcher still contains the deferred interactive license prompt.' >&2
+            exit 1
+          fi
+          grep -Fq 'development setup prompt deferred' scripts/setup_clamp3_runtime.ps1
           grep -Fq 'Internal scripts under scripts\ are implementation details' Genre_test_START.cmd
           grep -Fq '.\Genre_test_START.cmd retrieval-setup' docs/CLAMP3_RUNTIME_P0.md
           if grep -Fq 'pwsh -File .\scripts\setup_clamp3_runtime.ps1' docs/CLAMP3_RUNTIME_P0.md; then

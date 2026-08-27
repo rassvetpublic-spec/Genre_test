@@ -73,7 +73,6 @@ Write-Host "Repo root    : $RepoRoot"
 Write-Host "Runtime root : $RuntimeRoot"
 Write-Host "CLaMP code   : $ClampRevision"
 Write-Host "Torch target : $TorchVersion / cu130"
-Write-Host "MERT terms   : $MertLicense (non-commercial model gate)"
 
 if (-not ($Install -or $DownloadModels -or $RunSmoke -or $RunSidecarSmoke)) {
     Write-Host ""
@@ -144,6 +143,7 @@ if (-not (Test-Path (Join-Path $UpstreamDir ".git"))) {
 }
 
 Write-Section "Runtime doctor"
+Write-Host "MERT terms   : $MertLicense (recorded provenance; development setup prompt deferred)"
 Invoke-Checked $PythonExe -c "import sys, torch; print('python', sys.version.split()[0]); print('torch', torch.__version__); print('cuda_runtime', torch.version.cuda); print('cuda_available', torch.cuda.is_available()); print('device', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'); print('arch_list', torch.cuda.get_arch_list() if torch.cuda.is_available() else [])"
 
 if ($DownloadModels) {

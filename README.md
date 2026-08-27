@@ -89,7 +89,7 @@ Working-copy retrieval commands:
 .\Genre_test_START.cmd retrieval-smoke "D:\path\track.wav"
 ```
 
-`retrieval-setup` explicitly asks for acceptance of the MERT CC-BY-NC-4.0 non-commercial terms before downloading models.
+During v0.5 development, `retrieval-setup` runs unattended. Model provenance remains documented; the distribution installer acceptance flow is deferred to v1.0.
 
 ### Portable release
 
