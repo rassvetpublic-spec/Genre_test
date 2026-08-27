@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 from .backend import RetrievalBackend
 from .catalog import CatalogTrack, load_catalog_tracks
