@@ -49,6 +49,9 @@ def test_clamp_runtime_uses_flat_state_layout_and_common_log_folder() -> None:
     local_gate = (ROOT / "scripts" / "run_local_retrieval_p0_tests.ps1").read_text(
         encoding="utf-8"
     )
+    inventory = (ROOT / "scripts" / "clamp3_windows_inventory.ps1").read_text(
+        encoding="utf-8"
+    )
 
     assert 'state_root = repo_root / ".genre_test"' in gate
     assert '/ "runtimes"\n        / "clamp3"' in gate
@@ -70,6 +73,8 @@ def test_clamp_runtime_uses_flat_state_layout_and_common_log_folder() -> None:
 
     assert "$LogDir = Join-Path $RepoRoot '.genre_test\\logs'" in local_gate
     assert "results\\retrieval_p0_local" not in local_gate
+    assert 'Join-Path $repoRoot ".genre_test\\logs"' in inventory
+    assert 'results\\clamp3_spike' not in inventory
 
 
 def test_sidecar_backend_defaults_to_flat_state_layout() -> None:
