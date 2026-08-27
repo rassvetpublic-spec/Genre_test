@@ -21,7 +21,7 @@ def test_launcher_does_not_pass_trailing_slash_repo_root_to_python() -> None:
     assert '--audio "%RETRIEVAL_AUDIO%"' in gate_line
 
 
-def test_p0_gate_requires_real_core_cuda_repeatability_and_shutdown_checks() -> None:
+def test_p0_gate_requires_real_core_cuda_cross_path_and_shutdown_checks() -> None:
     gate = (ROOT / "scripts" / "clamp3_p0_gate.py").read_text(encoding="utf-8")
     assert "MAEST+AST CUDA probe" in gate
     assert '"maest_cuda"' in gate
@@ -34,6 +34,9 @@ def test_p0_gate_requires_real_core_cuda_repeatability_and_shutdown_checks() -> 
     assert '"direct_audio_repeatable"' in gate
     assert '"sidecar_text_repeatable"' in gate
     assert '"sidecar_audio_repeatable"' in gate
+    assert '"cross_text_head_match"' in gate
+    assert '"cross_audio_head_match"' in gate
+    assert '"cross_text_audio_cosine_match"' in gate
     assert '"sidecar_shutdown"' in gate
     assert '"sidecar_vram_released"' in gate
 
@@ -51,11 +54,19 @@ def test_clamp_p0_and_smokes_use_only_common_log_folder() -> None:
     assert '.genre_test\\retrieval\\evidence' not in setup
 
 
-def test_sidecar_backend_exposes_process_id_for_evidence() -> None:
+def test_sidecar_backend_forces_utf8_child_and_exposes_process_id() -> None:
     backend = (
         ROOT / "src" / "genre_test" / "retrieval" / "clamp3_sidecar_backend.py"
     ).read_text(encoding="utf-8")
+    assert '"-X",\n            "utf8",' in backend
+    assert 'encoding="utf-8"' in backend
     assert "def process_id(self) -> int | None:" in backend
+
+
+def test_p0_subprocesses_force_utf8_capture() -> None:
+    gate = (ROOT / "scripts" / "clamp3_p0_gate.py").read_text(encoding="utf-8")
+    assert 'env["PYTHONUTF8"] = "1"' in gate
+    assert 'env["PYTHONIOENCODING"] = "utf-8"' in gate
 
 
 def test_sidecar_smoke_records_lifecycle_memory_evidence() -> None:
