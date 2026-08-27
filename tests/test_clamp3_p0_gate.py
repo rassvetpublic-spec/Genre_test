@@ -65,6 +65,9 @@ def test_clamp_runtime_uses_flat_state_layout_and_common_log_folder() -> None:
     assert '$RetrievalDb = Join-Path $StateDir "retrieval.sqlite3"' in setup
     assert '$LegacyRoot = Join-Path $StateDir "retrieval"' in setup
     assert 'Migrate-LegacyLayout' in setup
+    assert 'Cannot migrate ${Label}:' in setup
+    assert 'Cannot migrate $Label:' not in setup
+    assert 'print(sys.executable)' not in setup
     assert '$RuntimeRoot =' not in setup
     assert '$EvidenceDir' not in setup
 
