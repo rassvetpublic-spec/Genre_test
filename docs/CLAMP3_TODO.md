@@ -5,7 +5,8 @@ Parent epic: #26
 This checklist is the execution order. GitHub issues are the source of truth for acceptance criteria.
 
 Scope boundary: [`CLAMP3_OUTPUT_SCOPE.md`](CLAMP3_OUTPUT_SCOPE.md)  
-Deferred ideas: [`FAR_TODO.md`](FAR_TODO.md)
+Deferred ideas: [`FAR_TODO.md`](FAR_TODO.md)  
+Real-machine acceptance: [`CLAMP3_RETRIEVAL_ACCEPTANCE.md`](CLAMP3_RETRIEVAL_ACCEPTANCE.md)
 
 ## P0 — must be completed before catalog indexing
 
@@ -142,13 +143,25 @@ Implementation foundation: #73 / PR #75. Paired RU/EN relevance benchmark remain
 - [ ] manual Russian search relevance acceptance
 
 ### #33 Segments
-- [ ] segment policy benchmark
-- [ ] 30 s baseline windows
-- [ ] segment persistence integration
-- [ ] centroid representative selector
-- [ ] representative search
-- [ ] custom interval search
-- [ ] estimate full-catalog segment storage/time
+Implementation block: #78 / PR #79. Full-catalog segment work stays gated behind a real subset cost measurement.
+
+- [x] versioned fixed-window policy `fixed30-hop30-cap64-min1-v1`
+- [x] 30 s baseline windows / 30 s hop
+- [x] deterministic short-tail and <1 s handling
+- [x] deterministic max-64 segment cap across long files
+- [x] segment persistence integration in `retrieval.sqlite3`
+- [x] incremental/resumable segment indexing
+- [x] centroid representative selector with deterministic tie-break
+- [x] versioned representative metadata persistence
+- [x] representative -> full search
+- [x] representative -> representative search
+- [x] custom interval -> full/representative search
+- [x] default subset safety gate; `--all` required for full catalog
+- [x] report segment count, elapsed time, vector payload and DB footprint
+- [ ] real 20/50-track subset timing/storage acceptance
+- [ ] second subset pass proves zero segment recomputation
+- [ ] compare representative vs full-track relevance on reviewed examples
+- [ ] authorize or reject full-catalog segment indexing from measured cost
 
 ### #43 Core Sound deterministic description
 - [ ] version description/template rules
@@ -170,7 +183,7 @@ Implementation foundation: #73 / PR #75. Paired RU/EN relevance benchmark remain
 - [ ] export
 
 ### #35 CLI
-PR #75 adds a dedicated lightweight `genre-test-retrieval` entry point; root-launcher unification remains separate.
+Implementation blocks: #73 / PR #75 and #78 / PR #79.
 
 - [ ] retrieval-doctor
 - [x] index
@@ -180,22 +193,35 @@ PR #75 adds a dedicated lightweight `genre-test-retrieval` entry point; root-lau
 - [x] reindex --stale-only semantics (`index` skips current cache hits)
 - [x] explicit active-backend rebuild
 - [x] retrieval query-history command
-- [ ] stable documented exit codes
-- [ ] root `Genre_test_START.cmd` command aliases
-- [ ] Cyrillic path/query real-machine tests
+- [x] segment status/index commands
+- [x] representative/custom-segment search commands
+- [x] catalog audit / retry-missing commands
+- [x] benchmark runner command
+- [x] stable documented retrieval exit-code contract
+- [x] root `Genre_test_START.cmd` aliases for retrieval product commands
+- [x] non-interactive automation path
+- [x] default retrieval reports use `.genre_test\logs`
+- [ ] Cyrillic path/query command smoke on real Windows machine after PR #79 CI
 
 ### #36 Benchmark
-- [ ] reviewed relevance schema
-- [ ] >=50 queries minimum
-- [ ] target >=100 queries
-- [ ] Precision@K
-- [ ] Recall@K
-- [ ] MRR
-- [ ] nDCG@K
-- [ ] RU/EN overlap
-- [ ] P50/P95 latency
-- [ ] index throughput
-- [ ] baseline report by backend fingerprint
+Implementation block: #78 / PR #79. Metrics code is not itself quality evidence; reviewed labels remain mandatory.
+
+- [x] independent benchmark schema v1
+- [x] graded relevance labels 0..3
+- [x] Precision@K
+- [x] Recall@K
+- [x] MRR
+- [x] nDCG@K
+- [x] paired RU/EN Top-K overlap/Jaccard
+- [x] embedding/ranking P50/P95 latency aggregation
+- [x] backend fingerprint recorded in report
+- [x] JSON/CSV/Markdown output
+- [x] explicit placeholder schema documented without claiming ground truth
+- [ ] create >=50 reviewed real queries
+- [ ] target >=100 reviewed queries
+- [ ] include index throughput from real catalog run
+- [ ] run baseline report on target hardware
+- [ ] manually review benchmark results before quality claim
 
 ## P2 — graduation
 
@@ -248,15 +274,24 @@ Baseline remains **CLaMP 3 SAAS + MERT + XLM-R** until benchmark evidence suppor
 - [ ] portable smoke
 
 ### #39 Existing catalog
-- [ ] resolve source root(s)
+Implementation blocks: #73 / PR #75 and #78 / PR #79. Real catalog execution remains pending.
+
+- [x] derive source paths from existing history catalog
 - [x] reuse v0.4 track_id/profile metadata in retrieval orchestration
 - [x] embed only retrieval layer; no MAEST/AST re-analysis in index path
 - [x] resume semantics through per-track transactional cache commits
-- [ ] explicit Safe Stop UX/reporting
-- [ ] >=99% coverage or explained failures
-- [ ] second-pass cache verification on real catalog
-- [ ] index report
-- [ ] backup/restore instructions
+- [x] safe-stop contract: completed SQLite writes survive interruption
+- [x] current/missing/stale/corrupt coverage audit tooling
+- [x] readable-without-embedding retry selection
+- [x] family/genre/folder summaries
+- [x] backend identity and retrieval DB footprint in acceptance report
+- [x] JSON/Markdown catalog acceptance report under common logs
+- [x] backup/restore instructions
+- [ ] resolve/confirm real source root(s) from target history output
+- [ ] >=99% readable full-track coverage or explained failures
+- [ ] real second-pass cache verification
+- [ ] archive real full-track index throughput/report
+- [ ] archive failed/missing path disposition
 
 ### #40 v0.5 release
 - [ ] Russian README updated
