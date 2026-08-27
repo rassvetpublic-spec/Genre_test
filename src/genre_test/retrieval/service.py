@@ -142,19 +142,10 @@ def index_status(
 ) -> IndexStatus:
     tracks = load_catalog_tracks(history_path)
     catalog_ids = {track.track_id for track in tracks}
-    corrupt = len(store.corrupt_keys())
-    current_records = []
-    for record in store.iter_audio(
+    current_ids = store.audio_track_ids(
         backend_fingerprint=backend_fingerprint,
         scope="full",
-    ):
-        if record.identity.track_id in catalog_ids:
-            current_records.append(record)
-    current_ids = {
-        record.identity.track_id
-        for record in current_records
-        if record.identity.track_id is not None
-    }
+    ) & catalog_ids
     stale = store.count_stale(
         active_backend_fingerprint=backend_fingerprint,
         scope="full",
@@ -170,7 +161,7 @@ def index_status(
         current_embeddings=len(current_ids),
         current_missing=max(0, len(catalog_ids) - len(current_ids)),
         stale_embeddings=stale,
-        corrupt_embeddings=corrupt,
+        corrupt_embeddings=len(store.corrupt_keys()),
     )
 
 
