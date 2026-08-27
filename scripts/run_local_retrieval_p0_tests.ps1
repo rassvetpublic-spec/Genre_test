@@ -9,10 +9,11 @@ $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $Python = Join-Path $RepoRoot '.venv\Scripts\python.exe'
-$ResultsDir = Join-Path $RepoRoot 'results\retrieval_p0_local'
-$ReportPath = Join-Path $ResultsDir 'retrieval_p0_local_report.json'
+$LogDir = Join-Path $RepoRoot '.genre_test\logs'
+$Stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+$ReportPath = Join-Path $LogDir "retrieval_p0_local_$Stamp.json"
 
-New-Item -ItemType Directory -Force -Path $ResultsDir | Out-Null
+New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 
 $Steps = @()
 $OverallPass = $true
@@ -98,7 +99,8 @@ if (-not (Invoke-Step 'Retrieval P0 regression tests' {
     $TestFiles = @(
         (Join-Path $RepoRoot 'tests\test_retrieval_foundation.py'),
         (Join-Path $RepoRoot 'tests\test_retrieval_store.py'),
-        (Join-Path $RepoRoot 'tests\test_clamp3_sidecar_backend.py')
+        (Join-Path $RepoRoot 'tests\test_clamp3_sidecar_backend.py'),
+        (Join-Path $RepoRoot 'tests\test_clamp3_p0_gate.py')
     )
     & $Python -m pytest -q @TestFiles
     if ($LASTEXITCODE -ne 0) { throw "retrieval pytest failed with exit code $LASTEXITCODE" }
@@ -118,6 +120,26 @@ if (-not $SkipFullTests) {
 if (-not (Invoke-Step 'Optional CLaMP runtime health probe' {
     & $Python (Join-Path $RepoRoot 'scripts\clamp3_runtime_probe.py')
     if ($LASTEXITCODE -ne 0) { throw "runtime probe failed with exit code $LASTEXITCODE" }
+})) {
+    $OverallPass = $false
+}
+
+if (-not (Invoke-Step 'Flat runtime-state layout' {
+    $Legacy = Join-Path $RepoRoot '.genre_test\retrieval'
+    if (Test-Path -LiteralPath $Legacy) {
+        throw "obsolete state directory still exists: $Legacy"
+    }
+    $Expected = @(
+        (Join-Path $RepoRoot '.genre_test\logs'),
+        (Join-Path $RepoRoot '.genre_test\models'),
+        (Join-Path $RepoRoot '.genre_test\runtimes\clamp3'),
+        (Join-Path $RepoRoot '.genre_test\upstream\clamp3')
+    )
+    foreach ($Path in $Expected) {
+        if (-not (Test-Path -LiteralPath $Path)) {
+            throw "expected state path is missing: $Path"
+        }
+    }
 })) {
     $OverallPass = $false
 }
@@ -200,6 +222,7 @@ $Report = [ordered]@{
     python = $PythonVersion
     gpu = $GpuInfo
     clamp3_python = $Clamp3Python
+    log_dir = $LogDir
     steps = $Steps
 }
 
