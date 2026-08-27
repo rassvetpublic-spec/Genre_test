@@ -34,7 +34,7 @@ dev = [
 [project.scripts]
 genre-test = "genre_test.cli:app"
 genre-test-gui = "genre_test.desktop_gui:main"
-genre-test-retrieval = "genre_test.retrieval.cli:main"
+genre-test-retrieval = "genre_test.retrieval.entrypoint:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/genre_test"]
