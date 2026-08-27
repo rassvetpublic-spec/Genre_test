@@ -101,6 +101,22 @@ def extract_lightweight_audio_features(audio: np.ndarray, sr: int) -> AudioFeatu
         )
 
     samples = np.asarray(audio, dtype=np.float64)
+    # Silence has exact zero values for every lightweight metric. Returning it
+    # directly avoids unnecessary FFT/backend initialization and keeps the
+    # short-audio path warning-free across supported Python/Numpy versions.
+    if not np.any(samples):
+        return AudioFeatures(
+            duration_s=round(duration, 3),
+            sample_rate=sr,
+            bpm=None,
+            key=None,
+            mode=None,
+            rms=0.0,
+            spectral_centroid_hz=0.0,
+            spectral_rolloff_hz=0.0,
+            zero_crossing_rate=0.0,
+        )
+
     rms = float(np.sqrt(np.mean(np.square(samples))))
     if samples.size > 1:
         zcr = float(np.mean(np.signbit(samples[1:]) != np.signbit(samples[:-1])))
