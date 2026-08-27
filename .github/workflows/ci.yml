@@ -136,6 +136,9 @@ jobs:
           if ($clampSetup -notmatch 'AcceptMertNonCommercialTerms' -or $clampSetup -notmatch 'CC-BY-NC-4\.0') {
             throw 'CLaMP sidecar bootstrap is missing the explicit MERT license gate.'
           }
+          if ($clampSetup -match 'print\(sys\.executable\)' -or $clampSetup -notmatch '\$python312 = @\(Get-Python312\)') {
+            throw 'CLaMP Python launcher probe can leak native stdout into venv launcher arguments.'
+          }
           Write-Host 'setup/release/regression/retrieval parser/CUDA13/Python3.13 gate PASS'
       - name: Pinned retrieval manifest smoke
         shell: bash
