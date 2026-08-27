@@ -54,7 +54,7 @@ Acceptance note: initial environment-creation time and complete first-download t
 - [x] add fake-backend tests
 - [x] add serialization round-trip helpers
 - [x] finalize retrieval SQLite schema v1
-- [ ] add explicit schema migration tests for future schema versions
+- [x] add explicit schema migration coverage: v1 -> v2 query-history schema
 - [x] define sidecar protocol version 1
 - [x] define structured sidecar error codes
 
@@ -84,37 +84,62 @@ Persistent backend implementation is in main from earlier P0 work; PR #72 suppli
 - [x] hardened target-PC P0 gate PASS
 
 ### #30 Cache/index
-- [x] `retrieval.sqlite3` schema v1
+Implementation block: #73 / PR #75. Code completion is separate from the upcoming real-catalog acceptance run.
+
+- [x] `retrieval.sqlite3` schema v1 foundation
+- [x] v2 migration for retrieval-only query history
 - [x] track/text/segment embedding persistence contract
 - [x] vector SHA-256 integrity
 - [x] stale backend separation by backend fingerprint
 - [x] transactional SQLite vector writes
-- [ ] cache hit/miss metrics
+- [x] cache hit/miss/corrupt/stale accounting
 - [x] exact dense float32 cosine matrix index
-- [x] deterministic stable cosine ranking baseline
-- [ ] incremental catalog update orchestration
-- [ ] rebuild/stale-only commands
+- [x] deterministic explicit tie-break ranking
+- [x] incremental catalog orchestration from existing `history.sqlite3`
+- [x] moved byte-identical files reuse `track_id` cache without re-embedding
+- [x] resumable per-track commits and `--limit` pilot mode
+- [x] incremental `index` acts as missing/stale-only current-backend pass
+- [x] active-backend `rebuild` while retaining old backend fingerprint records
+- [x] status reports current/missing/stale/corrupt/path availability
+- [ ] target catalog first-pass coverage >=99% or explained failures
+- [ ] target catalog second pass proves zero recomputation
+- [ ] archive full-catalog index throughput/report
 
 ## P1 — product retrieval
 
 ### #31 Audio similarity
-- [ ] full-track query
-- [ ] self-match sanity
-- [ ] Top-K exact ranking
-- [ ] family/genre filters
-- [ ] BPM filter
-- [ ] key policy/filter
-- [ ] confidence filter
-- [ ] vocal/mood/instrument/production filters
-- [ ] JSON/CSV export
+Implementation foundation: #73 / PR #75. Full-catalog performance and manual relevance acceptance remain open.
+
+- [x] full-track query
+- [x] self-match include/exclude policy
+- [x] deterministic Top-K exact ranking
+- [x] family/genre filters
+- [x] BPM filter
+- [x] key filter
+- [x] confidence filter
+- [x] vocal/mood/instrument/production filters
+- [x] source-folder filter
+- [x] AudioProfile metadata enrichment in results
+- [x] separate embedding/ranking latency
+- [x] explicit JSON/CSV export
+- [ ] real-catalog self-match sanity near 1.0
+- [ ] real-catalog Top-10/50/100 latency benchmark
+- [ ] manual similarity relevance acceptance
 
 ### #32 Russian text search
-- [ ] RU UTF-8 text embedding on real CLaMP runtime
-- [ ] native RU baseline without LLM rewrite
-- [ ] text Top-K search
-- [ ] paired RU/EN benchmark
-- [ ] query history
-- [ ] empty/oversized query handling
+Implementation foundation: #73 / PR #75. Paired RU/EN relevance benchmark remains open.
+
+- [x] RU UTF-8 text embedding proven on real CLaMP runtime by #27/#29 P0
+- [x] native RU baseline without LLM rewrite
+- [x] text Top-K exact search against catalog audio vectors
+- [x] text embedding cache by backend/query identity
+- [x] local query history in `retrieval.sqlite3`, separate from analysis history
+- [x] empty/oversized query handling
+- [x] corrupt text-cache recovery
+- [x] separate embedding/ranking latency
+- [x] explicit JSON/CSV export
+- [ ] paired RU/EN reviewed benchmark
+- [ ] manual Russian search relevance acceptance
 
 ### #33 Segments
 - [ ] segment policy benchmark
@@ -145,14 +170,19 @@ Persistent backend implementation is in main from earlier P0 work; PR #72 suppli
 - [ ] export
 
 ### #35 CLI
+PR #75 adds a dedicated lightweight `genre-test-retrieval` entry point; root-launcher unification remains separate.
+
 - [ ] retrieval-doctor
-- [ ] index
-- [ ] index-status
-- [ ] search-text
-- [ ] search-audio
-- [ ] reindex --stale-only
-- [ ] stable exit codes
-- [ ] Cyrillic path/query tests
+- [x] index
+- [x] index-status (`status`)
+- [x] search-text
+- [x] search-audio
+- [x] reindex --stale-only semantics (`index` skips current cache hits)
+- [x] explicit active-backend rebuild
+- [x] retrieval query-history command
+- [ ] stable documented exit codes
+- [ ] root `Genre_test_START.cmd` command aliases
+- [ ] Cyrillic path/query real-machine tests
 
 ### #36 Benchmark
 - [ ] reviewed relevance schema
@@ -219,11 +249,12 @@ Baseline remains **CLaMP 3 SAAS + MERT + XLM-R** until benchmark evidence suppor
 
 ### #39 Existing catalog
 - [ ] resolve source root(s)
-- [ ] reuse v0.4 track_id/profile metadata
-- [ ] embed only retrieval layer
-- [ ] resume/safe-stop
+- [x] reuse v0.4 track_id/profile metadata in retrieval orchestration
+- [x] embed only retrieval layer; no MAEST/AST re-analysis in index path
+- [x] resume semantics through per-track transactional cache commits
+- [ ] explicit Safe Stop UX/reporting
 - [ ] >=99% coverage or explained failures
-- [ ] second-pass cache verification
+- [ ] second-pass cache verification on real catalog
 - [ ] index report
 - [ ] backup/restore instructions
 
