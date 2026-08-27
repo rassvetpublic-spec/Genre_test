@@ -28,7 +28,6 @@ from clamp3_runtime_smoke import (  # noqa: E402
     _text_embedding,
     _waveform_from_audio_array,
 )
-from genre_test.retrieval.mert_compat import ensure_mert_weight_norm_compat  # noqa: E402
 from genre_test.retrieval.model_pins import (  # noqa: E402
     CLAMP3_WEIGHT_FILENAME,
     EMBEDDING_DIMENSION,
@@ -140,11 +139,15 @@ class Clamp3RuntimeEngine:
         if self.mert_extractor is not None:
             return
         assert self.assets is not None
-        self.mert_compat = ensure_mert_weight_norm_compat(self.assets["mert_dir"])
         self.mert_extractor = _load_mert_extractor(
             self.upstream_root,
             self.assets["mert_dir"],
             self.device,
+        )
+        self.mert_compat = getattr(
+            self.mert_extractor,
+            "genre_test_mert_compat",
+            None,
         )
 
     def embed_text(self, text: str) -> tuple[float, ...]:
