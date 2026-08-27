@@ -11,7 +11,14 @@ from ..runtime_meta import default_history_path, default_state_dir, project_root
 from .clamp3_sidecar_backend import Clamp3SidecarBackend, default_clamp3_backend_info
 from .contracts import SearchFilter
 from .export import write_search_csv, write_search_json
-from .service import index_catalog, index_status, rebuild_catalog, search_audio, search_text
+from .service import (
+    SearchResult,
+    index_catalog,
+    index_status,
+    rebuild_catalog,
+    search_audio,
+    search_text,
+)
 from .storage import RetrievalStore
 
 app = typer.Typer(
@@ -68,19 +75,28 @@ def _progress(current: int, total: int, message: str) -> None:
     console.print(f"[{current}/{total}] {message}")
 
 
-def _export(result: object, *, json_out: Path | None, csv_out: Path | None) -> None:
+def _export(
+    result: SearchResult,
+    *,
+    json_out: Path | None,
+    csv_out: Path | None,
+) -> None:
     if json_out is not None:
-        target = write_search_json(result, json_out)  # type: ignore[arg-type]
+        target = write_search_json(result, json_out)
         console.print(f"JSON: {target}")
     if csv_out is not None:
-        target = write_search_csv(result, csv_out)  # type: ignore[arg-type]
+        target = write_search_csv(result, csv_out)
         console.print(f"CSV: {target}")
 
 
+@app.command("retrieval-index-status", hidden=True)
 @app.command("status")
 def status_command(
     db: Annotated[Path | None, typer.Option("--db", help="Retrieval SQLite path")] = None,
-    history: Annotated[Path | None, typer.Option("--history", help="Analysis history SQLite path")] = None,
+    history: Annotated[
+        Path | None,
+        typer.Option("--history", help="Analysis history SQLite path"),
+    ] = None,
 ) -> None:
     """Show current catalog/cache/stale/corruption status without starting CLaMP."""
     store = RetrievalStore(db or _default_db())
@@ -93,6 +109,7 @@ def status_command(
     _print_json(status.to_dict())
 
 
+@app.command("retrieval-index", hidden=True)
 @app.command("index")
 def index_command(
     db: Annotated[Path | None, typer.Option("--db")] = None,
@@ -117,6 +134,7 @@ def index_command(
     _print_json(report.to_dict())
 
 
+@app.command("retrieval-rebuild", hidden=True)
 @app.command("rebuild")
 def rebuild_command(
     db: Annotated[Path | None, typer.Option("--db")] = None,
@@ -165,6 +183,7 @@ def _search_options(
     )
 
 
+@app.command("retrieval-search-text", hidden=True)
 @app.command("search-text")
 def search_text_command(
     text: Annotated[str, typer.Argument(help="Native UTF-8 text query")],
@@ -174,12 +193,24 @@ def search_text_command(
     top_k: Annotated[int, typer.Option("--top-k", min=1, max=1000)] = 20,
     family: Annotated[str | None, typer.Option("--family", help="Comma-separated")] = None,
     genre: Annotated[str | None, typer.Option("--genre", help="Comma-separated")] = None,
-    key: Annotated[str | None, typer.Option("--key", help="Comma-separated, e.g. B minor")] = None,
+    key: Annotated[
+        str | None,
+        typer.Option("--key", help="Comma-separated, e.g. B minor"),
+    ] = None,
     vocal: Annotated[str | None, typer.Option("--vocal", help="Comma-separated")] = None,
     mood: Annotated[str | None, typer.Option("--mood", help="Comma-separated")] = None,
-    instrument: Annotated[str | None, typer.Option("--instrument", help="Comma-separated")] = None,
-    production: Annotated[str | None, typer.Option("--production", help="Comma-separated")] = None,
-    source_folder: Annotated[str | None, typer.Option("--source-folder", help="Comma-separated roots")] = None,
+    instrument: Annotated[
+        str | None,
+        typer.Option("--instrument", help="Comma-separated"),
+    ] = None,
+    production: Annotated[
+        str | None,
+        typer.Option("--production", help="Comma-separated"),
+    ] = None,
+    source_folder: Annotated[
+        str | None,
+        typer.Option("--source-folder", help="Comma-separated roots"),
+    ] = None,
     bpm_min: Annotated[float | None, typer.Option("--bpm-min", min=0)] = None,
     bpm_max: Annotated[float | None, typer.Option("--bpm-max", min=0)] = None,
     min_confidence: Annotated[
@@ -220,6 +251,7 @@ def search_text_command(
     _export(result, json_out=json_out, csv_out=csv_out)
 
 
+@app.command("retrieval-search-audio", hidden=True)
 @app.command("search-audio")
 def search_audio_command(
     audio: Annotated[
@@ -235,9 +267,18 @@ def search_audio_command(
     key: Annotated[str | None, typer.Option("--key", help="Comma-separated")] = None,
     vocal: Annotated[str | None, typer.Option("--vocal", help="Comma-separated")] = None,
     mood: Annotated[str | None, typer.Option("--mood", help="Comma-separated")] = None,
-    instrument: Annotated[str | None, typer.Option("--instrument", help="Comma-separated")] = None,
-    production: Annotated[str | None, typer.Option("--production", help="Comma-separated")] = None,
-    source_folder: Annotated[str | None, typer.Option("--source-folder", help="Comma-separated roots")] = None,
+    instrument: Annotated[
+        str | None,
+        typer.Option("--instrument", help="Comma-separated"),
+    ] = None,
+    production: Annotated[
+        str | None,
+        typer.Option("--production", help="Comma-separated"),
+    ] = None,
+    source_folder: Annotated[
+        str | None,
+        typer.Option("--source-folder", help="Comma-separated roots"),
+    ] = None,
     bpm_min: Annotated[float | None, typer.Option("--bpm-min", min=0)] = None,
     bpm_max: Annotated[float | None, typer.Option("--bpm-max", min=0)] = None,
     min_confidence: Annotated[
@@ -278,6 +319,7 @@ def search_audio_command(
     _export(result, json_out=json_out, csv_out=csv_out)
 
 
+@app.command("retrieval-search-history", hidden=True)
 @app.command("history")
 def history_command(
     db: Annotated[Path | None, typer.Option("--db")] = None,
