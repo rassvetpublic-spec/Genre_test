@@ -10,9 +10,15 @@ def test_launcher_exposes_p0_gate_command() -> None:
     assert 'scripts\\clamp3_p0_gate.py' in launcher
 
 
-def test_p0_gate_requires_repeatability_and_shutdown_checks() -> None:
+def test_p0_gate_requires_real_core_cuda_repeatability_and_shutdown_checks() -> None:
     gate = (ROOT / "scripts" / "clamp3_p0_gate.py").read_text(encoding="utf-8")
     assert "MAEST+AST CUDA probe" in gate
+    assert '"maest_cuda"' in gate
+    assert '"maest_windows_positive"' in gate
+    assert '"ast_present"' in gate
+    assert '"ast_status_ok"' in gate
+    assert '"ast_cuda"' in gate
+    assert '"ast_windows_positive"' in gate
     assert '"direct_text_repeatable"' in gate
     assert '"direct_audio_repeatable"' in gate
     assert '"sidecar_text_repeatable"' in gate
