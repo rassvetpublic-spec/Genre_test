@@ -40,7 +40,9 @@ from genre_test.retrieval.model_pins import (  # noqa: E402
 
 
 def _default_runtime_root() -> Path:
-    return REPO_ROOT / ".genre_test" / "retrieval"
+    # Historical name retained for the internal CLI argument. The value is the
+    # shared Genre_test state root; there is no physical `.genre_test/retrieval` container.
+    return REPO_ROOT / ".genre_test"
 
 
 def _package_version(name: str) -> str | None:
