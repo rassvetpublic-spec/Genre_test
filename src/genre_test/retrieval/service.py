@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Callable
 
 from ..track_identity import identify_track
 from .backend import RetrievalBackend
@@ -234,7 +234,7 @@ def index_catalog(
                 raise ValueError("backend returned unexpected full-track embedding identity")
             store.put(vector, backend=backend.info, path=track.path)
             embedded += 1
-        except Exception:
+        except (OSError, RuntimeError, ValueError):
             failed_track_ids.append(track.track_id)
 
     return IndexRunReport(
@@ -336,11 +336,12 @@ def search_audio(
     backend: RetrievalBackend,
     audio_path: Path,
     top_k: int = 20,
-    filters: SearchFilter = SearchFilter(),
+    filters: SearchFilter | None = None,
     exclude_self: bool = True,
 ) -> SearchResult:
     if top_k <= 0:
         raise ValueError("top_k must be positive")
+    active_filters = filters or SearchFilter()
     identity = identify_track(Path(audio_path))
     query_identity = _active_identity(backend, identity.track_id)
 
@@ -357,7 +358,7 @@ def search_audio(
         history_path=history_path,
         backend=backend,
         query_vector=vector,
-        filters=filters,
+        filters=active_filters,
         top_k=top_k,
         exclude_track_id=identity.track_id if exclude_self else None,
     )
@@ -366,7 +367,7 @@ def search_audio(
         backend=backend.info,
         query_track_id=identity.track_id,
         top_k=top_k,
-        filters=asdict(filters),
+        filters=asdict(active_filters),
         embedding_seconds=embedding_seconds,
         ranking_seconds=ranking_seconds,
         result_count=len(hits),
@@ -381,7 +382,7 @@ def search_audio(
         query_text=None,
         language=None,
         query_track_id=identity.track_id,
-        filters=filters,
+        filters=active_filters,
         hits=hits,
     )
 
@@ -394,7 +395,7 @@ def search_text(
     text: str,
     language: str | None = None,
     top_k: int = 20,
-    filters: SearchFilter = SearchFilter(),
+    filters: SearchFilter | None = None,
 ) -> SearchResult:
     normalized = text.strip()
     if not normalized:
@@ -405,6 +406,7 @@ def search_text(
         )
     if top_k <= 0:
         raise ValueError("top_k must be positive")
+    active_filters = filters or SearchFilter()
 
     identity = EmbeddingIdentity.for_text(
         backend.info.fingerprint,
@@ -425,7 +427,7 @@ def search_text(
         history_path=history_path,
         backend=backend,
         query_vector=vector,
-        filters=filters,
+        filters=active_filters,
         top_k=top_k,
         exclude_track_id=None,
     )
@@ -435,7 +437,7 @@ def search_text(
         query_text=normalized,
         language=identity.language,
         top_k=top_k,
-        filters=asdict(filters),
+        filters=asdict(active_filters),
         embedding_seconds=embedding_seconds,
         ranking_seconds=ranking_seconds,
         result_count=len(hits),
@@ -450,6 +452,6 @@ def search_text(
         query_text=normalized,
         language=identity.language,
         query_track_id=None,
-        filters=filters,
+        filters=active_filters,
         hits=hits,
     )
