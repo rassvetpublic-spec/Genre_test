@@ -61,7 +61,7 @@ function Move-LegacyDirectory {
         return
     }
     if (Test-Path -LiteralPath $Destination) {
-        throw "Cannot migrate $Label: both legacy and new paths exist. Legacy=$Source New=$Destination"
+        throw "Cannot migrate ${Label}: both legacy and new paths exist. Legacy=$Source New=$Destination"
     }
     New-Item -ItemType Directory -Force -Path (Split-Path $Destination -Parent) | Out-Null
     Move-Item -LiteralPath $Source -Destination $Destination
@@ -78,7 +78,7 @@ function Move-LegacyFile {
         return
     }
     if (Test-Path -LiteralPath $Destination) {
-        throw "Cannot migrate $Label: both legacy and new paths exist. Legacy=$Source New=$Destination"
+        throw "Cannot migrate ${Label}: both legacy and new paths exist. Legacy=$Source New=$Destination"
     }
     New-Item -ItemType Directory -Force -Path (Split-Path $Destination -Parent) | Out-Null
     Move-Item -LiteralPath $Source -Destination $Destination
@@ -206,7 +206,7 @@ if ($Install) {
         Invoke-Checked $launcher @launcherArgs
     }
 
-    & $PythonExe -c "import sys; print(sys.executable); raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)"
+    & $PythonExe -c "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)"
     if ($LASTEXITCODE -ne 0) {
         throw "Migrated/new CLaMP virtual environment is not runnable at $PythonExe"
     }
