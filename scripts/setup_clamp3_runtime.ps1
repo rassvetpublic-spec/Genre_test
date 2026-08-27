@@ -28,7 +28,7 @@ $VenvDir = Join-Path $RuntimeDir ".venv"
 $PythonExe = Join-Path $VenvDir "Scripts\python.exe"
 $CorePythonExe = Join-Path $RepoRoot ".venv\Scripts\python.exe"
 $UpstreamDir = Join-Path $RuntimeRoot "upstream\clamp3"
-$EvidenceDir = Join-Path $RuntimeRoot "evidence"
+$LogDir = Join-Path $RepoRoot ".genre_test\logs"
 $SmokeScript = Join-Path $RepoRoot "scripts\clamp3_runtime_smoke.py"
 $SidecarClientSmokeScript = Join-Path $RepoRoot "scripts\clamp3_sidecar_client_smoke.py"
 
@@ -71,6 +71,7 @@ function Get-Python312 {
 Write-Section "Genre_test CLaMP 3 P0 runtime"
 Write-Host "Repo root    : $RepoRoot"
 Write-Host "Runtime root : $RuntimeRoot"
+Write-Host "Log root     : $LogDir"
 Write-Host "CLaMP code   : $ClampRevision"
 Write-Host "Torch target : $TorchVersion / cu130"
 
@@ -146,10 +147,13 @@ Write-Section "Runtime doctor"
 Write-Host "MERT terms   : $MertLicense (recorded provenance; development setup prompt deferred)"
 Invoke-Checked $PythonExe -c "import sys, torch; print('python', sys.version.split()[0]); print('torch', torch.__version__); print('cuda_runtime', torch.version.cuda); print('cuda_available', torch.cuda.is_available()); print('device', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'); print('arch_list', torch.cuda.get_arch_list() if torch.cuda.is_available() else [])"
 
+New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
+
 if ($DownloadModels) {
     Write-Section "Explicit pinned model download"
     Write-Host "Downloading CLaMP 3 SAAS + XLM-R + MERT. This can use several GB of disk/cache."
-    $downloadProbe = Join-Path $RuntimeRoot "download_probe.json"
+    $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
+    $downloadProbe = Join-Path $LogDir "clamp3_download_probe_$stamp.json"
     $downloadArgs = @(
         $SmokeScript,
         "--runtime-root", $RuntimeRoot,
@@ -165,13 +169,13 @@ if ($DownloadModels) {
         $downloadArgs += @("--audio", (Resolve-Path $AudioPath).Path)
     }
     Invoke-Checked $PythonExe @downloadArgs
+    Write-Host "Log: $downloadProbe" -ForegroundColor Green
 }
 
 if ($RunSmoke) {
     Write-Section "Real direct-runtime embedding smoke"
-    New-Item -ItemType Directory -Force -Path $EvidenceDir | Out-Null
     $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
-    $evidencePath = Join-Path $EvidenceDir "clamp3_runtime_smoke_$stamp.json"
+    $evidencePath = Join-Path $LogDir "clamp3_runtime_smoke_$stamp.json"
     $args = @(
         $SmokeScript,
         "--runtime-root", $RuntimeRoot,
@@ -186,7 +190,7 @@ if ($RunSmoke) {
         $args += @("--audio", (Resolve-Path $AudioPath).Path)
     }
     Invoke-Checked $PythonExe @args
-    Write-Host "Evidence: $evidencePath" -ForegroundColor Green
+    Write-Host "Log: $evidencePath" -ForegroundColor Green
 }
 
 if ($RunSidecarSmoke) {
@@ -197,9 +201,8 @@ if ($RunSidecarSmoke) {
     if (-not (Test-Path $SidecarClientSmokeScript)) {
         throw "Sidecar client smoke script is missing: $SidecarClientSmokeScript"
     }
-    New-Item -ItemType Directory -Force -Path $EvidenceDir | Out-Null
     $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
-    $sidecarEvidencePath = Join-Path $EvidenceDir "clamp3_sidecar_smoke_$stamp.json"
+    $sidecarEvidencePath = Join-Path $LogDir "clamp3_sidecar_smoke_$stamp.json"
     $sidecarArgs = @(
         $SidecarClientSmokeScript,
         "--repo-root", $RepoRoot,
@@ -215,8 +218,9 @@ if ($RunSidecarSmoke) {
         $sidecarArgs += @("--audio", (Resolve-Path $AudioPath).Path)
     }
     Invoke-Checked $CorePythonExe @sidecarArgs
-    Write-Host "Sidecar evidence: $sidecarEvidencePath" -ForegroundColor Green
+    Write-Host "Log: $sidecarEvidencePath" -ForegroundColor Green
 }
 
 Write-Section "Done"
 Write-Host "Core .venv was not modified. Retrieval runtime remains isolated under .genre_test\retrieval."
+Write-Host "All CLaMP diagnostics are stored under .genre_test\logs."
