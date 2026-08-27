@@ -55,7 +55,7 @@ def _runtime_versions() -> dict[str, str | None]:
         name: _package_version(name)
         for name in (
             "torch",
-            "torchaudio",
+            "scipy",
             "transformers",
             "accelerate",
             "huggingface_hub",
@@ -272,27 +272,33 @@ def _text_embedding(model, tokenizer, text: str, device):
     return _weighted_global(outputs, weights)
 
 
+def _waveform_from_audio_array(data, sample_rate: int, device):
+    import math
+
+    import numpy as np
+    import torch
+    from scipy.signal import resample_poly
+
+    if data.shape[0] == 0:
+        raise ValueError("Audio file contains no samples")
+    mono = np.asarray(data, dtype=np.float32).mean(axis=1)
+    if sample_rate != TARGET_SAMPLE_RATE:
+        divisor = math.gcd(sample_rate, TARGET_SAMPLE_RATE)
+        mono = resample_poly(
+            mono,
+            TARGET_SAMPLE_RATE // divisor,
+            sample_rate // divisor,
+        ).astype(np.float32, copy=False)
+    return torch.from_numpy(np.ascontiguousarray(mono)).unsqueeze(0).to(device)
+
+
 def _load_audio_for_mert(audio_path: Path, device):
     import soundfile as sf
-    import torch
-    import torchaudio
 
     data, sample_rate = sf.read(
         str(audio_path), dtype="float32", always_2d=True
     )
-    if data.shape[0] == 0:
-        raise ValueError("Audio file contains no samples")
-
-    waveform = torch.from_numpy(data.T.copy())
-    if waveform.shape[0] > 1:
-        waveform = waveform.mean(dim=0, keepdim=True)
-    waveform = waveform.to(device)
-
-    if sample_rate != TARGET_SAMPLE_RATE:
-        resampler = torchaudio.transforms.Resample(sample_rate, TARGET_SAMPLE_RATE).to(device)
-        waveform = resampler(waveform)
-
-    return waveform
+    return _waveform_from_audio_array(data, int(sample_rate), device)
 
 
 def _mert_features(audio_path: Path, extractor, device):

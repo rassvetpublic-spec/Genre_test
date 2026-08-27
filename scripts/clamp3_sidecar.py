@@ -26,6 +26,7 @@ from clamp3_runtime_smoke import (  # noqa: E402
     _load_mert_extractor,
     _runtime_versions,
     _text_embedding,
+    _waveform_from_audio_array,
 )
 from genre_test.retrieval.model_pins import (  # noqa: E402
     CLAMP3_WEIGHT_FILENAME,
@@ -134,8 +135,6 @@ class Clamp3RuntimeEngine:
         end_s: float | None,
     ):
         import soundfile as sf
-        import torch
-        import torchaudio
 
         with sf.SoundFile(str(path)) as handle:
             sample_rate = int(handle.samplerate)
@@ -162,19 +161,7 @@ class Clamp3RuntimeEngine:
                 always_2d=True,
             )
 
-        if data.shape[0] == 0:
-            raise ValueError("audio contains no samples")
-        waveform = torch.from_numpy(data.T.copy())
-        if waveform.shape[0] > 1:
-            waveform = waveform.mean(dim=0, keepdim=True)
-        waveform = waveform.to(self.device)
-        if sample_rate != TARGET_SAMPLE_RATE:
-            resampler = torchaudio.transforms.Resample(
-                sample_rate,
-                TARGET_SAMPLE_RATE,
-            ).to(self.device)
-            waveform = resampler(waveform)
-        return waveform
+        return _waveform_from_audio_array(data, sample_rate, self.device)
 
     def _mert_features_for_audio(
         self,

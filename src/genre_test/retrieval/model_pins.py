@@ -28,8 +28,9 @@ TEXT_MODEL_ID = "FacebookAI/xlm-roberta-base"
 TEXT_MODEL_REVISION = "e73636d4f797dec63c3081bb6ed5c7b0bb3f2089"
 TEXT_MODEL_LICENSE = "MIT"
 
-PREPROCESSING_VERSION = "clamp3-mert-24k-mono-5s-mean-v1"
+PREPROCESSING_VERSION = "clamp3-mert-24k-mono-scipy-polyphase-5s-mean-v2"
 TARGET_SAMPLE_RATE = 24_000
+RESAMPLER = "scipy.signal.resample_poly-1.13.1"
 MONO = True
 RAW_WAVEFORM_NORMALIZE = False
 PROCESSOR_NORMALIZE = True
@@ -72,6 +73,7 @@ def selected_model_manifest() -> dict[str, Any]:
         "preprocessing": {
             "version": PREPROCESSING_VERSION,
             "target_sample_rate": TARGET_SAMPLE_RATE,
+            "resampler": RESAMPLER,
             "mono": MONO,
             "raw_waveform_normalize": RAW_WAVEFORM_NORMALIZE,
             "processor_normalize": PROCESSOR_NORMALIZE,

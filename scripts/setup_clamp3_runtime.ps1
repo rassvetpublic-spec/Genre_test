@@ -51,7 +51,7 @@ function Invoke-Checked {
 function Get-Python312 {
     $py = Get-Command py -ErrorAction SilentlyContinue
     if ($py) {
-        & $py.Source -3.12 -c "import sys; assert sys.version_info[:2] == (3, 12); print(sys.executable)" 2>$null
+        & $py.Source -3.12 -c "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)" 2>$null
         if ($LASTEXITCODE -eq 0) {
             return @($py.Source, "-3.12")
         }
@@ -96,7 +96,8 @@ if ($DownloadModels -and -not $AcceptMertNonCommercialTerms) {
 if ($Install) {
     Write-Section "Create isolated Python 3.12 runtime"
     New-Item -ItemType Directory -Force -Path $RuntimeDir | Out-Null
-    $python312 = Get-Python312
+    # Force a clean array boundary: native probe stdout must never become launcher arguments.
+    $python312 = @(Get-Python312)
     if (-not (Test-Path $PythonExe)) {
         $launcher = $python312[0]
         $launcherArgs = @()
@@ -108,7 +109,7 @@ if ($Install) {
     }
 
     Invoke-Checked $PythonExe -m pip install --upgrade pip
-    Invoke-Checked $PythonExe -m pip install --index-url $TorchIndex "torch==$TorchVersion" "torchaudio==$TorchVersion"
+    Invoke-Checked $PythonExe -m pip install --index-url $TorchIndex "torch==$TorchVersion"
     Invoke-Checked $PythonExe -m pip install `
         "transformers==4.40.0" `
         "accelerate==0.34.0" `
@@ -118,6 +119,7 @@ if ($Install) {
         "tqdm==4.66.5" `
         "unidecode==1.3.6" `
         "soundfile==0.12.1" `
+        "scipy==1.13.1" `
         "sentencepiece==0.2.0" `
         "safetensors>=0.4.3,<1"
 

@@ -9,6 +9,7 @@ from genre_test.retrieval.model_pins import (
     MERT_LICENSE,
     MERT_REVISION,
     PREPROCESSING_VERSION,
+    RESAMPLER,
     TEXT_MODEL_REVISION,
     manifest_fingerprint,
     selected_model_manifest,
@@ -27,6 +28,7 @@ def test_selected_retrieval_manifest_is_explicit_and_stable() -> None:
     assert manifest["text"]["revision"] == TEXT_MODEL_REVISION
     assert manifest["preprocessing"]["version"] == PREPROCESSING_VERSION
     assert manifest["preprocessing"]["target_sample_rate"] == 24_000
+    assert manifest["preprocessing"]["resampler"] == RESAMPLER
     assert manifest["preprocessing"]["window_seconds"] == 5.0
     assert manifest["preprocessing"]["processor_normalize"] is True
     assert manifest["preprocessing"]["embedding_dimension"] == 768

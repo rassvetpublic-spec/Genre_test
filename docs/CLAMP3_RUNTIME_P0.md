@@ -41,7 +41,7 @@ Text encoder/tokenizer base:
 
 The MERT revision is the commit explicitly recommended in the MERT model documentation for pinned loading. The project still applies the stricter current MERT license gate and does not treat this backend as commercially unrestricted.
 
-## Preprocessing identity v1
+## Preprocessing identity v2
 
 The first smoke reproduces the upstream audio policy deliberately:
 
@@ -49,6 +49,7 @@ The first smoke reproduces the upstream audio policy deliberately:
 sample rate                  24000 Hz
 channels                     mono
 raw waveform normalization   false
+resampler                    scipy.signal.resample_poly 1.13.1
 feature processor normalize  true
 MERT window                  5.0 s
 window overlap               0%
@@ -64,10 +65,10 @@ final retrieval vector       L2 normalized
 Version string:
 
 ```text
-clamp3-mert-24k-mono-5s-mean-v1
+clamp3-mert-24k-mono-scipy-polyphase-5s-mean-v2
 ```
 
-Any future change to these rules requires a new preprocessing identity and therefore a new embedding/cache identity.
+The v2 identity replaces the un-runnable v1 bootstrap, which incorrectly required a nonexistent `torchaudio==2.12.1` cu130 wheel. Pinned upstream CLaMP/MERT does not import torchaudio. Any future change to these rules requires a new preprocessing identity and therefore a new embedding/cache identity.
 
 ## Runtime architecture
 
