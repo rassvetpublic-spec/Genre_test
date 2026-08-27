@@ -101,30 +101,42 @@ def main() -> int:
     if not audio.is_file():
         raise FileNotFoundError(audio)
 
+    state_root = repo_root / ".genre_test"
+    legacy_retrieval_root = state_root / "retrieval"
     core_python = repo_root / ".venv" / "Scripts" / "python.exe"
     core_cli = repo_root / ".venv" / "Scripts" / "genre-test.exe"
     isolated_python = (
-        repo_root
-        / ".genre_test"
-        / "retrieval"
-        / "runtime"
+        state_root
+        / "runtimes"
+        / "clamp3"
         / ".venv"
         / "Scripts"
         / "python.exe"
     )
-    runtime_root = repo_root / ".genre_test" / "retrieval"
-    log_dir = repo_root / ".genre_test" / "logs"
+    upstream_root = state_root / "upstream" / "clamp3"
+    log_dir = state_root / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     stamp = time.strftime("%Y%m%d_%H%M%S")
+
+    if legacy_retrieval_root.exists():
+        raise RuntimeError(
+            "Obsolete .genre_test/retrieval layout still exists. "
+            "Run Genre_test_START.cmd retrieval-setup once to migrate it before P0."
+        )
 
     for required in (core_python, core_cli, isolated_python):
         if not required.is_file():
             raise FileNotFoundError(required)
+    if not (state_root / "models").is_dir():
+        raise FileNotFoundError(state_root / "models")
+    if not (upstream_root / ".git").is_dir():
+        raise FileNotFoundError(upstream_root / ".git")
 
     report: dict[str, Any] = {
         "status": "RUNNING",
         "audio": str(audio),
         "repeat": args.repeat,
+        "state_root": str(state_root),
         "log_dir": str(log_dir),
         "gate": "CLAMP3_P0_27_29",
     }
@@ -182,7 +194,9 @@ def main() -> int:
             str(isolated_python),
             str(repo_root / "scripts" / "clamp3_runtime_smoke.py"),
             "--runtime-root",
-            str(runtime_root),
+            str(state_root),
+            "--upstream-root",
+            str(upstream_root),
             "--audio",
             str(audio),
             "--repeat",
@@ -228,6 +242,7 @@ def main() -> int:
     sidecar_text_audio = float(sidecar["audio"]["text_audio_cosine"])
     checks = {
         **core_checks,
+        "flat_state_layout": not legacy_retrieval_root.exists(),
         "direct_status_ok": direct.get("status") == "OK",
         "sidecar_status_ok": sidecar.get("status") == "OK",
         "direct_text_repeatable": float(direct["text"]["repeat_cosine"]) >= 0.99999,
