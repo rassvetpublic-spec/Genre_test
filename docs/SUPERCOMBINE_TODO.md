@@ -34,6 +34,11 @@ The objective is studio-ready audio with audible generative defects corrected. T
 - [x] Geekatplay org reuse audit documented
 - [x] live Resource Monitor implemented in PR #42 (#48)
 - [ ] complete `TechnicalProfileOutputV1` (#45)
+- [ ] implement `GenerativeDefectProfileV1` from `docs/GENERATIVE_DEFECT_PROFILE.md`
+- [ ] validate corpus manifest/annotation schemas from `docs/GENERATIVE_AUDIO_REPAIR_BENCHMARK.md`
+- [ ] build private-local 50–100 excerpt corpus; target v1 = 80 real SUNO excerpts plus clean controls
+- [ ] freeze pilot/calibration/test/challenge splits by parent source
+- [ ] establish two-reviewer annotation and disagreement/adjudication protocol
 - [ ] shared decode/canonical stereo buffer
 - [ ] timestamped technical marker contract
 - [ ] common `ProcessingManifest` / `DerivedAssetIdentity` contract
@@ -58,6 +63,10 @@ The objective is studio-ready audio with audible generative defects corrected. T
 - [ ] phase/mono instability detector
 - [ ] transient-smear diagnostic
 - [ ] candidate restoration backend inventory
+- [ ] deterministic DSP Safe/Probe baselines
+- [ ] A2SB bandwidth-extension/local-inpainting spike
+- [ ] compare Apollo vs A2SB vs DSP vs stem-assisted routes by defect class
+- [ ] clean-control over-processing and false-positive gates
 - [ ] Apollo compatibility/provenance/runtime spike (#63)
 - [ ] pin Apollo code revision, checkpoint identity, license and SHA-256
 - [ ] verify whether Timbrica MP3/Vocal/Universal variants map to public reproducible checkpoints
@@ -76,6 +85,9 @@ The objective is studio-ready audio with audible generative defects corrected. T
 - [ ] loudness-matched before/after
 - [ ] marker reduction + damage guard
 - [ ] processing manifest
+- [ ] hidden/randomized loudness-matched listening sessions via #54
+- [ ] report artifact reduction and musical damage as separate outcomes
+- [ ] allow `FULL_MIX_WINS`, `REGENERATE_SOURCE` and `INCONCLUSIVE` verdicts
 - [ ] CPU/GPU benchmark
 
 Explicit non-goals:
