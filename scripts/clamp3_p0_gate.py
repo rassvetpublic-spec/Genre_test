@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -17,6 +18,9 @@ REPO_ROOT = _repo_root()
 
 def _run(command: list[str], *, cwd: Path, timeout_s: float) -> dict[str, Any]:
     started = time.perf_counter()
+    env = os.environ.copy()
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
     completed = subprocess.run(
         command,
         cwd=cwd,
@@ -26,6 +30,7 @@ def _run(command: list[str], *, cwd: Path, timeout_s: float) -> dict[str, Any]:
         errors="replace",
         timeout=timeout_s,
         check=False,
+        env=env,
     )
     return {
         "command": command,
@@ -61,6 +66,17 @@ def _new_analysis_json(log_dir: Path, before: set[Path]) -> Path:
 
 def _uses_cuda(value: Any) -> bool:
     return "cuda" in str(value or "").lower()
+
+
+def _head_close(left: Any, right: Any, *, tolerance: float = 1e-5) -> bool:
+    try:
+        left_values = [float(value) for value in left]
+        right_values = [float(value) for value in right]
+    except (TypeError, ValueError):
+        return False
+    if not left_values or len(left_values) != len(right_values):
+        return False
+    return max(abs(a - b) for a, b in zip(left_values, right_values, strict=True)) <= tolerance
 
 
 def _parse_args() -> argparse.Namespace:
@@ -208,6 +224,8 @@ def main() -> int:
 
     direct = report["direct_runtime"]
     sidecar = report["sidecar"]
+    direct_text_audio = float(direct["audio"]["text_audio_cosine"])
+    sidecar_text_audio = float(sidecar["audio"]["text_audio_cosine"])
     checks = {
         **core_checks,
         "direct_status_ok": direct.get("status") == "OK",
@@ -220,6 +238,15 @@ def main() -> int:
         "direct_audio_norm": abs(float(direct["audio"]["norm"]) - 1.0) <= 1e-5,
         "sidecar_text_norm": abs(float(sidecar["text"]["norm"]) - 1.0) <= 1e-5,
         "sidecar_audio_norm": abs(float(sidecar["audio"]["norm"]) - 1.0) <= 1e-5,
+        # Cross-process equality is part of P0: direct and persistent-sidecar paths
+        # must represent the same input with the same pinned model/preprocessing.
+        "cross_text_head_match": _head_close(
+            direct["text"]["vector_head"], sidecar["text"]["vector_head"]
+        ),
+        "cross_audio_head_match": _head_close(
+            direct["audio"]["vector_head"], sidecar["audio"]["vector_head"]
+        ),
+        "cross_text_audio_cosine_match": abs(direct_text_audio - sidecar_text_audio) <= 1e-5,
         "sidecar_shutdown": sidecar.get("lifecycle", {}).get("running_after_close") is False,
         "sidecar_vram_released": sidecar.get("lifecycle", {}).get("gpu_memory_mib_after_close") == 0,
     }
