@@ -21,15 +21,18 @@ Deferred ideas: [`FAR_TODO.md`](FAR_TODO.md)
 - [x] choose exact CLaMP weight variant: SAAS for audio retrieval
 - [x] pin SAAS weight revision, filename, size and SHA-256
 - [x] choose exact MERT revision compatible with the pinned CLaMP extractor
-- [ ] build modern isolated Windows runtime on the target machine
-- [ ] audio embedding smoke
-- [ ] Russian text embedding smoke
-- [ ] measure repeatability
-- [ ] measure cold/warm latency
-- [ ] measure VRAM/RAM
-- [ ] test after MAEST+AST CUDA usage
-- [ ] test core-native compatibility
-- [ ] write final runtime decision
+- [x] build modern isolated Windows runtime on the target machine
+- [x] audio embedding smoke
+- [x] Russian text embedding smoke
+- [x] measure repeatability
+- [x] measure cold/warm latency
+- [x] measure VRAM/RAM
+- [x] test after MAEST+AST CUDA usage
+- [x] document core-native disposition: **N/A / intentionally not selected** after isolated sidecar passed; no core-native inference is claimed
+- [x] write final runtime decision: isolated persistent subprocess sidecar
+- [x] hardened target-PC P0 gate PASS on 2026-08-27 (`1cef99d` hardware evidence)
+
+Acceptance note: initial environment-creation time and complete first-download time were not retained as normalized historical metrics. This is documented in `CLAMP3_RUNTIME_P0.md`; it does not block the selected runtime correctness/architecture acceptance.
 
 ### #41 Licensing/provenance
 - [x] record CLaMP MIT metadata
@@ -56,22 +59,29 @@ Deferred ideas: [`FAR_TODO.md`](FAR_TODO.md)
 - [x] define structured sidecar error codes
 
 ### #29 Real CLaMP+MERT backend
-Implementation exists in PR #62; real RTX 5070 Ti evidence is still required before hardware-dependent items are considered accepted.
+Persistent backend implementation is in main from earlier P0 work; PR #72 supplies the final hardened target-PC hardware evidence and MERT compatibility correction.
 
 - [x] MERT adapter implemented
-- [x] exact upstream-compatible preprocessing v1 pinned in runtime manifest
+- [x] corrected upstream-compatible preprocessing v3 pinned in runtime manifest
+- [x] versioned in-memory `mert-weight-norm-key-remap-v1`
+- [x] verify pinned MERT source checkpoint is not modified
+- [x] verify MERT loads with no missing/unexpected/mismatched keys
 - [x] CLaMP audio adapter implemented
 - [x] CLaMP multilingual text adapter implemented
 - [x] persistent subprocess handshake implemented
 - [x] stable f32 little-endian/base64 vector transport
 - [x] lazy CLaMP/MERT loading
 - [x] clean shutdown / CUDA cache release path
-- [x] structured missing model / OOM / invalid request errors
+- [x] structured missing model / OOM / invalid request / inference errors
 - [x] keep model/library stdout off JSON protocol stdout
 - [x] end-to-end core -> persistent sidecar smoke command implemented
-- [ ] real Windows text/audio sidecar smoke
-- [ ] repeatability evidence on target hardware
-- [ ] verify VRAM release after shutdown
+- [x] real Windows text/audio sidecar smoke
+- [x] Russian UTF-8 direct/sidecar equality
+- [x] repeatability evidence on target hardware
+- [x] direct/sidecar cross-path text/audio consistency
+- [x] authoritative sidecar RAM + in-process CUDA metrics
+- [x] verify VRAM lifecycle after shutdown via live in-process CUDA allocation + process termination
+- [x] hardened target-PC P0 gate PASS
 
 ### #30 Cache/index
 - [x] `retrieval.sqlite3` schema v1
