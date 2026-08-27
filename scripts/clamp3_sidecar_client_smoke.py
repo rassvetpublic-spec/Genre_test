@@ -36,9 +36,11 @@ def _process_rss_bytes(pid: int | None) -> int | None:
         return None
     try:
         import psutil
-
+    except ImportError:
+        return None
+    try:
         return int(psutil.Process(pid).memory_info().rss)
-    except (ImportError, psutil.Error):
+    except psutil.Error:
         return None
 
 
