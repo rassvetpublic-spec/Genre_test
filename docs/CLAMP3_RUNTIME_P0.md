@@ -1,37 +1,32 @@
 # CLaMP 3 P0 — selected runtime and real Windows smoke
 
-Status: **initial RTX 5070 Ti gate completed, but final P0 revalidation is required after the UTF-8 sidecar fix and new direct↔sidecar equivalence checks. PR #72 remains open pending MTD.**
+Status: **implementation PR #72; final hardware re-run required before MTD**.
 
 Related: #26, #27, #29, #41.
 
 ## Selected model path
 
-For Genre_test audio retrieval the selected first production candidate is **CLaMP 3 SAAS**, not C2.
-
-Reason:
-- upstream documents SAAS as the recommended model for audio-based retrieval;
-- upstream `config.py` defaults to the SAAS checkpoint;
-- C2 is retained as the symbolic/MIDI/sheet-music candidate and is not part of the first audio-catalog runtime.
+For Genre_test audio retrieval the selected first production candidate is **CLaMP 3 SAAS**.
 
 Pinned identity:
 
 ```text
-CLaMP code:
+CLaMP code
   repo       https://github.com/sanderwood/clamp3.git
   revision   9016d2b0c8d12d1aa79c2e0ab201e6822bdc83a8
 
-CLaMP SAAS weight:
+CLaMP SAAS weight
   repo       sander-wood/clamp3
   revision   791815a04a3a2bd9ab64cf590ba8307930c179e6
   file       weights_clamp3_saas_h_size_768_t_model_FacebookAI_xlm-roberta-base_t_length_128_a_size_768_a_layers_12_a_length_128_s_size_768_s_layers_12_p_size_64_p_length_512.pth
   size       2571027658 bytes
   sha256     5033f868e3977be3945ee416b5a1718d5589a173c7ba8982231d8c94a6441d80
 
-MERT audio frontend:
+MERT audio frontend
   model      m-a-p/MERT-v1-95M
   revision   55fa29e5522049926c03d2ff9ae54d22c20e668f
 
-Text encoder/tokenizer base:
+Text encoder/tokenizer
   model      FacebookAI/xlm-roberta-base
   revision   e73636d4f797dec63c3081bb6ed5c7b0bb3f2089
 ```
@@ -61,45 +56,61 @@ Version string:
 clamp3-mert-24k-mono-scipy-polyphase-5s-mean-v2
 ```
 
-Any future change to these rules requires a new preprocessing identity and therefore a new embedding/cache identity.
-
 ## Runtime architecture
 
-The selected candidate remains an isolated persistent sidecar:
+The logical Python module remains `src/genre_test/retrieval/`, but there is **no physical `.genre_test/retrieval/` data directory**.
+
+Canonical runtime state:
 
 ```text
-Genre_test core .venv
-  Python 3.11–3.13
-  MAEST / AST runtime
-          |
-          | versioned UTF-8 JSON-lines protocol
-          v
-.genre_test/retrieval/
-  runtime/.venv      Python 3.12
-  upstream/clamp3    detached pinned checkout
-  models/            pinned local model snapshots
+.genre_test/
+  logs/
+    genre_test.log
+    clamp3_*.json
+    retrieval_p0_local_*.json
 
-.genre_test/logs/
-  genre_test.log
-  clamp3_*.json      all CLaMP smoke / P0 diagnostics
+  models/
+    clamp3-saas/
+    mert-v1-95m/
+    xlm-roberta-base/
+
+  runtimes/
+    clamp3/
+      .venv/
+
+  upstream/
+    clamp3/
+
+  history.sqlite3
+  retrieval.sqlite3          # when persistent retrieval indexing is used
 ```
 
-**Storage rule:** runtime/assets stay under `.genre_test/retrieval`; all diagnostics, smoke reports and P0 result JSONs go only to the existing common `.genre_test/logs` directory. Do not recreate `.genre_test/retrieval/evidence` or per-test evidence directories.
+Rules:
 
-The core `.venv` is not modified by the retrieval installer.
+- `.genre_test/logs/` is the only diagnostic/report location;
+- `.genre_test/models/` contains model assets;
+- `.genre_test/runtimes/clamp3/` contains the isolated Python runtime;
+- `.genre_test/upstream/clamp3/` contains the pinned detached upstream checkout;
+- `.genre_test/retrieval/` is obsolete and must not exist after migration;
+- `src/genre_test/retrieval/` remains the source-code package and is unrelated to the removed data directory.
 
-Validated GPU stack:
+## Automatic migration
+
+`Genre_test_START.cmd retrieval-setup` migrates the previous development layout without re-downloading model assets when possible:
 
 ```text
-RTX 5070 Ti / sm_120
-PyTorch 2.12.1+cu130
-CUDA 13.0
-Python 3.12.10 retrieval runtime
+.genre_test/retrieval/runtime/          -> .genre_test/runtimes/clamp3/
+.genre_test/retrieval/models/           -> .genre_test/models/
+.genre_test/retrieval/upstream/clamp3/  -> .genre_test/upstream/clamp3/
+.genre_test/retrieval/retrieval.sqlite3 -> .genre_test/retrieval.sqlite3
+.genre_test/retrieval/evidence/*        -> .genre_test/logs/
 ```
 
-## Hardware gate command
+The migration refuses destructive merging if both an old and a new destination already contain competing state. Once all known data is migrated, the obsolete `.genre_test/retrieval/` directory is removed.
 
-All user-facing runtime operations go through the repository root launcher.
+The isolated `.venv` is validated after migration before it is reused.
+
+## User-facing commands
 
 ```powershell
 .\Genre_test_START.cmd retrieval-status
@@ -109,108 +120,66 @@ All user-facing runtime operations go through the repository root launcher.
 .\Genre_test_START.cmd retrieval-p0-gate "D:\path\track.wav"
 ```
 
-The P0 command validates:
+For an existing development installation, run `retrieval-setup` once after pulling the flat-layout change. It performs the layout migration before normal setup checks.
+
+## Hardware P0 gate
+
+The complete P0 sequence is:
 
 ```text
-MAEST CUDA + AudioSet AST CUDA
-  -> direct isolated CLaMP 3 SAAS + MERT
-  -> repeated Russian text embedding
-  -> repeated full-track audio embedding
-  -> Genre_test core -> persistent sidecar
-  -> direct ↔ sidecar representation equivalence
-  -> process shutdown
-  -> per-process VRAM release
+flat state-layout check
+  -> MAEST CUDA
+  -> AudioSet AST CUDA
+  -> direct isolated CLaMP 3 + MERT ×2
+  -> Russian text ×2
+  -> full-track audio ×2
+  -> core -> persistent sidecar ×2
+  -> direct/sidecar cross-path equality checks
+  -> shutdown
+  -> VRAM release
 ```
 
-All generated JSON diagnostics are written directly under:
+Required invariants include:
 
 ```text
-.genre_test/logs/
+MAEST device                    cuda
+AST device                      cuda
+text/audio norm                 ~1.0
+within-path repeat cosine       >= 0.99999
+cross direct/sidecar text       match
+cross direct/sidecar audio      match
+cross text/audio cosine         match
+vector dimension                768
+sidecar shutdown                true
+sidecar VRAM after shutdown     0 MiB
+.genre_test/retrieval exists    false
 ```
 
-No test-specific result directories are created.
+## RTX 5070 Ti evidence history
 
-## Initial RTX 5070 Ti run — 2026-08-27
+The 2026-08-27 run on `C:\GIT\TEST.wav` already proved:
 
-Input: `C:\GIT\TEST.wav`, 330.92 s, WAV PCM 24-bit / 48 kHz stereo.
+- MAEST CUDA;
+- AudioSet AST CUDA;
+- CLaMP/MERT direct audio inference;
+- persistent sidecar audio inference;
+- within-process repeatability;
+- clean shutdown;
+- zero per-process VRAM after sidecar shutdown.
 
-The first version of the gate reported `PASS` and confirmed:
-- MAEST on CUDA, 3 windows;
-- AudioSet AST on CUDA, 3 windows, semantic status `ok`;
-- direct CLaMP 3 runtime `OK`;
-- persistent sidecar `OK`;
-- within-process text/audio repeatability;
-- normalized vectors;
-- clean sidecar shutdown;
-- zero sidecar PID VRAM after shutdown.
+Review of that report found that direct and sidecar audio vectors matched, but the Russian text vectors did not. Therefore the old PASS was intentionally **not accepted as final P0 closure**.
 
-Direct runtime baseline:
-
-```text
-CLaMP load                6.65 s
-Russian text cold         2.46 s
-Russian text warm         0.012 s
-MERT model load           1.44 s
-full-track audio run #1   1.83 s
-full-track audio run #2   1.49 s
-CUDA peak allocated       ~2.44 GB
-```
-
-Sidecar baseline:
-
-```text
-health/startup             5.56 s
-text cold                 13.93 s
-text warm                  0.013 s
-audio run #1               2.21 s
-audio run #2               1.40 s
-shutdown                   clean
-VRAM after shutdown        0 MiB for sidecar PID
-```
-
-### Defect found during evidence review
-
-The direct and sidecar **audio** vector heads matched within float precision, but the direct and sidecar **Russian text** vector heads and text↔audio cosine did not match. The original gate checked repeatability inside each process but did not compare the two execution paths, so that result is not sufficient to close #29.
-
-Root cause candidate and fix: the parent transport explicitly encoded JSON-lines as UTF-8, while the isolated Windows Python child was not forced into UTF-8 mode for redirected standard streams. `Clamp3SidecarBackend` now starts the child with Python `-X utf8`; P0 subprocess capture also forces `PYTHONUTF8=1` and `PYTHONIOENCODING=utf-8`.
-
-The gate now additionally requires:
-
-```text
-cross_text_head_match              true
-cross_audio_head_match             true
-cross_text_audio_cosine_match      true
-```
-
-A new real hardware run is required after this fix. Only that strengthened gate may close #27/#29 P0.
-
-## Gate invariants
-
-```text
-text norm                    ~1.0
-audio norm                   ~1.0
-repeat cosine                >= 0.99999
-direct/sidecar heads         match within 1e-5
-text↔audio cosine            match within 1e-5
-vector dimension             768
-MAEST device                 cuda
-AST device                   cuda
-sidecar shutdown             true
-sidecar VRAM exit            0 MiB
-no core .venv mutation
-```
+The sidecar now forces Python UTF-8 mode (`-X utf8`), and the gate requires direct/sidecar cross-path equality. One final real hardware run is required after the flat-layout migration.
 
 ## CI boundary
 
-CI must never download multi-GB model assets.
+CI does not download multi-GB model assets. It checks:
 
-CI checks:
 - immutable pin metadata;
-- SHA helpers;
-- launcher/script regression gates;
-- central log-directory policy;
-- UTF-8 sidecar launch policy;
-- direct↔sidecar gate invariants in static tests;
+- launcher/script syntax and regression gates;
+- flat state-layout policy;
+- common log-directory policy;
+- UTF-8 sidecar transport policy;
 - fake backend/storage/protocol behavior.
 
-The real model/GPU smoke remains a local release gate.
+The real model/GPU run remains a local release gate.
