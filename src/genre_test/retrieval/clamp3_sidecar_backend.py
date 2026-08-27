@@ -139,8 +139,13 @@ class Clamp3SidecarBackend:
                 f"sidecar script not found: {self.script_path}",
             )
 
+        # Parent transport is explicitly UTF-8. Force the isolated Windows Python
+        # child into UTF-8 mode too, otherwise redirected stdin/stdout can use the
+        # active ANSI code page and corrupt non-ASCII retrieval queries.
         command = [
             str(self.python_executable),
+            "-X",
+            "utf8",
             "-u",
             str(self.script_path),
             "--runtime-root",
