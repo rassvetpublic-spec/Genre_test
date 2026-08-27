@@ -118,6 +118,10 @@ class Clamp3SidecarBackend:
         return self._process is not None and self._process.poll() is None
 
     @property
+    def process_id(self) -> int | None:
+        return self._process.pid if self._process is not None else None
+
+    @property
     def stderr_tail(self) -> tuple[str, ...]:
         return tuple(self._stderr_tail)
 
