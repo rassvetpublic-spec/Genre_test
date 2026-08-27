@@ -30,6 +30,7 @@ def test_p0_gate_requires_real_core_cuda_cross_path_and_shutdown_checks() -> Non
     assert '"ast_status_ok"' in gate
     assert '"ast_cuda"' in gate
     assert '"ast_windows_positive"' in gate
+    assert '"flat_state_layout"' in gate
     assert '"direct_text_repeatable"' in gate
     assert '"direct_audio_repeatable"' in gate
     assert '"sidecar_text_repeatable"' in gate
@@ -41,17 +42,45 @@ def test_p0_gate_requires_real_core_cuda_cross_path_and_shutdown_checks() -> Non
     assert '"sidecar_vram_released"' in gate
 
 
-def test_clamp_p0_and_smokes_use_only_common_log_folder() -> None:
+def test_clamp_runtime_uses_flat_state_layout_and_common_log_folder() -> None:
     gate = (ROOT / "scripts" / "clamp3_p0_gate.py").read_text(encoding="utf-8")
     setup = (ROOT / "scripts" / "setup_clamp3_runtime.ps1").read_text(encoding="utf-8")
+    smoke = (ROOT / "scripts" / "clamp3_runtime_smoke.py").read_text(encoding="utf-8")
+    local_gate = (ROOT / "scripts" / "run_local_retrieval_p0_tests.ps1").read_text(
+        encoding="utf-8"
+    )
 
-    assert 'log_dir = repo_root / ".genre_test" / "logs"' in gate
-    assert 'evidence_root = runtime_root / "evidence"' not in gate
-    assert 'session_dir = evidence_root' not in gate
+    assert 'state_root = repo_root / ".genre_test"' in gate
+    assert '/ "runtimes"\n        / "clamp3"' in gate
+    assert 'log_dir = state_root / "logs"' in gate
 
-    assert '$LogDir = Join-Path $RepoRoot ".genre_test\\logs"' in setup
+    assert '$StateDir = Join-Path $RepoRoot ".genre_test"' in setup
+    assert '$RuntimeDir = Join-Path $StateDir "runtimes\\clamp3"' in setup
+    assert '$ModelsDir = Join-Path $StateDir "models"' in setup
+    assert '$UpstreamDir = Join-Path $StateDir "upstream\\clamp3"' in setup
+    assert '$LogDir = Join-Path $StateDir "logs"' in setup
+    assert '$RetrievalDb = Join-Path $StateDir "retrieval.sqlite3"' in setup
+    assert '$LegacyRoot = Join-Path $StateDir "retrieval"' in setup
+    assert 'Migrate-LegacyLayout' in setup
+    assert '$RuntimeRoot =' not in setup
     assert '$EvidenceDir' not in setup
-    assert '.genre_test\\retrieval\\evidence' not in setup
+
+    assert 'return REPO_ROOT / ".genre_test"' in smoke
+    assert 'return REPO_ROOT / ".genre_test" / "retrieval"' not in smoke
+
+    assert "$LogDir = Join-Path $RepoRoot '.genre_test\\logs'" in local_gate
+    assert "results\\retrieval_p0_local" not in local_gate
+
+
+def test_sidecar_backend_defaults_to_flat_state_layout() -> None:
+    backend = (
+        ROOT / "src" / "genre_test" / "retrieval" / "clamp3_sidecar_backend.py"
+    ).read_text(encoding="utf-8")
+    assert 'state_root = repo_root / ".genre_test"' in backend
+    assert '/ "runtimes"\n                / "clamp3"' in backend
+    assert 'upstream_root=state_root / "upstream" / "clamp3"' in backend
+    assert 'runtime_root=state_root' in backend
+    assert 'runtime_root = repo_root / ".genre_test" / "retrieval"' not in backend
 
 
 def test_sidecar_backend_forces_utf8_child_and_exposes_process_id() -> None:
