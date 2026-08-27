@@ -79,6 +79,14 @@ def _head_close(left: Any, right: Any, *, tolerance: float = 1e-5) -> bool:
     return max(abs(a - b) for a, b in zip(left_values, right_values, strict=True)) <= tolerance
 
 
+def _contains_newly_initialized(value: Any) -> bool:
+    if isinstance(value, str):
+        return "newly initialized" in value.lower()
+    if isinstance(value, (list, tuple)):
+        return any(_contains_newly_initialized(item) for item in value)
+    return False
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run the complete Genre_test v0.5 CLaMP 3 #27/#29 hardware P0 gate."
@@ -114,6 +122,8 @@ def main() -> int:
         / "python.exe"
     )
     upstream_root = state_root / "upstream" / "clamp3"
+    models_root = state_root / "models"
+    mert_dir = models_root / "mert-v1-95m"
     log_dir = state_root / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     stamp = time.strftime("%Y%m%d_%H%M%S")
@@ -127,8 +137,10 @@ def main() -> int:
     for required in (core_python, core_cli, isolated_python):
         if not required.is_file():
             raise FileNotFoundError(required)
-    if not (state_root / "models").is_dir():
-        raise FileNotFoundError(state_root / "models")
+    if not models_root.is_dir():
+        raise FileNotFoundError(models_root)
+    if not mert_dir.is_dir():
+        raise FileNotFoundError(mert_dir)
     if not (upstream_root / ".git").is_dir():
         raise FileNotFoundError(upstream_root / ".git")
 
@@ -188,6 +200,27 @@ def main() -> int:
             f"Checks: {core_checks}"
         )
 
+    # Gate B: repair/verify the pinned MERT checkpoint's legacy weight_norm key
+    # names before any MERT inference. This is a key-only compatibility migration;
+    # the numerical tensors remain unchanged.
+    mert_compat_json = log_dir / f"clamp3_p0_mert_compat_{stamp}.json"
+    mert_compat_result = _run(
+        [
+            str(isolated_python),
+            str(repo_root / "scripts" / "clamp3_mert_compat.py"),
+            "--mert-dir",
+            str(mert_dir),
+            "--json-out",
+            str(mert_compat_json),
+        ],
+        cwd=repo_root,
+        timeout_s=args.timeout,
+    )
+    report["mert_compat_command"] = mert_compat_result
+    _require_ok("MERT weight_norm compatibility", mert_compat_result)
+    report["mert_compat"] = _load_json(mert_compat_json)
+    report["artifacts"]["mert_compat"] = str(mert_compat_json)
+
     direct_json = log_dir / f"clamp3_p0_direct_{stamp}.json"
     direct_result = _run(
         [
@@ -238,13 +271,30 @@ def main() -> int:
 
     direct = report["direct_runtime"]
     sidecar = report["sidecar"]
+    compat = report["mert_compat"]
     direct_text_audio = float(direct["audio"]["text_audio_cosine"])
     sidecar_text_audio = float(sidecar["audio"]["text_audio_cosine"])
+    sidecar_metrics = sidecar.get("runtime_metrics_before_close") or {}
+    sidecar_cuda_metrics = sidecar_metrics.get("cuda") or {}
+    sidecar_mert_compat = sidecar_metrics.get("mert_compat") or {}
+    lifecycle = sidecar.get("lifecycle", {})
+
     checks = {
         **core_checks,
         "flat_state_layout": not legacy_retrieval_root.exists(),
+        "mert_compat_status_ok": compat.get("status") == "OK",
+        "mert_compat_numerical_weights_unchanged": (
+            compat.get("numerical_weights_changed") is False
+        ),
+        "mert_compat_modern_keys_verified": len(compat.get("verified_modern_keys") or []) == 2,
         "direct_status_ok": direct.get("status") == "OK",
         "sidecar_status_ok": sidecar.get("status") == "OK",
+        "direct_mert_no_newly_initialized": not _contains_newly_initialized(
+            report["direct_runtime_command"].get("stderr")
+        ),
+        "sidecar_mert_no_newly_initialized": not _contains_newly_initialized(
+            sidecar.get("stderr_tail")
+        ),
         "direct_text_repeatable": float(direct["text"]["repeat_cosine"]) >= 0.99999,
         "direct_audio_repeatable": float(direct["audio"]["repeat_cosine"]) >= 0.99999,
         "sidecar_text_repeatable": float(sidecar["text"]["repeat_cosine"]) >= 0.99999,
@@ -262,8 +312,23 @@ def main() -> int:
             direct["audio"]["vector_head"], sidecar["audio"]["vector_head"]
         ),
         "cross_text_audio_cosine_match": abs(direct_text_audio - sidecar_text_audio) <= 1e-5,
-        "sidecar_shutdown": sidecar.get("lifecycle", {}).get("running_after_close") is False,
-        "sidecar_vram_released": sidecar.get("lifecycle", {}).get("gpu_memory_mib_after_close") == 0,
+        "sidecar_mert_compat_ok": sidecar_mert_compat.get("status") == "OK",
+        "sidecar_ram_measured_before_close": int(sidecar_metrics.get("rss_bytes") or 0) > 0,
+        "sidecar_cuda_allocated_before_close": (
+            int(sidecar_cuda_metrics.get("allocated_bytes") or 0) > 0
+        ),
+        "sidecar_cuda_peak_measured": (
+            int(sidecar_cuda_metrics.get("peak_allocated_bytes") or 0) > 0
+        ),
+        "sidecar_shutdown": lifecycle.get("running_after_close") is False,
+        # Windows/WDDM can omit the process from nvidia-smi even while torch reports
+        # live CUDA allocations. Release proof therefore requires both authoritative
+        # in-process allocation before close and process termination after close.
+        "sidecar_vram_released": (
+            int(sidecar_cuda_metrics.get("allocated_bytes") or 0) > 0
+            and lifecycle.get("running_after_close") is False
+            and lifecycle.get("gpu_memory_mib_after_close") in {0, None}
+        ),
     }
     report["checks"] = checks
     report["status"] = "PASS" if all(checks.values()) else "FAIL"
