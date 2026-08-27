@@ -179,7 +179,7 @@ if not exist "%ROOT%scripts\clamp3_p0_gate.py" (
   exit /b 1
 )
 echo [INFO] Running complete CLaMP 3 #27/#29 hardware P0 gate...
-"%ROOT%.venv\Scripts\python.exe" "%ROOT%scripts\clamp3_p0_gate.py" --repo-root "%ROOT%" --audio "%RETRIEVAL_AUDIO%" --repeat 2
+"%ROOT%.venv\Scripts\python.exe" "%ROOT%scripts\clamp3_p0_gate.py" --audio "%RETRIEVAL_AUDIO%" --repeat 2
 exit /b %ERRORLEVEL%
 
 :WORKING_HELP
