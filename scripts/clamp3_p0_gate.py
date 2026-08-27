@@ -49,11 +49,12 @@ def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _single_analysis_json(out_dir: Path) -> Path:
-    candidates = sorted(out_dir.glob("*.genre.*.json"))
+def _new_analysis_json(log_dir: Path, before: set[Path]) -> Path:
+    after = {path.resolve() for path in log_dir.glob("*.genre.*.json")}
+    candidates = sorted(after - before)
     if len(candidates) != 1:
         raise RuntimeError(
-            f"Expected exactly one core analysis JSON under {out_dir}, found {len(candidates)}"
+            f"Expected exactly one new core analysis JSON under {log_dir}, found {len(candidates)}"
         )
     return candidates[0]
 
@@ -96,11 +97,9 @@ def main() -> int:
         / "python.exe"
     )
     runtime_root = repo_root / ".genre_test" / "retrieval"
-    evidence_root = runtime_root / "evidence"
-    evidence_root.mkdir(parents=True, exist_ok=True)
+    log_dir = repo_root / ".genre_test" / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
     stamp = time.strftime("%Y%m%d_%H%M%S")
-    session_dir = evidence_root / f"p0_gate_{stamp}"
-    session_dir.mkdir(parents=True, exist_ok=False)
 
     for required in (core_python, core_cli, isolated_python):
         if not required.is_file():
@@ -110,19 +109,19 @@ def main() -> int:
         "status": "RUNNING",
         "audio": str(audio),
         "repeat": args.repeat,
-        "session_dir": str(session_dir),
+        "log_dir": str(log_dir),
         "gate": "CLAMP3_P0_27_29",
     }
 
     # Gate A: prove both MAEST and AudioSet AST actually exercised CUDA first.
-    core_out = session_dir / "core_cuda_probe"
+    before_core = {path.resolve() for path in log_dir.glob("*.genre.*.json")}
     core_result = _run(
         [
             str(core_cli),
             "analyze",
             str(audio),
             "--out",
-            str(core_out),
+            str(log_dir),
             "--device",
             "cuda",
             "--mode",
@@ -138,9 +137,12 @@ def main() -> int:
     )
     report["core_cuda_probe"] = core_result
     _require_ok("MAEST+AST CUDA probe", core_result)
-    core_analysis_path = _single_analysis_json(core_out)
-    core_analysis = _load_json(core_analysis_path)
+    generated_core_path = _new_analysis_json(log_dir, before_core)
+    core_analysis = _load_json(generated_core_path)
+    core_analysis_path = log_dir / f"clamp3_p0_core_{stamp}.json"
+    generated_core_path.replace(core_analysis_path)
     report["core_analysis"] = core_analysis
+    report["artifacts"] = {"core": str(core_analysis_path)}
 
     semantic = core_analysis.get("semantic_evidence") or {}
     core_checks = {
@@ -158,7 +160,7 @@ def main() -> int:
             f"Checks: {core_checks}"
         )
 
-    direct_json = session_dir / "direct_runtime.json"
+    direct_json = log_dir / f"clamp3_p0_direct_{stamp}.json"
     direct_result = _run(
         [
             str(isolated_python),
@@ -178,8 +180,9 @@ def main() -> int:
     report["direct_runtime_command"] = direct_result
     _require_ok("direct isolated-runtime smoke", direct_result)
     report["direct_runtime"] = _load_json(direct_json)
+    report["artifacts"]["direct"] = str(direct_json)
 
-    sidecar_json = session_dir / "sidecar.json"
+    sidecar_json = log_dir / f"clamp3_p0_sidecar_{stamp}.json"
     sidecar_result = _run(
         [
             str(core_python),
@@ -201,6 +204,7 @@ def main() -> int:
     report["sidecar_command"] = sidecar_result
     _require_ok("core -> persistent sidecar smoke", sidecar_result)
     report["sidecar"] = _load_json(sidecar_json)
+    report["artifacts"]["sidecar"] = str(sidecar_json)
 
     direct = report["direct_runtime"]
     sidecar = report["sidecar"]
@@ -222,11 +226,16 @@ def main() -> int:
     report["checks"] = checks
     report["status"] = "PASS" if all(checks.values()) else "FAIL"
 
-    final_path = args.json_out.resolve() if args.json_out else session_dir / "p0_gate.json"
+    final_path = (
+        args.json_out.resolve()
+        if args.json_out
+        else log_dir / f"clamp3_p0_gate_{stamp}.json"
+    )
     final_path.parent.mkdir(parents=True, exist_ok=True)
+    report["artifacts"]["gate"] = str(final_path)
     final_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, ensure_ascii=False, indent=2))
-    print(f"P0 evidence: {final_path}")
+    print(f"P0 log: {final_path}")
     return 0 if report["status"] == "PASS" else 3
 
 
