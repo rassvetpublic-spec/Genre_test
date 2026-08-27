@@ -38,6 +38,19 @@ def test_p0_gate_requires_real_core_cuda_repeatability_and_shutdown_checks() -> 
     assert '"sidecar_vram_released"' in gate
 
 
+def test_clamp_p0_and_smokes_use_only_common_log_folder() -> None:
+    gate = (ROOT / "scripts" / "clamp3_p0_gate.py").read_text(encoding="utf-8")
+    setup = (ROOT / "scripts" / "setup_clamp3_runtime.ps1").read_text(encoding="utf-8")
+
+    assert 'log_dir = repo_root / ".genre_test" / "logs"' in gate
+    assert 'evidence_root = runtime_root / "evidence"' not in gate
+    assert 'session_dir = evidence_root' not in gate
+
+    assert '$LogDir = Join-Path $RepoRoot ".genre_test\\logs"' in setup
+    assert '$EvidenceDir' not in setup
+    assert '.genre_test\\retrieval\\evidence' not in setup
+
+
 def test_sidecar_backend_exposes_process_id_for_evidence() -> None:
     backend = (
         ROOT / "src" / "genre_test" / "retrieval" / "clamp3_sidecar_backend.py"
