@@ -87,6 +87,18 @@ def _contains_newly_initialized(value: Any) -> bool:
     return False
 
 
+def _loading_info_clean(compat: Any) -> bool:
+    if not isinstance(compat, dict):
+        return False
+    info = compat.get("loading_info")
+    if not isinstance(info, dict):
+        return False
+    return not any(
+        info.get(name)
+        for name in ("missing_keys", "unexpected_keys", "mismatched_keys")
+    )
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run the complete Genre_test v0.5 CLaMP 3 #27/#29 hardware P0 gate."
@@ -200,9 +212,9 @@ def main() -> int:
             f"Checks: {core_checks}"
         )
 
-    # Gate B: repair/verify the pinned MERT checkpoint's legacy weight_norm key
-    # names before any MERT inference. This is a key-only compatibility migration;
-    # the numerical tensors remain unchanged.
+    # Gate B: validate that the pinned MERT checkpoint can be translated from the
+    # legacy weight_g/weight_v names to modern parametrization names in memory.
+    # The source HuggingFace snapshot must remain byte-for-byte untouched.
     mert_compat_json = log_dir / f"clamp3_p0_mert_compat_{stamp}.json"
     mert_compat_result = _run(
         [
@@ -272,6 +284,7 @@ def main() -> int:
     direct = report["direct_runtime"]
     sidecar = report["sidecar"]
     compat = report["mert_compat"]
+    direct_mert_compat = direct.get("audio", {}).get("mert_compat") or {}
     direct_text_audio = float(direct["audio"]["text_audio_cosine"])
     sidecar_text_audio = float(sidecar["audio"]["text_audio_cosine"])
     sidecar_metrics = sidecar.get("runtime_metrics_before_close") or {}
@@ -286,9 +299,14 @@ def main() -> int:
         "mert_compat_numerical_weights_unchanged": (
             compat.get("numerical_weights_changed") is False
         ),
+        "mert_source_checkpoint_unmodified": (
+            compat.get("source_checkpoint_modified") is False
+        ),
         "mert_compat_modern_keys_verified": len(compat.get("verified_modern_keys") or []) == 2,
         "direct_status_ok": direct.get("status") == "OK",
         "sidecar_status_ok": sidecar.get("status") == "OK",
+        "direct_mert_compat_ok": direct_mert_compat.get("status") == "OK",
+        "direct_mert_loading_exact": _loading_info_clean(direct_mert_compat),
         "direct_mert_no_newly_initialized": not _contains_newly_initialized(
             report["direct_runtime_command"].get("stderr")
         ),
@@ -313,6 +331,7 @@ def main() -> int:
         ),
         "cross_text_audio_cosine_match": abs(direct_text_audio - sidecar_text_audio) <= 1e-5,
         "sidecar_mert_compat_ok": sidecar_mert_compat.get("status") == "OK",
+        "sidecar_mert_loading_exact": _loading_info_clean(sidecar_mert_compat),
         "sidecar_ram_measured_before_close": int(sidecar_metrics.get("rss_bytes") or 0) > 0,
         "sidecar_cuda_allocated_before_close": (
             int(sidecar_cuda_metrics.get("allocated_bytes") or 0) > 0
