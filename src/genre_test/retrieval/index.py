@@ -103,6 +103,7 @@ class DenseCosineIndex:
         *,
         top_k: int = 20,
         exclude_track_id: str | None = None,
+        allowed_track_ids: set[str] | None = None,
     ) -> list[SearchHit]:
         if query.identity.backend_fingerprint != self.backend_fingerprint:
             raise ValueError("query backend fingerprint does not match index")
@@ -117,18 +118,29 @@ class DenseCosineIndex:
         query_values = np.asarray(query.values, dtype=np.float32)
         similarities = self.matrix @ query_values
 
-        candidates = np.argsort(-similarities, kind="stable")
+        # Do not rely on SQLite row order or an unstable numeric sort for equal scores.
+        # The explicit secondary keys make ranking reproducible across runs/platforms.
+        candidates = sorted(
+            range(len(self.track_ids)),
+            key=lambda row_index: (
+                -float(similarities[row_index]),
+                self.track_ids[row_index],
+                self.paths[row_index],
+            ),
+        )
         hits: list[SearchHit] = []
         for row_index in candidates:
-            track_id = self.track_ids[int(row_index)]
+            track_id = self.track_ids[row_index]
             if exclude_track_id is not None and track_id == exclude_track_id:
+                continue
+            if allowed_track_ids is not None and track_id not in allowed_track_ids:
                 continue
             hits.append(
                 SearchHit(
                     rank=len(hits) + 1,
                     track_id=track_id,
-                    path=self.paths[int(row_index)],
-                    similarity=float(similarities[int(row_index)]),
+                    path=self.paths[row_index],
+                    similarity=float(similarities[row_index]),
                     backend_fingerprint=self.backend_fingerprint,
                 )
             )
