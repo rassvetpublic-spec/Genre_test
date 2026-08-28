@@ -18,10 +18,22 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install 'ruff>=0.9,<1'
-      - name: Format and autofix
+      - name: Format and capture Ruff result
+        shell: bash
         run: |
+          set +e
           ruff format src/genre_test/technical src/genre_test/mastering tests/test_technical_mastering_metrics.py
-          ruff check src tests --fix
+          ruff check src tests --fix > ruff-report.txt 2>&1
+          echo $? > ruff-exit-code.txt
+          git diff > ruff-fixes.patch
+          set -e
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ruff-diagnostic
+          path: |
+            ruff-report.txt
+            ruff-exit-code.txt
+            ruff-fixes.patch
       - name: Commit deterministic Ruff fixes
         shell: bash
         run: |
