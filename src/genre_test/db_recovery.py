@@ -7,10 +7,12 @@ import os
 import sqlite3
 import sys
 import uuid
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Iterable
+
+from .runtime_meta import default_state_dir, legacy_history_path, project_root
 
 KNOWN_DB_NAMES = {"history.sqlite3", "retrieval.sqlite3"}
 SKIP_DIR_NAMES = {
@@ -349,17 +351,12 @@ def _portable_sibling_roots(project: Path) -> list[Path]:
 
 def default_search_roots() -> list[Path]:
     roots: list[Path] = [Path.cwd()]
-    try:
-        from .runtime_meta import default_state_dir, legacy_history_path, project_root
-
-        project = project_root()
-        roots.extend([project, default_state_dir()])
-        roots.extend(_portable_sibling_roots(project))
-        legacy = legacy_history_path()
-        if legacy is not None:
-            roots.append(legacy.parent)
-    except Exception:
-        pass
+    project = project_root()
+    roots.extend([project, default_state_dir()])
+    roots.extend(_portable_sibling_roots(project))
+    legacy = legacy_history_path()
+    if legacy is not None:
+        roots.append(legacy.parent)
 
     unique: dict[str, Path] = {}
     for root in roots:
@@ -477,7 +474,7 @@ def repair_database(
         if not force:
             temporary.unlink(missing_ok=True)
             raise FileExistsError(f"output appeared during repair: {output}")
-        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        stamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         previous_backup = output.with_name(
             output.name + f".pre-repair-{stamp}.bak"
         )
@@ -519,7 +516,7 @@ def write_scan_reports(
     markdown_path = prefix.with_suffix(".md")
 
     payload = {
-        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "candidate_count": len(reports),
         "candidates": [report.to_dict() for report in reports],
     }
