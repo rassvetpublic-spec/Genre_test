@@ -1,0 +1,36 @@
+name: Temporary Ruff Autofix
+
+on:
+  push:
+    branches: [feat/technical-mastering-metrics]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/technical-mastering-metrics
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'ruff>=0.9,<1'
+      - name: Format and autofix
+        run: |
+          ruff format src/genre_test/technical src/genre_test/mastering tests/test_technical_mastering_metrics.py
+          ruff check src tests --fix
+      - name: Commit deterministic Ruff fixes
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'No Ruff changes required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src tests
+          git commit -m 'style: apply Ruff formatting and fixes'
+          git push origin HEAD:feat/technical-mastering-metrics
