@@ -225,19 +225,28 @@ Supporting TODO:
 
 No v0.6 feature may use AI-detector score reduction as a quality target.
 
+## Repository consolidation: Ozone mastering
+
+Issue **#100** makes `Genre_test` the single engineering source of truth for the AUDIO_MASTERING project and imports the active Ozone 12 v1.4.1 knowledge/config boundary under `docs/mastering/ozone12`, `config/mastering/ozone12`, `tools/mastering/ozone12` and `src/genre_test/mastering/ozone12`.
+
+The standalone `OZONE12_MASTERING_LAB` repository is now a migration/history source, not a second destination for new architecture. Follow-up **#101** moves the remaining executable toolkit by ownership: Ozone XML/preset/render code stays Ozone-specific, while drum-attack, mono-loss, stereo and decoded-codec metrics become backend-neutral Genre_test technical/QC capabilities.
+
+This consolidation does **not** pull Ozone or REAPER into normal v0.5 analysis startup and does not accelerate the full mastering runtime into the current release milestone.
+
 ## PLANNED: v0.7 — Studio Finish / mastering orchestration
 
-Genre_test should orchestrate and validate mastering candidates rather than replace the separate OZONE12_MASTERING_LAB workflow with a simplistic DSP chain.
+Genre_test should orchestrate and validate mastering candidates through its integrated Ozone 12 subsystem rather than maintain a separate mastering product or pretend a simplistic internal DSP chain replaces Ozone. Module order is semantically significant; the imported 16-slot map is a topology/order template, not a command to enable every module, and `BYPASS` remains a valid winner.
 
 Planned:
 
+- versioned mastering request/manifest contract;
 - REAPER render-host bridge;
-- Ozone preset/XML integration boundary;
+- Ozone preset/XML integration boundary from the integrated `mastering/ozone12` subsystem;
 - Safe / Probe / Refine candidate orchestration;
 - preflight and post-render TechnicalProfile gates;
 - delivery normalization/compliance profiles;
 - codec-preview validation;
-- drum-attack retention, mono loss and decoded codec peak checks;
+- backend-neutral drum-attack retention, mono loss and decoded codec peak checks;
 - candidate rejection/regeneration on hard technical failures;
 - **#54 synchronized A/B/X comparison lab** for 2–12 repair/mix/master variants with common transport, loudness-match, blind comparison, markers and render manifests.
 
@@ -356,6 +365,10 @@ Useful but non-blocking ideas remain in [`docs/FAR_TODO.md`](docs/FAR_TODO.md). 
 
 ## Architecture rules
 
+- `Genre_test` is the single engineering source of truth for new AUDIO_MASTERING work; standalone Ozone lab material is migration/history evidence after #100;
+- Ozone 12 is an optional mastering backend and must not become a dependency of ordinary analysis/retrieval startup;
+- shared technical metrics are backend-neutral; Ozone XML/ParamID/ElementChain/preset/render logic stays under the Ozone mastering boundary;
+- Ozone module order is semantically significant, but topology slots do not imply activation;
 - obsolete TensorFlow-1/musicnn paths are not active product architecture;
 - additional models must be reproducible and versioned;
 - retrieval embeddings never silently overwrite analysis history;
