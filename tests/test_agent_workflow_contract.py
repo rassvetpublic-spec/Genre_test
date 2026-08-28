@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 AGENT_NAMES = {
     "repo-steward.agent.md": "REPO_STEWARD",
