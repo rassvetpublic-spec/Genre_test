@@ -123,7 +123,7 @@ def estimate_alignment(
     ref, cand = envelope(reference), envelope(candidate)
     corr = correlate(cand, ref, mode="full", method="fft")
     lags = correlation_lags(cand.size, ref.size, mode="full")
-    valid = np.abs(lags) <= int(round(max_lag_seconds * analysis_rate))
+    valid = np.abs(lags) <= round(max_lag_seconds * analysis_rate)
     if not np.any(valid):
         lag_ds, confidence = 0, 0.0
     else:
@@ -132,7 +132,7 @@ def estimate_alignment(
         lag_ds = int(vl[index])
         denominator = float(np.linalg.norm(ref) * np.linalg.norm(cand))
         confidence = float(vc[index] / denominator) if denominator > 0.0 else 0.0
-    lag_samples = int(round(lag_ds * sample_rate / analysis_rate))
+    lag_samples = round(lag_ds * sample_rate / analysis_rate)
     return {
         "candidate_lag_samples": lag_samples,
         "candidate_lag_ms": 1000.0 * lag_samples / sample_rate,
@@ -213,7 +213,7 @@ def detect_transient_events(
     )[:max_events]
     selected = sorted(ranked)
     events = [
-        max(0, int(round(i * sample_rate / analysis_rate - 0.004 * sample_rate))) for i in selected
+        max(0, round(i * sample_rate / analysis_rate - 0.004 * sample_rate)) for i in selected
     ]
     return events, {
         "events_detected": int(peaks.size),
@@ -402,8 +402,7 @@ def measure_mono_loss(
 def _run(command: Sequence[str], timeout: int = 600) -> tuple[str, str]:
     process = subprocess.run(
         command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
         timeout=timeout,
         check=False,
