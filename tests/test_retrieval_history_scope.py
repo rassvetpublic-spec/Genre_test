@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from genre_test.retrieval.catalog import load_catalog_tracks
-from genre_test.retrieval.history_scope import build_history_scope
+from genre_test.retrieval.history_scope import _source_fingerprint, build_history_scope
 
 
 def _sha256(path: Path) -> str:
@@ -48,10 +48,7 @@ def _create_source(path: Path, *, duplicate: bool = False) -> None:
         ("sha256:c", "c", "2026-01-01", "2026-01-05", "D:/older/c.wav", 30),
         ("sha256:d", "d", "2026-01-01", "2026-01-05", "D:/fast/d.wav", 40),
     ]
-    con.executemany(
-        "INSERT INTO tracks VALUES (?, ?, ?, ?, ?, ?)",
-        tracks,
-    )
+    con.executemany("INSERT INTO tracks VALUES (?, ?, ?, ?, ?, ?)", tracks)
     runs = [
         (
             "run-a",
@@ -102,10 +99,7 @@ def _create_source(path: Path, *, duplicate: bool = False) -> None:
                 json.dumps({"path": "D:/music/a-latest.wav", "resolved_genre": "Rock"}),
             )
         )
-    con.executemany(
-        "INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, ?)",
-        runs,
-    )
+    con.executemany("INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, ?)", runs)
     con.commit()
     con.close()
 
@@ -144,6 +138,7 @@ def test_build_history_scope_filters_mixed_history_and_preserves_source(tmp_path
     assert meta["analyzer_version"] == "0.4.0"
     assert meta["analysis_mode"] == "auto"
     assert meta["selected_tracks"] == "2"
+    assert meta["source_fingerprint_policy"] == "db+nonempty-wal-v1"
 
     catalog = load_catalog_tracks(output)
     assert [track.track_id for track in catalog] == ["sha256:a", "sha256:b"]
@@ -206,3 +201,26 @@ def test_build_history_scope_refuses_to_replace_output_without_force(tmp_path: P
         )
 
     assert output.read_text(encoding="utf-8") == "keep"
+
+
+def test_source_fingerprint_ignores_zero_length_wal_creation(tmp_path: Path) -> None:
+    source = tmp_path / "history.sqlite3"
+    source.write_bytes(b"stable-db-content")
+
+    before = _source_fingerprint(source)
+    Path(str(source) + "-wal").write_bytes(b"")
+    after = _source_fingerprint(source)
+
+    assert after == before
+
+
+def test_source_fingerprint_includes_nonempty_wal(tmp_path: Path) -> None:
+    source = tmp_path / "history.sqlite3"
+    source.write_bytes(b"stable-db-content")
+    wal = Path(str(source) + "-wal")
+
+    before = _source_fingerprint(source)
+    wal.write_bytes(b"committed-wal-pages")
+    after = _source_fingerprint(source)
+
+    assert after != before
