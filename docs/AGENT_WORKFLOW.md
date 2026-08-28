@@ -28,7 +28,8 @@ PULL REQUEST
                                 v
                            READY-MTD
                                 |
-                       fresh user MTD only
+                explicit user MTD authority
+                  for this PR or plan
                                 |
                                 v
                               MERGE
@@ -39,8 +40,14 @@ PULL REQUEST
                                 v
                        DELETE HEAD BRANCH
                                 |
-                                v
-                              DONE
+                   planned next PR exists?
+                       /              \
+                     yes              no
+                      |                |
+             revalidate READY-MTD     DONE
+                      |
+          continue only while the same
+          approved MTD plan is valid
 ```
 
 `AUDIO_SCIENCE` is required for DSP, audio-analysis, restoration, stereo, transient, codec, loudness, mastering, Ozone XML/preset/module-order, and render-path changes.
@@ -73,7 +80,7 @@ Use independently for audio/DSP/mastering correctness. It distinguishes measured
 
 ### RELEASE_MANAGER
 
-Use only after implementation/review. It checks the Issue contract, reviews, CI, mergeability, documentation, external validation requirements, and unresolved risks. It returns `READY-MTD`, `NOT-READY`, or `INCONCLUSIVE`. `READY-MTD` is not merge authorization.
+Use only after implementation/review. It checks the Issue contract, reviews, CI, mergeability, documentation, external validation requirements, unresolved risks, and whether explicit MTD authority covers the current PR. It returns `READY-MTD`, `NOT-READY`, or `INCONCLUSIVE`. `READY-MTD` alone is not merge authorization.
 
 ## MTD semantics
 
@@ -85,18 +92,34 @@ MTD
 мтд
 ```
 
-One explicit token authorizes one merge cycle for the current ready PR only. It is consumed by that merge and cannot carry forward. Auto-merge must not be enabled as a substitute for explicit MTD.
+An explicit MTD can authorize either:
 
-An authorized merge cycle is:
+1. one specific READY-MTD PR; or
+2. a sequential merge train across multiple planned PRs inside one already agreed project plan.
+
+For a sequential merge train, the MTD remains valid only while the work stays inside that approved plan. It never authorizes unrelated PRs or silent scope expansion.
+
+Each PR in the train still requires its own readiness gate:
 
 1. Re-read the current PR and current head SHA.
-2. Confirm required CI/reviews still apply to that head.
-3. Merge the PR.
-4. Verify the post-merge CI/test run on `main`.
-5. Confirm the merged head branch is deleted; GitHub automatic deletion is preferred.
-6. Report merge SHA, post-merge result, branch state, and next unmerged task.
+2. Confirm the PR is part of the approved MTD plan.
+3. Confirm required CI/reviews still apply to that head.
+4. Confirm the PR is mergeable and scope has not changed unexpectedly.
+5. Merge the PR.
+6. Verify the post-merge CI/test run on `main`.
+7. Confirm the merged head branch is deleted; GitHub automatic deletion is preferred.
+8. Only then proceed to the next planned READY-MTD PR.
 
-If the head changes before merge, revalidate. If post-merge CI fails, the merge is not considered operationally complete until the failure is triaged.
+Stop the sequential MTD train and return to the user if any of the following occurs:
+
+- CI or required validation fails;
+- the PR becomes non-mergeable or conflicts appear;
+- the current head introduces unexpected scope;
+- required evidence is missing or inconclusive;
+- a new product, architecture, safety, or release decision is needed;
+- the next PR is not part of the already agreed project plan.
+
+Auto-merge must not be enabled as a substitute for explicit MTD authority. If a head SHA changes before merge, revalidate it. If post-merge CI fails, do not continue the train until the failure is triaged.
 
 ## Protected baselines
 
