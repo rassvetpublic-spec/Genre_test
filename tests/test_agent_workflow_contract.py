@@ -21,7 +21,7 @@ def test_all_specialized_agents_are_repository_local() -> None:
         assert "Read `AGENTS.md` first" in text
 
 
-def test_merge_authority_is_explicit_and_single_use() -> None:
+def test_merge_authority_is_explicit_and_supports_planned_sequential_mtd() -> None:
     constitution = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
     workflow = (ROOT / "docs" / "AGENT_WORKFLOW.md").read_text(encoding="utf-8")
     release_manager = (
@@ -29,12 +29,16 @@ def test_merge_authority_is_explicit_and_single_use() -> None:
     ).read_text(encoding="utf-8")
 
     for text in (constitution, workflow, release_manager):
-        assert "READY-MTD" in text
-        assert "one merge cycle" in text.lower()
-        assert "auto-merge" in text.lower()
+        lower = text.lower()
+        assert "ready-mtd" in lower
+        assert "sequential" in lower
+        assert "project plan" in lower
+        assert "auto-merge" in lower
+        assert "scope" in lower
 
-    assert "current user instruction" in release_manager
+    assert "current conversation/project instructions" in release_manager
     assert "post-merge" in release_manager.lower()
+    assert "ci fails" in release_manager.lower()
 
 
 def test_path_specific_instructions_have_apply_to_frontmatter() -> None:
