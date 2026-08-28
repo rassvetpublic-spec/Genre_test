@@ -1,7 +1,19 @@
 # Ozone 12 runtime namespace
 
-Reserved integration boundary for the optional Ozone 12 Advanced mastering backend.
+Optional Ozone 12 Advanced mastering-backend boundary.
 
-Issue #100 establishes the repository and knowledge/config boundary without importing Ozone or REAPER into the ordinary Genre_test runtime. Issue #101 owns executable migration and will add Python modules here only after separating Ozone-specific code from backend-neutral TechnicalProfile/QC metrics.
+Issue #100 established the repository and knowledge/config boundary. Issue #101 separates executable ownership so Ozone-specific XML semantics live here while backend-neutral audio QC lives under `genre_test.technical`.
 
-Ordinary v0.4/v0.5 analysis and retrieval must continue to work when Ozone and REAPER are absent.
+Current runtime-light modules:
+
+```text
+__init__.py   pinned preset/plugin/build identity
+xml.py        ElementChain + strict Param mutation primitives
+xml_cli.py    executable XML inspect/audit/patch/stage-pack workflow
+```
+
+The XML layer requires no Ozone or REAPER installation to import or test. It manipulates preset XML only and rejects unconfirmed build identities for mutations.
+
+Critical invariant: active module order comes from decoded `ElementChain`. `Enabled=1` alone is not evidence that a module is active. Patch operations preserve chain order and never synthesize missing Param nodes.
+
+Ordinary v0.4/v0.5 analysis and retrieval must continue to work when Ozone and REAPER are absent. Full REAPER/Ozone render orchestration remains deferred to the later mastering backend bridge.

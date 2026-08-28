@@ -1,17 +1,47 @@
 # Ozone 12 tools
 
-This directory contains **Ozone-specific** tooling migrated from `OZONE12_MASTERING_LAB`.
+This directory contains Ozone-specific material migrated from `OZONE12_MASTERING_LAB`.
 
-Current #100 scope is intentionally small: confirmed XML/schema/ElementChain validation and patching helpers. The old all-in-one mastering meter is not copied here as a permanent duplicate.
+## Active executable boundary
 
-Follow-up #101 splits executable ownership:
+The supported XML entry point is:
 
 ```text
-Ozone XML / ParamID / ElementChain / presets / REAPER bridge
-    -> tools or src under mastering/ozone12
-
-attack retention / mono loss / correlation / decoded codec peaks
-    -> Genre_test backend-neutral technical/QC layer
+genre-test-ozone-xml
 ```
 
-The normal Genre_test analyzer must not require Ozone, REAPER or these tools.
+It is implemented in `genre_test.mastering.ozone12` and provides:
+
+- preset identity inspection;
+- strict ElementChain decode and safe encode;
+- XML base/candidate audit with Markdown/CSV reports;
+- strict JSON Param-map patching;
+- guarded Stereo Imager Transient/Sustain patching;
+- guarded Maximizer patching that requires Maximizer to be final;
+- repeatable stage-pack generation.
+
+Patch operations are intentionally conservative:
+
+- pinned `PresetVer=6`, `PluginVer=120002`, `PluginBuild=1331` are required;
+- the target module must be present in `ElementChain`;
+- only Param nodes already present in the source XML are mutated;
+- unknown/missing ParamIDs fail instead of being synthesized;
+- module order is never inferred from `Enabled=1`;
+- the CLI does not silently rewrite ElementChain order.
+
+## Shared metrics are not duplicated here
+
+The old standalone `oz12_mastering_meter.py`, `oz12_analyze_stage.py`, and their shared audio-analysis helpers are **not** active Genre_test architecture. Their backend-neutral responsibilities were promoted to:
+
+```text
+genre_test.technical.mastering_metrics
+genre-test-mastering-qc
+```
+
+That shared layer owns transient retention, mono loss/correlation and decoded-codec peak validation for repair, Ozone, A/B/X and future mastering backends.
+
+## Legacy reference files
+
+`tools/mastering/ozone12/xml_patch/` retains selected source-snapshot validators/examples for provenance and regression reference. New executable XML behavior should use the package CLI/core rather than creating another independent patching framework.
+
+REAPER/Ozone render orchestration remains a later mastering-backend bridge and is not a dependency of normal Genre_test analysis/retrieval startup.
