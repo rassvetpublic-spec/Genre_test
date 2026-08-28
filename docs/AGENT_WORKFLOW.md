@@ -85,7 +85,7 @@ MTD
 мтд
 ```
 
-One explicit token authorizes one merge cycle for the current ready PR only. It is consumed by that merge and cannot carry forward.
+One explicit token authorizes one merge cycle for the current ready PR only. It is consumed by that merge and cannot carry forward. Auto-merge must not be enabled as a substitute for explicit MTD.
 
 An authorized merge cycle is:
 
