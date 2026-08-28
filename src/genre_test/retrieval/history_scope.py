@@ -51,13 +51,27 @@ def _hash_file(path: Path) -> str:
 
 
 def _source_fingerprint(path: Path) -> str:
-    """Hash the SQLite DB plus WAL when present, excluding volatile SHM state."""
+    """Hash the SQLite DB plus any non-empty WAL, excluding volatile SHM state.
+
+    SQLite can create a zero-length ``-wal`` and refresh ``-shm`` metadata when a
+    WAL-mode database is opened read-only. Those side effects do not represent a
+    logical source change, so an empty WAL is normalized to the same state as no WAL.
+    A non-empty WAL remains part of the fingerprint because it can contain committed
+    pages that are not yet checkpointed into the main DB file.
+    """
 
     digest = hashlib.sha256()
-    candidates = [path, path.with_name(path.name + "-wal")]
+    candidates = [path]
+    wal = path.with_name(path.name + "-wal")
+    try:
+        if wal.is_file() and wal.stat().st_size > 0:
+            candidates.append(wal)
+    except OSError:
+        # A WAL appearing/disappearing while fingerprinting is a real race; let the
+        # subsequent hash/open fail closed instead of treating it as stable input.
+        candidates.append(wal)
+
     for candidate in candidates:
-        if not candidate.exists():
-            continue
         digest.update(candidate.name.encode("utf-8", errors="surrogatepass"))
         digest.update(b"\0")
         digest.update(_hash_file(candidate).encode("ascii"))
@@ -134,23 +148,11 @@ def build_history_scope(
     duplicate_policy: DuplicatePolicy = "error",
     force: bool = False,
 ) -> ScopeBuildReport:
-    """Build a retrieval-only SQLite snapshot for one analyzer version/mode scope.
-
-    The source database is opened read-only. The output contains only the `tracks` and
-    `runs` rows needed by retrieval catalog loading, plus provenance metadata. The
-    source fingerprint is checked before and after the operation so a concurrent
-    source change cannot silently produce a mixed snapshot.
-    """
+    """Build a retrieval-only SQLite snapshot for one analyzer version/mode scope."""
 
     source = Path(source).expanduser().resolve()
     output = Path(output).expanduser().resolve()
-    _validate_scope_inputs(
-        source,
-        output,
-        analyzer_version,
-        analysis_mode,
-        duplicate_policy,
-    )
+    _validate_scope_inputs(source, output, analyzer_version, analysis_mode, duplicate_policy)
     if output.exists() and not force:
         raise FileExistsError(f"output already exists: {output}")
 
@@ -255,10 +257,7 @@ def build_history_scope(
         selected_track_ids: list[str] = []
         selected_paths: dict[str, str | None] = {}
         selected_times: dict[str, str | None] = {}
-        cursor = source_connection.execute(
-            selection_sql,
-            (analyzer_version, analysis_mode),
-        )
+        cursor = source_connection.execute(selection_sql, (analyzer_version, analysis_mode))
         while True:
             rows = cursor.fetchmany(256)
             if not rows:
@@ -322,10 +321,7 @@ def build_history_scope(
         else:
             destination.executemany(
                 "UPDATE tracks SET last_path=? WHERE track_id=?",
-                [
-                    (selected_paths[track_id], track_id)
-                    for track_id in ordered_track_ids
-                ],
+                [(selected_paths[track_id], track_id) for track_id in ordered_track_ids],
             )
 
         for schema in _index_schemas(source_connection, ("tracks", "runs")):
@@ -344,6 +340,7 @@ def build_history_scope(
             "created_at": _utc_now_iso(),
             "source_path": str(source),
             "source_fingerprint": source_fingerprint_before,
+            "source_fingerprint_policy": "db+nonempty-wal-v1",
             "analyzer_version": analyzer_version,
             "analysis_mode": analysis_mode,
             "duplicate_policy": duplicate_policy,
