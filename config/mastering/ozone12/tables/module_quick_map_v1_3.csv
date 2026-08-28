@@ -1,0 +1,10 @@
+Module,KeyXML,Role,HowToPatch,Risk,v1_3_status
+Global/ElementChain,ExtraBytes ElementID=ElementChain,Active visible module chain/order,Decode and re-encode 00+uint32LE+UTF8; audit back,Wrong chain or inherited inactive block,confirmed
+Master Rebalance,SourceType; SourceGain,Optional stem rebalance pre-stage,GUI-verify track choice and add before EQ only when needed,Track-specific overcorrection or false active assumption,observed fields; no T/S/default enum
+Equalizer,Processing Mode; Main/Aux Selection; Band/Aux Band,T/S tone,Use build1331 confirmed map,Glass or lost attack,T/S confirmed
+Impact,GlobalAmount; Band Amount; Envelope/Crossovers,Punch and groove,Ordinary params; one-module probe if inaudible,Clicks pumping hollow sustain,No T/S channel mode confirmed
+Clarity,ProcessingMode; Amount/Tilt; Aux,T/S separation,Transient conservative and Sustain stronger when justified,Sterile gloss or lost body,T/S confirmed
+Stabilizer,ProcessingMode; main/Aux Amount Speed Smoothing Strength; Target,Adaptive T/S balance,Use confirmed GUI base only for missing schema fields,Eaten air character or attack,T/S confirmed
+Stereo Imager,Processing Mode; T/S Selection; main/Aux Width/Recover,T/S width,Widen mainly upper Sustain; verify mono,Instrument disappears in mono,T/S confirmed + mono hard reject
+Dynamic EQ,Processing Mode; Main/Aux Selection; band family,T/S targeted control,Target widened Sustain glass; avoid drum low bands without cause,Matte vocal or lost kick,T/S confirmed
+Maximizer,Gain; Mode; Margin; True Peak; risk switches,Final loudness,Activate explicitly; neutralize Soft Clip/LLB; compare matched attack,Transient loss pumping decoded overs,No Main/Aux T/S map

@@ -1,0 +1,11 @@
+name: drum_forward_commercial
+role: commercial master where live drums and groove are the primary driver
+source_gate: "WAV source; optional Master Rebalance pre-stage only as a track decision"
+ts_strategy: "protect Transient; allow stronger corrective work on Sustain"
+impact: "audible punch without click, pumping or hollow sustain"
+clarity_stabilizer: "Sustain may work harder; preserve snare and kick front edge"
+imager: "stable low/center/transients; widen mainly upper Sustain; mono instrument loss is reject"
+dynamic_eq: "control widened long glass; no low bands on kick/bass without an explicit problem"
+maximizer: "IRC4 Transient when build-confirmed; True Peak On; stop before audible attack loss"
+defaults_policy: "No fixed drum gain, width, threshold, LUFS or codec trim; all are TRACK_DECISION."
+required_checks: "loudness-matched drum attack, macro LRA/crest, mono, Side/Mid by band, decoded codecs"

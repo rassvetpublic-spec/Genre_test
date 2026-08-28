@@ -1,0 +1,17 @@
+component,field,definition,unit,decision_use
+alignment,candidate_lag_ms,Positive means candidate begins later than reference,ms,Applied before event comparison
+alignment,envelope_correlation,Normalized confidence of reduced-rate envelope alignment,ratio,Low value requires manual alignment review
+level_match,level_match_gain_db,Analysis-only candidate gain for active-RMS match,dB,Prevents loudness bias in attack comparison
+drum_attack,attack_guard_delta_db,Minimum of median attack-RMS delta and median attack-to-sustain delta,dB,"WARN below configurable -0.5 default; FAIL below configurable -1.0 default"
+drum_attack,median_attack_peak_delta_db,Median candidate-minus-reference event peak after match,dB,Informational because steady side content can bias raw peaks
+drum_attack,p10_attack_peak_delta_db,Tenth percentile event peak delta,dB,Shows weak-tail event loss
+drum_attack,median_attack_to_sustain_delta_db,Median change in front-edge contrast,dB,Protects drum punch from sustain masking
+mono_loss,reference_mono_retention_db,Reference mono power relative to equal-channel stereo power,dB,Context baseline
+mono_loss,candidate_mono_retention_db,Candidate mono power relative to equal-channel stereo power,dB,Context candidate
+mono_loss,candidate_minus_reference_db,Additional mono retention or loss versus reference,dB,"Negative is worse; configurable WARN/FAIL"
+mono_loss,worst_scope,Worst reliable overall/event/band delta,text,Drives mono status
+decoded_codec_peak,decoded_true_peak_dbtp,Peak after explicit encode and float decode,dBTP,Compare only with declared delivery target
+decoded_codec_peak,decoded_sample_peak_dbfs,Decoded sample peak,dBFS,Diagnostic companion to true peak
+decoded_codec_peak,duration_delta_ms,Decoded duration minus source duration,ms,Padding/tail review
+decoded_codec_peak,recommended_source_trim_db,Calculated codec-specific trim when target is supplied,dB,Re-encode and remeasure after trim
+overall,overall_status,Worst status across attack mono and codecs,status,Technical alert; musical listening remains authoritative

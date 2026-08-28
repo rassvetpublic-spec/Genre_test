@@ -1,0 +1,16 @@
+{
+  "Maximizer": {
+    "Gain": "2,60000000",
+    "Margin": "-2,00001144",
+    "Prevent Intersample Clipping": "1",
+    "Target Loudness [dB]": "-12,00000000",
+    "Soft Clip Enable": "0",
+    "Soft Clip Amount": "0,00000000"
+  },
+  "Stereo Imager": {
+    "Enable Stereoizer": "0",
+    "Processing Mode": "1",
+    "Recover Sides Gain Offset (dB)": "0,00000000",
+    "Aux: Recover Sides Gain Offset (dB)": "1,00000000"
+  }
+}

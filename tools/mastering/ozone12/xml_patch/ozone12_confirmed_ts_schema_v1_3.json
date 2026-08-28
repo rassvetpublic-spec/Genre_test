@@ -1,0 +1,121 @@
+{
+  "schema_version": "1.3",
+  "confirmed_for": {
+    "PresetVer": "6",
+    "PluginVer": "120002",
+    "PluginBuild": "1331"
+  },
+  "element_chain": {
+    "order": [
+      "Equalizer",
+      "Impact",
+      "Clarity",
+      "Stabilizer",
+      "Stereo Imager",
+      "Dynamic EQ",
+      "Maximizer"
+    ],
+    "optional_prefix": [
+      "Master Rebalance"
+    ],
+    "encoding": "0x00 + uint32_le(byte_length) + UTF-8 module name",
+    "source_of_truth": "ElementChain; Enabled does not prove DSP activity"
+  },
+  "modules": {
+    "Master Rebalance": {
+      "element_id": "Master Rebalance",
+      "ts_branch_map": false,
+      "observed_fields": [
+        "SourceType",
+        "SourceGain"
+      ],
+      "rule": "Optional pre-stage only; enum and gain require GUI verification and TRACK_DECISION"
+    },
+    "Equalizer": {
+      "xml_block": "EQ",
+      "element_id": "Equalizer",
+      "mode": {"ParamID": "Processing Mode", "Value": "3"},
+      "selector": {"ParamID": "Main/Aux Selection", "Value": "1"},
+      "transient": "Band N <field>",
+      "sustain": "Aux: Band N <field>",
+      "fields": ["Enable", "Visible", "Frequency", "Gain", "Q", "Shape"]
+    },
+    "Clarity": {
+      "xml_block": "Clarity",
+      "element_id": "Clarity",
+      "mode": {"ParamID": "ProcessingMode", "Value": "2"},
+      "transient": ["Amount", "Tilt"],
+      "sustain": ["Aux: Amount", "Aux: Tilt"]
+    },
+    "Stabilizer": {
+      "xml_block": "Stabilizer",
+      "element_id": "Stabilizer",
+      "mode": {"ParamID": "ProcessingMode", "Value": "2"},
+      "transient": ["Amount", "Speed", "FreqSmoothing", "LFStrength", "MFStrength", "HFStrength"],
+      "sustain": ["Aux: Amount", "Aux: Speed", "Aux: FreqSmoothing", "Aux: LFStrength", "Aux: MFStrength", "Aux: HFStrength"],
+      "common": ["Target"],
+      "confirmed_gui_default": {
+        "Amount": 25,
+        "Speed": 50,
+        "FreqSmoothing": 50,
+        "LFStrength": 100,
+        "MFStrength": 100,
+        "HFStrength": 100,
+        "Target": 5
+      },
+      "ui_state": {"MidSideSelection": 1}
+    },
+    "Stereo Imager": {
+      "xml_block": "Imager",
+      "element_id": "Stereo Imager",
+      "mode": {"ParamID": "Processing Mode", "Value": "1"},
+      "selector": {"ParamID": "Transient/Sustain Selection", "Value": "1"},
+      "transient": ["Band N Width Percent", "Recover Sides Enabled", "Recover Sides Gain Offset (dB)"],
+      "sustain": ["Aux: Band N Width Percent", "Aux: Recover Sides Enabled", "Aux: Recover Sides Gain Offset (dB)"],
+      "common": ["Crossover Cutoff 1", "Crossover Cutoff 2", "Crossover Cutoff 3", "Module Amount", "Band N Active", "Active Band", "Stereoizer Mode"],
+      "rules": [
+        "Do not force-add Enable Stereoizer when GUI-saved XML omits it",
+        "Important instrument loss in mono is a hard reject",
+        "Prevent Antiphase is not a substitute for mono audit"
+      ]
+    },
+    "Dynamic EQ": {
+      "xml_block": "DynamicEQ",
+      "element_id": "Dynamic EQ",
+      "mode": {"ParamID": "Processing Mode", "Value": "3"},
+      "selector": {"ParamID": "Main/Aux Selection", "Value": "1"},
+      "transient": "Band N <field>",
+      "sustain": "Aux: Band N <field>",
+      "fields": ["Visible", "Enable", "Frequency", "Threshold", "Gain", "Q", "Shape"],
+      "drum_forward_rule": "Do not create low bands on kick/bass without an explicit problem"
+    },
+    "Impact": {
+      "xml_block": "Impact",
+      "element_id": "Impact",
+      "ts_channel_mode_confirmed": false,
+      "confirmed_fields": ["GlobalAmount", "Envelope", "Band 1 Amount", "Band 2 Amount", "Band 3 Amount", "Band 4 Amount", "Crossover Cutoff 1", "Crossover Cutoff 2", "Crossover Cutoff 3", "MainAutoGainEnabled", "Aux: Envelope", "Aux: HostSyncEnvelopeEnabled"],
+      "note": "Aux fields are not Sustain branch"
+    },
+    "Maximizer": {
+      "xml_block": "Maximizer",
+      "element_id": "Maximizer",
+      "ts_branch_map": false,
+      "mode_enum": {"3": "IRC 4 - Transient (confirmed build 1331)"},
+      "confirmed_fields": ["Mode", "Margin", "EnableSoftClipping", "SoftClipMix", "LowLevelBoostWetAmount", "Prevent Intersample Clipping", "EnableLowLevelBoost", "Gain", "Stereo Link", "Stereo Transient Link Amount", "Target Loudness [dB]"],
+      "activation_gate": {
+        "Gain": "explicit TRACK_DECISION and actual drive",
+        "Prevent Intersample Clipping": "On for first candidate",
+        "EnableSoftClipping": "Off unless separately tested",
+        "EnableLowLevelBoost": "Off unless separately tested",
+        "Target Loudness [dB]": "target/display; not a replacement for Gain"
+      }
+    }
+  },
+  "provenance_allowed": ["SOURCE_XML", "CONFIRMED_GUI_DEFAULT", "CORE_PROFILE", "TRACK_DECISION", "CALIBRATION_ONLY"],
+  "rules": [
+    "CALIBRATION_ONLY must never become a musical/default working value",
+    "A GUI-saved user winner becomes the next Base XML",
+    "Preserve prior accepted modules and unknown data outside declared scope",
+    "Use a one-module boundary probe when effect is below audibility"
+  ]
+}

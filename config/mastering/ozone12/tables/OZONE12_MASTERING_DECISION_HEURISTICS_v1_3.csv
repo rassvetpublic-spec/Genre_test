@@ -1,0 +1,11 @@
+category,trigger,required_action,accept_condition,reject_or_stop,scope
+source,WAV and MP3 both exist,Use WAV as mastering source and MP3 as reference/codec output,Source registry labels roles,MP3 silently chosen over available WAV,universal
+audibility,Stage almost indistinguishable,Verify active chain and DSP field then run one-module boundary probe,Direction is audible and candidate retreats to musical minimum,Several modules increased together,universal
+base,User selects a GUI-saved XML,Make it the current base and preserve prior accepted modules,Diff changes only declared scope,Generated older candidate overwrites manual winner,universal
+drums,Track is drum-forward,Protect Transient and avoid unexplained DynEQ low bands,Punch/groove survives loudness match,Audible drum attack loss or pumping,profile strategy
+imager,Headphone wow requested,Widen mainly upper Sustain and run mono/band audit,Important elements remain stable in mono,Important instrument noticeably disappears in mono,universal hard reject
+maximizer,Maximizer is activated,Verify ElementChain Mode Gain Margin TP and neutralize Soft Clip/LLB,Gain changes loudness without unacceptable attack loss,Target changed without Gain or inherited risk fields remain,build-aware
+transient,Matched event attack is reduced,Review Gain/linking/Impact and stop pushing loudness,Musical punch remains preferred,"Approx. 0.5-1.0 dB median attack loss is warning; audible loss is stop",heuristic not absolute
+export,Accepted float render becomes 24-bit final,Use native DAW/Ozone export and sample/null check,Difference is unbiased dither/noise floor,Post-converted control replaces available native final,universal
+codec,Direct MP3/AAC delivery required,Measure decoded true peak and apply codec-specific trim then re-encode,Decoded file meets target plus safety margin,Assume WAV ceiling guarantees codec ceiling,universal
+padding,Lossy duration differs,Inspect leading/trailing padding and gapless/tail behaviour,Musical start/tail is intact,Unexpected truncation or damaged tail,universal

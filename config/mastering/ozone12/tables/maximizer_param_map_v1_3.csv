@@ -1,0 +1,11 @@
+ParamID,Meaning,Safe first-candidate rule,Notes
+Mode,Maximizer algorithm/mode enum,3 only when build 1331 GUI/schema confirms IRC4 Transient,Revalidate enum when version/build changes
+Gain,Actual Maximizer input drive,Explicit TRACK_DECISION,Main sound-changing loudness control
+Margin,Output ceiling / true peak margin,Choose from delivery and decoded codec audit,No universal ceiling guarantees decoded MP3/AAC peak
+Prevent Intersample Clipping / True Peak,True Peak protection,On,Still measure decoded codec peaks
+Target Loudness [dB],Target/display/learn value,Informational,Does not replace Gain
+Character,Limiter time/character behaviour,Preserve current base unless tested,Exact result depends on mode/material
+EnableLowLevelBoost,Upward compression / low level boost,Off,Inherited inactive Auto value must be neutralized on activation unless tested
+Soft Clip Enable,Soft clipping,Off,Separate boundary test only
+Stereo Link / Transient Link,Limiter stereo/transient linking,Preserve or test explicitly,Partial linking is track-specific and can alter width/attack
+ElementChain membership,Whether Maximizer is active,Must include Maximizer,Inactive block values do not affect DSP

@@ -1,0 +1,35 @@
+profile: suno55_altrock_dubstep_lossy_safe
+version: 1
+status: heuristic_starting_point_not_fixed_preset
+source_policy:
+  prefer_lossless: true
+  lossy_allowed_if_only_source: true
+  decode_once_to_float_pcm: true
+chain_slots:
+  unlimiter: conditional
+  stem_eq_or_master_rebalance: conditional
+  eq1_ms: on
+  low_end_focus: conditional
+  bass_control: conditional
+  vintage_compressor_or_dynamics: off_by_default
+  impact: on
+  eq2_transient_sustain: on
+  tape_or_exciter: off_by_default
+  clarity: off_by_default
+  stabilizer_transient_sustain: conditional_on
+  spectral_shaper: conditional
+  imager_transient_sustain: conditional_on
+  dynamic_eq: conditional_on
+  vintage_limiter: off_by_default
+  maximizer: on
+spatial_hypothesis:
+  primary_transients: focused
+  sub: centered
+  upper_sustain_and_ambience: widen_if_mono_survives
+guards:
+  - event_aligned_transient_retention
+  - sample_aligned_mono_retention
+  - bandwise_side_mid_and_correlation
+  - codec_encode_decode_audit
+  - no_universal_high_frequency_cut
+  - no_missing_air_reconstruction_without_explicit_repair_route
