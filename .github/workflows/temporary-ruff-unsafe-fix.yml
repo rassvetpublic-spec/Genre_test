@@ -1,0 +1,37 @@
+name: Temporary Ruff Unsafe Fix
+
+on:
+  push:
+    branches: [feat/technical-mastering-metrics]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/technical-mastering-metrics
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'ruff>=0.9,<1'
+      - name: Apply reviewed Ruff fixes
+        run: |
+          ruff check src/genre_test/technical/mastering_metrics.py --fix --unsafe-fixes
+          ruff format src/genre_test/technical/mastering_metrics.py
+          ruff check src tests
+      - name: Commit fixes
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'No changes required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/genre_test/technical/mastering_metrics.py
+          git commit -m 'style: resolve remaining Ruff findings'
+          git push origin HEAD:feat/technical-mastering-metrics
