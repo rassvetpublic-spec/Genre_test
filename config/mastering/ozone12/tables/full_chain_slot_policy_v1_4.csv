@@ -1,0 +1,17 @@
+slot,module,role,baseline_state_for_ai_hybrid,preferred_mode,automation_status,main_guard
+1,Unlimiter,restore prior limiting,conditional,stereo/manual,calibrate_or_confirm,do not inflate healthy transients
+2,Stem EQ / Master Rebalance,stem-balance repair,conditional,stem/manual,partial_confirmed,avoid separation artifacts
+3,Equalizer 1,corrective tone,on,M/S,confirmed_for_EQ,avoid codec-air boost
+4,Low End Focus,low attack/body contrast,conditional,punchy/smooth as measured,calibrate,do not simply add bass
+5,Bass Control,low balance+punch+sustain,conditional,module native,calibrate,preserve sub intent
+6,Vintage Compressor / Dynamics,macro glue,off by default,slow-attack probe,calibrate,preserve attack and section contrast
+7,Impact,microdynamic punch,on,module native,known ordinary params,preserve top-end transients
+8,Equalizer 2,T/S tonal shaping,on,T/S,confirmed_for_EQ,Transient branch protected
+9,Vintage Tape / Exciter,nonlinear colour,off by default,selective,calibrate,do not regenerate AI fizz
+10,Clarity,adaptive polish,off by default,T/S when used,confirmed_T/S,avoid glossy/sterile high end
+11,Stabilizer,adaptive balance,on when useful,T/S,confirmed_T/S,preserve attack/character
+12,Spectral Shaper,de-harsh/de-shimmer,conditional,localized bands,calibrate,transient damage guard
+13,Stereo Imager,stereo field,on when width needed,T/S,confirmed_T/S,mono survival
+14,Dynamic EQ,final corrective control,on when needed,M/S after width or T/S by defect,confirmed_modes,avoid broad cuts
+15,Vintage Limiter,optional pre-final peaks,off by default,manual probe,calibrate,do not pre-flatten punch
+16,Maximizer,final loudness/TP,on,IRC family per candidate,known ordinary params,stop on transient loss

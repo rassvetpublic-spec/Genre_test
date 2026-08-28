@@ -1,0 +1,9 @@
+Module,Can_use_TS,Confirmed_mapping_build1331,Default_action_same_build,Main_risk
+Master Rebalance,No,No T/S branch; observed SourceType/SourceGain,Optional pre-stage with GUI-verified TRACK_DECISION,Wrong stem balance or assumed enum
+Equalizer,Yes,Processing Mode=3; Main Band=Transient; Aux Band=Sustain,Use confirmed map and preserve attack,Glass or lost transient
+Clarity,Yes,ProcessingMode=2; Amount/Tilt vs Aux,Use confirmed map; Sustain may work stronger,Sterile gloss or matte vocal
+Stabilizer,Yes,ProcessingMode=2; full main/Aux fields,Use confirmed GUI base only for absent fields,Eating air character or attack
+Stereo Imager,Yes,Processing Mode=1; main=Transient; Aux=Sustain,Widen mainly upper Sustain and require mono survival,Empty center or missing instrument in mono
+Dynamic EQ,Yes,Processing Mode=3; Main Band=Transient; Aux Band=Sustain,Target long/widened glass; avoid low drum bands without cause,Matte vocal or lost kick/bass
+Impact,No confirmed T/S channel mode,Aux Envelope is not Sustain,Use ordinary Impact params and boundary probe only if needed,False Aux=Sustain or click/pumping
+Maximizer,No Main/Aux T/S branches,Mode=3=IRC4 Transient for build1331,Use Gain/Mode/Margin/TP; neutralize inherited risk switches,Wrong enum transient loss or decoded overs

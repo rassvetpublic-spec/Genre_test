@@ -1,0 +1,7 @@
+name: generic_streaming_safe
+role: default when genre is unclear
+target_lufs_i: "about -12.5 to -11.5 unless track asks louder"
+true_peak_margin: "about -2.0 dBTP"
+width: "moderate; keep correlation healthy"
+maximizer: "IRC4 Transient if confirmed; Gain-driven; Soft Clip Off; Low Level Boost Off"
+notes: "Start safe, then make bolder forks by user taste."

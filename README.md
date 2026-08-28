@@ -238,6 +238,36 @@ Accepted v0.4 release gates include:
 - CUDA/Blackwell runtime verified on RTX 5070 Ti;
 - CI on Python 3.11 / 3.12 / 3.13 with Ruff, pytest and PowerShell/CUDA gates.
 
+## Integrated studio-finish direction
+
+`Genre_test` is the single engineering source of truth for the wider AUDIO_MASTERING project. The former standalone `OZONE12_MASTERING_LAB` is being absorbed as the Ozone 12 mastering subsystem rather than maintained as a second product.
+
+Canonical Ozone boundary:
+
+```text
+docs/mastering/ozone12/
+config/mastering/ozone12/
+tools/mastering/ozone12/
+src/genre_test/mastering/ozone12/
+```
+
+Ozone 12 Advanced remains an **optional mastering backend**. Ordinary v0.4/v0.5 analysis and retrieval must not require Ozone or REAPER. The full v0.7 path is planned as:
+
+```text
+Genre_test preflight
+ -> mastering orchestration
+ -> REAPER render host
+ -> Ozone 12 Advanced
+ -> WAV 24-bit / 48 kHz
+ -> backend-neutral TechnicalProfile/QC
+ -> A/B/X
+ -> delivery
+```
+
+Ozone module order is treated as part of the sound. The imported 16-slot topology is an order template, not a default active chain; every processor must earn activation and `BYPASS` is a valid winner. Shared attack/mono/stereo/codec metrics are promoted into Genre_test common technical/QC code rather than duplicated inside the Ozone backend.
+
+See [`docs/mastering/ozone12/README.md`](docs/mastering/ozone12/README.md), issue #100 and follow-up #101.
+
 ## Known development items
 
 - shared audio decode/cache between MAEST and AST;
