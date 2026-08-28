@@ -37,6 +37,7 @@ genre-test-gui = "genre_test.desktop_gui:main"
 genre-test-retrieval = "genre_test.retrieval.entrypoint:main"
 genre-test-db-recovery = "genre_test.db_recovery:main"
 genre-test-mastering-qc = "genre_test.technical.mastering_cli:main"
+genre-test-ozone-xml = "genre_test.mastering.ozone12.xml_cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/genre_test"]
