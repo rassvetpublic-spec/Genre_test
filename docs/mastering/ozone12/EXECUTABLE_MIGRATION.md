@@ -3,6 +3,8 @@
 Issue: #101  
 Parent consolidation: #100
 
+Status: **CONSOLIDATED for the current executable-migration scope**.
+
 Source snapshot:
 
 ```text
@@ -15,6 +17,12 @@ Universal Core v1.4.1 source package SHA-256:
 ```text
 9f165e9194797e1e6ba51d1d248dfb6d2a7f734df33c1265c70ddf0826117cc7
 ```
+
+## Landed work
+
+- #103 promoted backend-neutral mastering/QC metrics into `genre_test.technical` and exposed `genre-test-mastering-qc`.
+- #106 consolidated confirmed Ozone XML/ElementChain/Param mutation into `genre_test.mastering.ozone12` and exposed `genre-test-ozone-xml`.
+- Ordinary v0.4/v0.5 analysis/retrieval remains independent of Ozone and REAPER.
 
 ## Ownership after consolidation
 
@@ -29,7 +37,32 @@ Universal Core v1.4.1 source package SHA-256:
 | `oz12_mastering_meter.py` | `genre_test.technical.mastering_metrics` | retired as active duplicate |
 | `oz12_analyze_stage.py` audio deltas | shared technical/QC | not copied as a second analyzer |
 | audio helpers in `oz12_common.py` | shared technical/QC | not copied as backend-specific analysis |
-| REAPER/Ozone rendering | future mastering backend bridge | intentionally deferred |
+| legacy repository `refresh_manifests.py` | none | old-repository packaging housekeeping; not migrated |
+| legacy `validate_process_only_scope.py` | Genre_test repository hygiene rules/tests | old-repository path policy; not copied |
+| legacy `oz12_autocheck.py` repository/archive checks | none | not copied; encodes obsolete repo/archive/Python assumptions |
+| P0 evidence semantics from legacy autocheck | future mastering-backend validation | retain conceptually: missing evidence is `BLOCKED`, never `PASS` |
+| REAPER/Ozone rendering | future mastering backend bridge | intentionally deferred to the planned mastering phase |
+
+## Why the old autocheck is not copied
+
+The standalone checker is useful as historical evidence but is not a compatible Genre_test runtime component. It is coupled to:
+
+- the old `OZONE12_MASTERING_LAB` repository layout;
+- the frozen v1.3 distribution archive and its repository-specific SHA;
+- Python 3.12-only assumptions while Genre_test supports Python 3.11–3.13;
+- old repository manifest/process-only scripts;
+- the retired `oz12_mastering_meter.py` implementation.
+
+Copying it would reintroduce duplicate architecture and stale release assumptions. The later REAPER/Ozone backend harness should instead reuse only its sound evidence principles:
+
+```text
+PASS     = required evidence observed and matched
+FAIL     = evidence observed and mismatched
+BLOCKED  = required prerequisite/evidence is missing
+SKIP     = explicitly non-applicable
+```
+
+`BLOCKED` must never be promoted to `PASS`. Future render/readback gates should preserve source/target hashes, plugin identity/version/build, active ElementChain, loaded-state identity, readback result, render invocation state, and negative-test evidence without depending on the legacy repository layout.
 
 ## Safety changes made during migration
 
@@ -45,6 +78,6 @@ The migration is not a blind file copy. Legacy scripts contained behavior that n
 8. leaves ElementChain rewriting explicit rather than silently changing module order;
 9. routes render comparison to `genre-test-mastering-qc` instead of preserving duplicate audio meters.
 
-## Remaining boundary
+## Deferred boundary
 
-This migration does not automate REAPER or instantiate Ozone. The later render bridge must consume the same pinned XML identity and module-order semantics, render from immutable source audio, then pass the result through backend-neutral technical/QC gates.
+The current consolidation is complete without automating REAPER or instantiating Ozone. The later render bridge is a separate planned mastering milestone, not unfinished v0.5 migration work. It must consume the same pinned XML identity and module-order semantics, render from immutable source audio, and pass every result through backend-neutral technical/QC gates.
