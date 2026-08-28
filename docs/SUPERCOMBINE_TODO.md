@@ -49,6 +49,8 @@ The objective is studio-ready audio with audible generative defects corrected. T
 - [ ] parent/source hash lineage for every derived render
 - [ ] common before/after metric snapshot
 - [ ] common error/unknown/fallback semantics
+- [x] establish integrated Ozone 12 knowledge/config namespace in Genre_test (#100)
+- [ ] migrate remaining Ozone executable toolkit and promote backend-neutral mastering metrics (#101)
 
 ---
 
@@ -153,7 +155,18 @@ Explicit non-goals:
 
 # v0.7 — Studio Finish / Mastering Orchestration
 
-The default mastering direction remains compatible with the separate OZONE12_MASTERING_LAB philosophy: staged, measurable processing with REAPER as host and Ozone module order treated as critical. Genre_test should orchestrate/evaluate renders rather than pretend a simplistic internal chain replaces Ozone.
+The Ozone 12 mastering knowledge/config boundary is integrated into Genre_test by #100. `Genre_test` is the product/orchestrator; Ozone 12 Advanced is an optional mastering backend with REAPER as render host. Module order is critical, while the 16-slot topology is only an order map: every processor must earn activation and `BYPASS` is a valid winner.
+
+Canonical integrated locations:
+
+```text
+docs/mastering/ozone12/
+config/mastering/ozone12/
+tools/mastering/ozone12/
+src/genre_test/mastering/ozone12/
+```
+
+The standalone `OZONE12_MASTERING_LAB` repository is migration/history evidence after #100, not a second roadmap. #101 completes executable migration and promotes drum-attack, mono/stereo and decoded-codec measurements into backend-neutral Genre_test technical/QC code.
 
 ## Mastering orchestration
 
@@ -164,16 +177,31 @@ The default mastering direction remains compatible with the separate OZONE12_MAS
 - [ ] target LUFS / True Peak policy separated from artistic loudness goal
 - [ ] render backend abstraction
 - [ ] REAPER render-host bridge
-- [ ] Ozone preset/XML bridge boundary
+- [x] Ozone knowledge/config/XML schema boundary integrated (#100)
+- [ ] finish Ozone executable XML/preset toolkit migration (#101)
+- [ ] Ozone preset/XML runtime bridge
 - [ ] stage progress / heartbeat / cancel
 - [ ] Safe / Probe / Refine candidate generation
 - [ ] bounded refinement loop
 - [ ] post-render TechnicalProfile self-check
 - [ ] codec-preview validation
-- [ ] mono-loss check
-- [ ] decoded codec peaks
-- [ ] drum-attack retention metric
+- [ ] backend-neutral mono-loss check
+- [ ] backend-neutral decoded codec peaks
+- [ ] backend-neutral drum-attack retention metric
 - [ ] reject/regenerate candidate on hard technical failure
+
+### Ozone chain invariants
+
+- [x] preserve lossless-first source gate; explicit one-time float decode only for declared `LOSSY_SOURCE`
+- [x] preserve confirmed build identity `PresetVer=6 / PluginVer=120002 / PluginBuild=1331`
+- [x] preserve `ElementChain` as active-chain source of truth
+- [x] preserve confirmed Transient/Sustain mappings
+- [x] preserve module-order semantics and 16-slot topology map
+- [x] preserve `BYPASS IS A VALID WINNER`
+- [x] preserve `focused transient / wider sustain` as a hypothesis guarded by A/B, mono, Side/Mid and codec checks rather than a fixed preset
+- [ ] calibrate unknown newer-module ParamID only from GUI-saved XML evidence
+- [ ] implement versioned `MasteringBackend` request/result contract
+- [ ] implement REAPER/Ozone render execution only after the contract is stable
 
 ## #54 Synchronized A/B/X comparison lab
 
