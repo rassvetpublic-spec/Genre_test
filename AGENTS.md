@@ -6,10 +6,12 @@ This repository is the canonical engineering source of truth for the AUDIO_MASTE
 
 - Never commit directly to `main`.
 - Normal change flow: Issue -> branch -> PR -> CI -> review -> READY-MTD.
-- No agent may merge a pull request unless the user explicitly issues `mtd`, `MTD`, or `мтд` for the current ready PR.
-- Treat one explicit MTD as authorization for one merge cycle only. Do not carry it forward to later PRs.
-- After an authorized merge: verify post-merge CI/test state and confirm the head branch is deleted. If automatic deletion did not occur, report the leftover branch for repository stewardship.
-- Do not enable auto-merge as a substitute for MTD.
+- No agent may merge a pull request unless the user explicitly issues `mtd`, `MTD`, or `мтд`, either for the current ready PR or for a previously agreed sequential MTD plan that includes it.
+- An explicit MTD may authorize a sequential merge train across multiple planned PRs within one project when the user has already approved that plan. It does not authorize unrelated PRs, unplanned scope expansion, or work outside that project plan.
+- Every PR in an authorized merge train must independently reach READY-MTD and be revalidated against its current head SHA before merge.
+- Stop the merge train and return to the user if CI fails, mergeability changes, an unexpected scope change appears, required evidence is missing, or a new product/architecture decision is needed.
+- After every authorized merge: verify post-merge CI/test state and confirm the head branch is deleted. If automatic deletion did not occur, report the leftover branch for repository stewardship.
+- Do not enable auto-merge as a substitute for explicit MTD authority.
 
 ## Product boundary
 
@@ -66,7 +68,7 @@ Use the repository custom agents for specialized work:
 - `coder`: implementation from approved, bounded work; stops at PR.
 - `qa-reviewer`: code/test/CI/regression review and change requests.
 - `audio-science`: DSP/audio/mastering validity review and measurement semantics.
-- `release-manager`: final readiness gate; never merges without explicit MTD.
+- `release-manager`: final readiness gate; merges only under explicit current MTD authority, including an active approved sequential MTD plan.
 
 The implementation agent must not be the sole reviewer of its own work.
 
