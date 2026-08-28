@@ -35,6 +35,14 @@ if /I "%~1"=="retrieval-rebuild" goto WORKING_RETRIEVAL_PRODUCT
 if /I "%~1"=="retrieval-search-audio" goto WORKING_RETRIEVAL_PRODUCT
 if /I "%~1"=="retrieval-search-text" goto WORKING_RETRIEVAL_PRODUCT
 if /I "%~1"=="retrieval-search-history" goto WORKING_RETRIEVAL_PRODUCT
+if /I "%~1"=="retrieval-segment-status" goto WORKING_RETRIEVAL_PRODUCT
+if /I "%~1"=="retrieval-segment-index" goto WORKING_RETRIEVAL_PRODUCT
+if /I "%~1"=="retrieval-search-representative" goto WORKING_RETRIEVAL_PRODUCT
+if /I "%~1"=="retrieval-search-segment" goto WORKING_RETRIEVAL_PRODUCT
+if /I "%~1"=="retrieval-catalog-audit" goto WORKING_RETRIEVAL_PRODUCT
+if /I "%~1"=="retrieval-retry-missing" goto WORKING_RETRIEVAL_PRODUCT
+if /I "%~1"=="retrieval-benchmark-run" goto WORKING_RETRIEVAL_PRODUCT
+if /I "%~1"=="retrieval-exit-codes" goto WORKING_RETRIEVAL_PRODUCT
 if /I "%~1"=="help" goto WORKING_HELP
 if not "%~1"=="" goto WORKING_UNKNOWN_COMMAND
 
@@ -190,12 +198,11 @@ echo [INFO] Running complete CLaMP 3 #27/#29 hardware P0 gate...
 exit /b %ERRORLEVEL%
 
 :WORKING_RETRIEVAL_PRODUCT
-if not exist "%ROOT%.venv\Scripts\genre-test-retrieval.exe" (
-  echo [FAIL] Retrieval product CLI is missing from the core venv.
-  echo Run Genre_test_START.cmd once without arguments to refresh the working environment.
+if not exist "%ROOT%.venv\Scripts\python.exe" (
+  echo [FAIL] Core Python is missing. Run Genre_test_START.cmd once without arguments first.
   exit /b 1
 )
-"%ROOT%.venv\Scripts\genre-test-retrieval.exe" %*
+"%ROOT%.venv\Scripts\python.exe" -m genre_test.retrieval.entrypoint %*
 exit /b %ERRORLEVEL%
 
 :WORKING_HELP
@@ -212,9 +219,21 @@ echo   Genre_test_START.cmd retrieval-rebuild
 echo   Genre_test_START.cmd retrieval-search-audio "D:\path\track.wav" [options]
 echo   Genre_test_START.cmd retrieval-search-text "Russian text query" [options]
 echo   Genre_test_START.cmd retrieval-search-history [--limit N]
+echo   Genre_test_START.cmd retrieval-segment-status
+echo   Genre_test_START.cmd retrieval-segment-index [--limit N] [--all]
+echo   Genre_test_START.cmd retrieval-search-representative TRACK_ID [--target-scope full^|representative]
+echo   Genre_test_START.cmd retrieval-search-segment "D:\path\track.wav" START_S END_S [options]
+echo   Genre_test_START.cmd retrieval-catalog-audit [--out-prefix PATH]
+echo   Genre_test_START.cmd retrieval-retry-missing [--limit N]
+echo   Genre_test_START.cmd retrieval-benchmark-run SUITE.json [--top-k N]
+echo   Genre_test_START.cmd retrieval-exit-codes
+echo.
+echo Segment safety:
+echo   retrieval-segment-index defaults to a 50-track subset.
+echo   Use --all only after reviewing subset timing/storage evidence.
 echo.
 echo State layout:
-echo   .genre_test\logs                    all logs/diagnostics
+echo   .genre_test\logs                    all logs/diagnostics/retrieval reports
 echo   .genre_test\models                  model assets
 echo   .genre_test\runtimes\clamp3        isolated CLaMP runtime
 echo   .genre_test\upstream\clamp3        pinned upstream source

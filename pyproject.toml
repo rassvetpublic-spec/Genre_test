@@ -34,7 +34,7 @@ dev = [
 [project.scripts]
 genre-test = "genre_test.cli:app"
 genre-test-gui = "genre_test.desktop_gui:main"
-genre-test-retrieval = "genre_test.retrieval.cli:app"
+genre-test-retrieval = "genre_test.retrieval.entrypoint:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/genre_test"]
@@ -52,3 +52,5 @@ target-version = "py311"
 "src/genre_test/gui.py" = ["BLE001"]
 "src/genre_test/validation_gui.py" = ["BLE001"]
 "src/genre_test/themed_gui.py" = ["B010"]
+"src/genre_test/retrieval/cli.py" = ["B009"]
+"src/genre_test/retrieval/segments.py" = ["B008"]
