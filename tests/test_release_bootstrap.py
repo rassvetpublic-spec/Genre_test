@@ -3,7 +3,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_v04_release_bootstrap_runtime_contract() -> None:
+def test_release_bootstrap_runtime_contract() -> None:
     script = (ROOT / "scripts" / "release_bootstrap.ps1").read_text(encoding="utf-8")
 
     assert "Windows PowerShell 5.1 compatible" in script
@@ -32,16 +32,13 @@ def test_packaged_launcher_requires_current_release_bootstrap_only() -> None:
     assert "0.3.6" not in launcher
 
 
-def test_portable_docs_are_v04_and_not_fixed_to_old_path() -> None:
+def test_portable_docs_do_not_advertise_retired_release() -> None:
     english = (ROOT / "PORTABLE_README.txt").read_text(encoding="utf-8")
     russian = (ROOT / "README_RU.txt").read_text(encoding="utf-8")
 
-    assert "Genre_test 0.4.0" in english
-    assert "Python 3.11, 3.12 or 3.13 x64" in english
-    assert "CUDA 13.0 / cu130" in english
-    assert "no fixed install path is required" in english
-    assert "Genre_test 0.4.0" in russian
+    assert "0.4.0" not in english
+    assert "0.4.0" not in russian
+    assert "Python 3.11 / 3.12 / 3.13 x64" in english
     assert "Python 3.11 / 3.12 / 3.13 x64" in russian
-    assert "CUDA 13.0 / cu130" in russian
-    assert "Фиксированный каталог больше не обязателен" in russian
-    assert "0.3.x выведены из эксплуатации" in russian
+    assert "PyTorch 2.12.1" in english
+    assert "PyTorch 2.12.1" in russian

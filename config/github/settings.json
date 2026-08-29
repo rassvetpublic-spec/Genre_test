@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "repository": "rassvetpublic-spec/Genre_test",
+  "repository_settings": {
+    "default_branch": "main",
+    "has_issues": true,
+    "has_projects": true,
+    "has_wiki": false,
+    "has_discussions": false,
+    "allow_squash_merge": true,
+    "allow_merge_commit": false,
+    "allow_rebase_merge": false,
+    "allow_auto_merge": false,
+    "delete_branch_on_merge": true,
+    "allow_update_branch": true,
+    "squash_merge_commit_title": "PR_TITLE",
+    "squash_merge_commit_message": "PR_BODY"
+  },
+  "actions_permissions": {
+    "enabled": true,
+    "allowed_actions": "selected"
+  },
+  "selected_actions": {
+    "github_owned_allowed": true,
+    "verified_allowed": false,
+    "patterns_allowed": []
+  },
+  "workflow_permissions": {
+    "default_workflow_permissions": "read",
+    "can_approve_pull_request_reviews": false
+  }
+}

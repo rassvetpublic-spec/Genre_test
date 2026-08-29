@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-MANIFEST = Path(__file__).parent / "fixtures" / "regression_cases_v04.json"
+MANIFEST = Path(__file__).parent / "fixtures" / "regression_cases.json"
 
 
 def _cases():
