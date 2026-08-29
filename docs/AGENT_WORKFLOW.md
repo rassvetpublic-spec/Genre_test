@@ -102,7 +102,17 @@ one implementation Issue
 -> at most one active implementation PR
 ```
 
-Until PR-2 implements the GitHub-native claim fields/templates, record the collision check in the task/PR handoff and stop on ambiguous ownership.
+Use `.github/ISSUE_TEMPLATE/agent-task.yml` as the canonical implementation-task contract. Before moving an Issue to `CLAIMED`, record the single implementation branch and the collision check against active Issues, branches, and PRs. Stop on ambiguous ownership instead of creating competing implementation.
+
+## GitHub-native work contracts
+
+The repository deliberately uses GitHub-native state instead of a second work-state database or `WORK_MANIFEST`:
+
+- `.github/ISSUE_TEMPLATE/agent-task.yml` captures roadmap phase, workflow state, scope, allowed/forbidden paths, architecture gate, dependencies, acceptance criteria, required reviews/evidence, non-goals, claim branch, collision evidence, risks, unresolved decisions, and next allowed action;
+- `.github/pull_request_template.md` carries the implementation handoff for the exact branch/head, acceptance mapping, tests/CI, review triggers, evidence, risks, unresolved decisions, scope audit, and next allowed action;
+- the Issue remains the task/scope/claim truth; the linked PR remains the implementation/exact-head evidence truth.
+
+Changing PR head invalidates previous exact-head QA, Audio Science, and READY-MTD verdicts; do not treat an old template snapshot as current evidence.
 
 ## Role handoffs
 
@@ -182,7 +192,7 @@ Only `RELEASE_MANAGER` may declare READY-MTD, execute merge, and delete the succ
 
 ## Standard handoff core
 
-Until PR-2 implements formal GitHub templates, preserve these fields in every material handoff:
+The canonical implementation handoff is captured by `.github/pull_request_template.md`. Preserve these fields in every material handoff even when a non-implementation task does not use that template directly:
 
 ```text
 issue

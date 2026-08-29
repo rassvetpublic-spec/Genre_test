@@ -1,0 +1,132 @@
+name: Agent implementation task
+description: GitHub-native task, claim, scope, review, and evidence contract for Genre_test agents.
+title: "[Agent Task] "
+labels:
+  - realise
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for implementation work. GitHub Issue + linked PR are the durable work record.
+        Do not create a parallel WORK_MANIFEST or rely on chat memory as the only state carrier.
+        New tasks start at REQUEST. Later state transitions are recorded only after the responsible role's gate is satisfied.
+
+  - type: input
+    id: roadmap_phase
+    attributes:
+      label: Roadmap phase
+      description: Current approved roadmap phase or infrastructure track.
+      placeholder: "v0.5 / v0.6 / v0.7 / Agent System v2"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: workflow_state
+    attributes:
+      label: Initial workflow state
+      description: New Issues start at REQUEST. Privileged states cannot be selected from the creation form.
+      options:
+        - REQUEST
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope_and_paths
+    attributes:
+      label: Scope and path boundaries
+      description: Define the bounded scope plus allowed and forbidden repository paths.
+      placeholder: |
+        Scope:
+        <exact bounded change>
+
+        Allowed paths:
+        - path/or/glob
+
+        Forbidden paths:
+        - path/or/glob
+    validations:
+      required: true
+
+  - type: textarea
+    id: architecture_and_dependencies
+    attributes:
+      label: Architecture gate and dependencies
+      description: State whether architecture/user approval is required and list prerequisite Issues, PRs, commits, tools, or decisions.
+      placeholder: |
+        Architecture required: No — approved architecture is sufficient / Yes — ARCHITECT certification required / Needs user approval — new/material architecture decision
+        Dependencies: None / #123 / PR #456 / commit ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance criteria
+      description: Observable conditions required to consider the Issue implemented.
+      placeholder: "- [ ] Criterion 1\n- [ ] Criterion 2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reviews_and_evidence
+    attributes:
+      label: Required reviews and evidence
+      description: Name required roles and the tests, CI, fixtures, measurements, host validation, docs, or external evidence needed.
+      placeholder: |
+        Required reviews:
+        - QA_REVIEWER
+        - AUDIO_SCIENCE: required / SKIP with reason
+
+        Required evidence:
+        - focused tests
+        - CI
+        - review evidence
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: Adjacent work explicitly excluded from this Issue.
+      placeholder: "List what must not be implemented here."
+    validations:
+      required: true
+
+  - type: textarea
+    id: claim_metadata
+    attributes:
+      label: Claim metadata
+      description: Leave as NOT CLAIMED at creation. REPO_STEWARD updates this only after checking active Issues, branches, and PRs.
+      placeholder: |
+        Status: NOT CLAIMED
+        Implementation branch: <record after CLAIM-APPROVED>
+        Collision check: <record checked Issues / branches / PRs and CLAIM-APPROVED or CLAIM-BLOCKED>
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks_and_decisions
+    attributes:
+      label: Open risks and unresolved decisions
+      description: Record blockers, external validation risks, and any decision still requiring ARCHITECT or explicit user approval.
+      placeholder: |
+        Open risks: None / ...
+        Unresolved decisions: None / ...
+    validations:
+      required: true
+
+  - type: input
+    id: next_allowed_action
+    attributes:
+      label: Next allowed action
+      description: The single next workflow action permitted from REQUEST.
+      placeholder: "e.g. REPO_STEWARD scope/collision check"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        **CLAIMED invariant:** one implementation Issue → at most one active implementation claim → at most one active implementation branch → at most one active implementation PR.
+        The creation form cannot grant CLAIMED or READY-MTD. Those states require their repository-defined gates and evidence.
