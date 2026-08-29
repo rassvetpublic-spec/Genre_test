@@ -1,7 +1,17 @@
 import hashlib
+import importlib
+from pathlib import Path
+import sys
 
-from tools.ai_review.cli import build_parser
-from tools.ai_review.orchestrator import ConsultOrchestrator
+
+_REPO_ROOT = str(Path(__file__).resolve().parents[1])
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
+_cli = importlib.import_module("tools.ai_review.cli")
+_orchestrator = importlib.import_module("tools.ai_review.orchestrator")
+build_parser = _cli.build_parser
+ConsultOrchestrator = _orchestrator.ConsultOrchestrator
 
 
 class FakeProvider:
