@@ -30,6 +30,10 @@ dev = [
   "pytest>=8.3,<10",
   "ruff>=0.9,<1",
 ]
+ai-review = [
+  "openai>=3.6,<4",
+  "google-genai>=2.20,<3",
+]
 
 [project.scripts]
 genre-test = "genre_test.cli:app"
