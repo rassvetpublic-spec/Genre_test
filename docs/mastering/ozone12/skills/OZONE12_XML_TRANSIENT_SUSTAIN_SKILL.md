@@ -184,8 +184,9 @@ Matched event attack loss around `0.5–1.0 dB` is a warning heuristic, not an a
 Для repeatable stage/final evidence использовать:
 
 ```text
-Universal Core: tools/stage_toolkit/oz12_mastering_meter.py
-rules-hub mirror: scripts/ozone12_mastering_meter.py
+Canonical CLI: genre-test-mastering-qc
+Implementation: src/genre_test/technical/mastering_metrics.py
+Contract: docs/TECHNICAL_MASTERING_METRICS.md
 ```
 
 Meter автоматически:
@@ -193,14 +194,14 @@ Meter автоматически:
 1. time-aligns reference/candidate по reduced-rate envelope;
 2. делает analysis-only active-RMS match;
 3. сравнивает одни и те же strong broad-band onset events;
-4. считает relative mono retention overall, вокруг drum events и по четырём полосам;
+4. считает relative mono retention overall и по четырём полосам;
 5. при final pass реально encode→decode MP3 320, AAC 256 и AAC 192 и измеряет decoded peaks.
 
 Primary drum guard = minimum of median attack-RMS delta and median attack-to-sustain delta. Default warning/fail thresholds настраиваются и остаются heuristics. Detector не является drum-stem separation.
 
 Mono guard использует candidate-minus-reference retention. Отрицательный delta означает дополнительную mono loss. Numeric PASS не отменяет mono listening и hard reject при исчезновении важного инструмента.
 
-Codec delivery target не выдумывается: без `--decoded-peak-target-dbtp` peaks имеют status `MEASURED`. После codec-specific trim обязателен повторный pass.
+Codec delivery target не выдумывается: без `--target-dbtp` peaks остаются измеренным evidence без проверки против ceiling. После codec-specific trim обязателен повторный pass.
 
 ## Workflow
 

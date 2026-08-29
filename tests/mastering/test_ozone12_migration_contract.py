@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from genre_test.technical.mastering_cli import build_parser
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -36,8 +38,73 @@ def test_migration_doc_records_deferred_render_boundary_and_blocked_semantics() 
     text = (ROOT / "docs/mastering/ozone12/EXECUTABLE_MIGRATION.md").read_text(
         encoding="utf-8"
     )
-    assert "CONSOLIDATED for the current executable-migration scope" in text
+    assert "COMPLETE for the approved #101 executable-migration scope" in text
     assert "BLOCKED` must never be promoted to `PASS`" in text
     assert "REAPER/Ozone rendering" in text
     assert "intentionally deferred" in text
     assert "old autocheck is not copied" in text
+    assert "status: RETIRED / NOT MIGRATED" in text
+    assert "must not revive or" in text
+    assert "copy the retired standalone P0/autocheck architecture" in text
+
+
+def test_operational_mastering_docs_use_shared_qc_cli() -> None:
+    docs_root = ROOT / "docs/mastering/ozone12"
+    operational_text = "\n".join(
+        path.read_text(encoding="utf-8") for path in docs_root.rglob("*.md")
+    )
+
+    assert "python tools/stage_toolkit/oz12_mastering_meter.py" not in operational_text
+    assert "--decoded-peak-target-dbtp" not in operational_text
+    assert "--keep-codec-files" not in operational_text
+    assert "overall/event/by-band" not in operational_text
+    assert "вокруг drum events" not in operational_text
+
+    meter_doc = (
+        docs_root / "core/15_AUTOMATIC_MASTERING_METER.md"
+    ).read_text(encoding="utf-8")
+    checklist = (
+        docs_root / "checklists/FINAL_APPROVAL_CHECKLIST.md"
+    ).read_text(encoding="utf-8")
+    assert "genre-test-mastering-qc" in meter_doc
+    assert "genre-test-mastering-qc" in checklist
+
+
+def test_documented_mastering_qc_cli_contract_matches_parser() -> None:
+    parser = build_parser()
+    args = parser.parse_args(["reference.wav", "candidate.wav"])
+    codec_args = parser.parse_args(
+        [
+            "reference.wav",
+            "candidate.wav",
+            "--codec",
+            "mp3_320",
+            "--codec",
+            "aac_256",
+            "--codec",
+            "aac_192",
+            "--target-dbtp",
+            "-1.0",
+        ]
+    )
+
+    assert codec_args.codec == ["mp3_320", "aac_256", "aac_192"]
+    assert codec_args.target_dbtp == -1.0
+    assert args.target_dbtp is None
+    assert args.codec_safety_margin_db == 0.1
+    assert args.max_lag_seconds == 2.0
+    assert args.max_events == 64
+    assert args.attack_warn_db == -0.75
+    assert args.attack_fail_db == -1.5
+    assert args.mono_warn_db == -0.5
+    assert args.mono_fail_db == -1.5
+
+
+def test_supercombine_marks_ozone_executable_migration_complete() -> None:
+    todo = (ROOT / "docs/SUPERCOMBINE_TODO.md").read_text(encoding="utf-8")
+
+    assert (
+        "- [x] migrate Ozone executable toolkit by ownership and promote "
+        "backend-neutral mastering metrics (#101" in todo
+    )
+    assert "- [x] finish Ozone executable XML/preset toolkit migration (#101" in todo

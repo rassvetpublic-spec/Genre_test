@@ -229,7 +229,7 @@ No v0.6 feature may use AI-detector score reduction as a quality target.
 
 Issue **#100** makes `Genre_test` the single engineering source of truth for the AUDIO_MASTERING project and imports the active Ozone 12 v1.4.1 knowledge/config boundary under `docs/mastering/ozone12`, `config/mastering/ozone12`, `tools/mastering/ozone12` and `src/genre_test/mastering/ozone12`.
 
-The standalone `OZONE12_MASTERING_LAB` repository is now a migration/history source, not a second destination for new architecture. Follow-up **#101** moves the remaining executable toolkit by ownership: Ozone XML/preset/render code stays Ozone-specific, while drum-attack, mono-loss, stereo and decoded-codec metrics become backend-neutral Genre_test technical/QC capabilities.
+The standalone `OZONE12_MASTERING_LAB` repository is now a frozen migration/history source, not a second destination for new architecture. **#101 is complete**: Ozone XML/preset behavior was consolidated under the Ozone boundary, while drum-attack, mono-loss, stereo and decoded-codec metrics became backend-neutral Genre_test technical/QC capabilities. The obsolete standalone P0/autocheck runtime is intentionally retired; the future REAPER/Ozone bridge will be designed natively for the versioned v0.7 `MasteringBackend` contract.
 
 This consolidation does **not** pull Ozone or REAPER into normal v0.5 analysis startup and does not accelerate the full mastering runtime into the current release milestone.
 

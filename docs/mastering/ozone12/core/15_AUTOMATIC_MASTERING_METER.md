@@ -1,117 +1,132 @@
-# 15. Automatic Mastering Meter
+# 15. Backend-neutral Mastering QC
 
-`tools/stage_toolkit/oz12_mastering_meter.py` автоматически сравнивает reference/base WAV и candidate/final WAV по трём guards:
+The standalone `tools/stage_toolkit/oz12_mastering_meter.py` implementation is
+retired. The canonical active implementation is shared by repair, mastering,
+codec preview and future A/B/X workflows:
 
 ```text
-drum-attack proxy
-mono-loss relative to the reference
-decoded MP3/AAC peaks after real encode → decode
+src/genre_test/technical/mastering_metrics.py
+CLI: genre-test-mastering-qc
+schema: MasteringComparisonMetricsV1
+algorithm_id: genre_test.technical.mastering_metrics:v1
 ```
 
-Инструмент не меняет аудио и не выбирает музыкальный winner вместо пользователя. Он создаёт воспроизводимый technical report и возвращает `FAIL` как alert.
+Do not restore or invoke the legacy meter as a second Ozone-specific
+implementation. See `docs/TECHNICAL_MASTERING_METRICS.md` for the canonical
+contract.
+
+The active QC compares a reference/base WAV with a derived candidate using:
+
+```text
+broad-band transient-retention proxy
+mono retention/loss relative to the reference
+optional decoded MP3/AAC peak audit after real encode -> decode
+```
+
+These measurements do not modify audio and do not choose the musical winner.
+Full-mix onsets are a proxy and are not drum-stem separation. Warnings and
+failures remain technical evidence that must be interpreted with
+loudness-matched listening.
 
 ## Requirements
 
 ```text
-Python 3.10+
+installed Genre_test environment
 NumPy
 SciPy
-FFmpeg + ffprobe for codec audit
+FFmpeg for codec audit
 ```
 
-`soundfile` не требуется. Входы — PCM/float WAV.
+Inputs are PCM/float WAV files.
 
 ## Quick stage check
 
-```bash
-python tools/stage_toolkit/oz12_mastering_meter.py \
-  --reference "BASE.wav" \
-  --candidate "CANDIDATE.wav" \
-  --outdir "reports/mastering_meter" \
-  --skip-codecs
+```powershell
+genre-test-mastering-qc "BASE.wav" "CANDIDATE.wav" `
+  --output "reports/mastering_qc.json"
 ```
 
 ## Final check with decoded codecs
 
-```bash
-python tools/stage_toolkit/oz12_mastering_meter.py \
-  --reference "PRE_MAX_BASE.wav" \
-  --candidate "NATIVE_FINAL.wav" \
-  --outdir "reports/final_meter" \
-  --decoded-peak-target-dbtp -1.0 \
-  --keep-codec-files
+```powershell
+genre-test-mastering-qc "PRE_MAX_BASE.wav" "NATIVE_FINAL.wav" `
+  --codec mp3_320 `
+  --codec aac_256 `
+  --codec aac_192 `
+  --target-dbtp -1.0 `
+  --output "reports/final_qc.json"
 ```
 
-`-1.0 dBTP` здесь только пример delivery target, а не universal default. Если `--decoded-peak-target-dbtp` не задан, peaks измеряются без PASS/FAIL по ceiling. `--keep-codec-files` сохраняет encoded и explicit float decoded файлы; без него временные codec-файлы удаляются после измерения.
+`-1.0 dBTP` is only an example declared delivery target, not a universal
+default. Without `--target-dbtp`, decoded peaks remain measured evidence and
+are not judged against an invented ceiling.
 
-## Outputs
+## Output and exit codes
+
+With `--output`, the CLI writes one complete JSON report. Without it, the same
+JSON is printed to stdout.
 
 ```text
-mastering_meter.json          complete machine-readable result
-mastering_meter.csv           flat summary for decision log / CI
-drum_attack_events.csv        event-aligned measurements
-mastering_meter_report.md     human-readable decision report
-codecs/                       optional encoded/decoded audit files
+0 = report completed without overall FAIL
+2 = configured hard guard returned overall FAIL
 ```
 
-## Drum-attack proxy
+Warnings remain review signals rather than automatic artistic rejection.
 
-1. Reference и candidate автоматически time-align по огибающей в пределах `--max-lag-seconds`.
-2. Candidate получает только analysis gain для active-RMS match; аудиофайл не переписывается.
-3. В reference находятся сильные broad-band onsets в полосе примерно `35–12000 Hz`.
-4. На тех же событиях сравниваются attack peak, attack RMS и attack-to-sustain contrast.
-5. Primary guard:
+## Transient-retention proxy
+
+1. Reference and candidate are time-aligned within `--max-lag-seconds`.
+2. Candidate receives analysis-only active-RMS matching; the audio file is not
+   rewritten.
+3. Strong broad-band onsets are detected in the full stereo reference.
+4. The same events are compared for attack and attack-to-sustain retention.
+
+Current CLI defaults are configurable policy:
 
 ```text
-attack_guard_delta = min(
-  median candidate-minus-reference attack RMS,
-  median candidate-minus-reference attack-to-sustain contrast
-)
+attack warning: -0.75 dB
+attack failure: -1.5 dB
 ```
 
-CLI defaults: warning ниже `-0.5 dB`, fail ниже `-1.0 dB`; оба порога настраиваются. Это переносимая review heuristic, не универсальный закон. Detector работает по full master и не является drum-stem separation. Для drum-forward трека слышимая потеря punch/groove остаётся stop-критерием.
+They are heuristics, not universal laws. Audible loss of punch or groove
+remains a stop condition even when numeric evidence is inconclusive.
 
-## Mono loss
+## Mono retention
 
-Для stereo overall, drum-event windows и четырёх полос считается mono retention:
+Mono retention is measured overall and by band:
 
 ```text
 10*log10(
-  power((L+R)/2) / ((power(L)+power(R))/2)
+  power((L+R)/2) / mean(power(L), power(R))
 )
 ```
 
-`0 dB` соответствует полностью coherent center; более отрицательное значение означает меньшую сохранность при mono fold-down. Decision metric — `candidate retention - reference retention`: отрицательный delta означает дополнительную потерю относительно base.
+`0 dB` is a fully coherent centre signal. Candidate-minus-reference is the
+decision delta: a negative value means the derived candidate added cancellation
+relative to its source.
 
-CLI defaults: warning ниже `-1 dB`, fail ниже `-3 dB`. Очень тихая полоса остаётся `MEASURED` и не управляет итогом. Без stems инструмент не идентифицируется: если гитара/вокал исчезает в mono, слуховой hard reject имеет приоритет даже при numeric PASS.
+Current configurable CLI defaults are:
+
+```text
+mono warning: -0.5 dB
+mono failure: -1.5 dB
+```
+
+Numeric PASS never overrides mono listening or a confirmed loss of an important
+instrument.
 
 ## Decoded codec peaks
 
-По умолчанию создаются и декодируются:
+Supported codec-preview profiles are:
 
 ```text
-MP3 320 kbps
-AAC 256 kbps
-AAC 192 kbps stress test
+mp3_320
+aac_256
+aac_192
 ```
 
-Decoded true peak измеряется FFmpeg `ebur128=peak=true` на explicit float decoded WAV. При заданном target инструмент считает:
-
-```text
-recommended_source_trim_db = max(
-  0,
-  measured_decoded_TP - target_TP + safety_margin
-)
-```
-
-После trim обязателен повторный encode → decode → measure. Значение одного кодека не переносится на другой.
-
-## Exit codes and self-test
-
-Обычный запуск возвращает `0`, если отчёт успешно создан, даже когда metric status = `FAIL`. Для CI добавить `--strict`: тогда overall `FAIL` возвращает exit code `3`.
-
-```bash
-python tools/stage_toolkit/oz12_mastering_meter.py --self-test
-```
-
-Self-test синтезирует ослабленные drum attacks и фазовую high-band потерю, затем проверяет все три codec decode paths и четыре output-файла.
+The active implementation performs a real encode, decodes to float WAV and
+measures decoded true peak with FFmpeg. When a delivery target is supplied, it
+can report a codec-specific trim recommendation. After applying any trim,
+repeat the complete encode -> decode -> measure pass; never transfer one
+codec's trim blindly to another.
