@@ -21,9 +21,9 @@ The user is the final authority for:
 - The user has granted **standing automatic MTD authorization for this Genre_test project**. Once a PR that belongs to an already approved task/plan reaches `READY-MTD <40-char-head-sha>`, `RELEASE_MANAGER` may execute `merge -> post-merge verification -> merged-head deletion` without requesting a fresh `mtd` token.
 - Standing automatic MTD never authorizes unrelated PRs, unplanned scope expansion, a new/material architecture decision, a changed contract outside approved scope, red/inconclusive evidence, or bypassing required QA/Audio Science gates.
 - The user may narrow, pause, or revoke standing automatic MTD at any time. Explicit `mtd`, `MTD`, or `мтд` remains valid as a one-off or scoped override when the user chooses to issue it.
-- Every PR in an automatic or explicitly authorized merge train must independently reach `READY-MTD <40-char-head-sha>` and be revalidated against that exact current head SHA immediately before merge.
+- Every PR in an automatic or explicitly authorized **sequential merge train under an already approved project plan** must independently reach `READY-MTD <40-char-head-sha>` and be revalidated against that exact current head SHA immediately before merge.
 - Any head SHA change invalidates prior QA/Audio Science/READY-MTD verdicts and returns the PR to validation.
-- Stop the merge train and return to the user if CI fails, mergeability changes, unexpected scope appears, required evidence is missing/inconclusive, or a new product/architecture/safety/release decision is needed.
+- Stop the sequential merge train and return to the user if CI fails, mergeability changes, unexpected scope appears, required evidence is missing/inconclusive, or a new product/architecture/safety/release decision is needed.
 - After every authorized merge, verify post-merge CI/test state on `main`. Only `RELEASE_MANAGER` may delete the successfully merged head branch; if cleanup cannot be proven safe, report it and stop rather than delegate destructive authority.
 - Do not enable GitHub auto-merge as a substitute for the repository's exact-head readiness and MTD process.
 
