@@ -11,12 +11,6 @@ from .errors import ConfigurationError
 
 _ENV_REF = re.compile(r"^\$\{([A-Z0-9_]+)\}$")
 _SUPPORTED_PROVIDERS = {"ollama", "openai", "gemini"}
-_PROVIDER_ENV_NAMES = (
-    "AI_REVIEW_PRIMARY_PROVIDER",
-    "AI_REVIEW_PRIMARY_MODEL",
-    "AI_REVIEW_SECONDARY_PROVIDER",
-    "AI_REVIEW_SECONDARY_MODEL",
-)
 
 
 @dataclass(frozen=True)
@@ -95,43 +89,51 @@ def load_settings(path: str | Path | None = None) -> Settings:
         raise ConfigurationError("config.yaml root must be an object.")
 
     # v0.1 compatibility for external config files using the original keys.
-    # New AI_REVIEW_* role configuration intentionally takes precedence when supplied.
-    new_role_env_configured = any(os.getenv(name) for name in _PROVIDER_ENV_NAMES)
+    # Translate legacy values into role defaults first, then apply each
+    # AI_REVIEW_* override independently so partial overrides preserve the
+    # untouched v0.1 provider/model values.
     legacy = (
-        not new_role_env_configured
-        and "primary_provider" not in raw
+        "primary_provider" not in raw
+        and "primary_model" not in raw
+        and "secondary_provider" not in raw
+        and "secondary_model" not in raw
         and ("openai_model" in raw or "gemini_model" in raw)
     )
     if legacy:
-        primary_provider_value: object = "openai"
-        primary_model_value = _resolve_scalar(raw.get("openai_model"), "openai_model")
-        secondary_provider_value: object = "gemini"
-        secondary_model_value = _resolve_scalar(raw.get("gemini_model"), "gemini_model")
+        primary_provider_default: object = "openai"
+        primary_model_default = raw.get("openai_model")
+        secondary_provider_default: object = "gemini"
+        secondary_model_default = raw.get("gemini_model")
     else:
-        primary_provider_value = _setting(
-            raw,
-            key="primary_provider",
-            env_name="AI_REVIEW_PRIMARY_PROVIDER",
-            default="ollama",
-        )
-        primary_model_value = _setting(
-            raw,
-            key="primary_model",
-            env_name="AI_REVIEW_PRIMARY_MODEL",
-            default="gpt-oss:20b",
-        )
-        secondary_provider_value = _setting(
-            raw,
-            key="secondary_provider",
-            env_name="AI_REVIEW_SECONDARY_PROVIDER",
-            default="gemini",
-        )
-        secondary_model_value = _setting(
-            raw,
-            key="secondary_model",
-            env_name="AI_REVIEW_SECONDARY_MODEL",
-            default="gemini-3.7-flash",
-        )
+        primary_provider_default = "ollama"
+        primary_model_default = "gpt-oss:20b"
+        secondary_provider_default = "gemini"
+        secondary_model_default = "gemini-3.7-flash"
+
+    primary_provider_value = _setting(
+        raw,
+        key="primary_provider",
+        env_name="AI_REVIEW_PRIMARY_PROVIDER",
+        default=primary_provider_default,
+    )
+    primary_model_value = _setting(
+        raw,
+        key="primary_model",
+        env_name="AI_REVIEW_PRIMARY_MODEL",
+        default=primary_model_default,
+    )
+    secondary_provider_value = _setting(
+        raw,
+        key="secondary_provider",
+        env_name="AI_REVIEW_SECONDARY_PROVIDER",
+        default=secondary_provider_default,
+    )
+    secondary_model_value = _setting(
+        raw,
+        key="secondary_model",
+        env_name="AI_REVIEW_SECONDARY_MODEL",
+        default=secondary_model_default,
+    )
 
     primary_provider = _normalize_provider(primary_provider_value, "primary_provider")
     primary_model = _normalize_model(primary_model_value, "primary_model")
