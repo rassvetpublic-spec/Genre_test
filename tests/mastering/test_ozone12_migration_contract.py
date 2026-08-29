@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from genre_test.technical.mastering_cli import build_parser
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -55,6 +57,8 @@ def test_operational_mastering_docs_use_shared_qc_cli() -> None:
     assert "python tools/stage_toolkit/oz12_mastering_meter.py" not in operational_text
     assert "--decoded-peak-target-dbtp" not in operational_text
     assert "--keep-codec-files" not in operational_text
+    assert "overall/event/by-band" not in operational_text
+    assert "вокруг drum events" not in operational_text
 
     meter_doc = (
         docs_root / "core/15_AUTOMATIC_MASTERING_METER.md"
@@ -64,6 +68,36 @@ def test_operational_mastering_docs_use_shared_qc_cli() -> None:
     ).read_text(encoding="utf-8")
     assert "genre-test-mastering-qc" in meter_doc
     assert "genre-test-mastering-qc" in checklist
+
+
+def test_documented_mastering_qc_cli_contract_matches_parser() -> None:
+    parser = build_parser()
+    args = parser.parse_args(["reference.wav", "candidate.wav"])
+    codec_args = parser.parse_args(
+        [
+            "reference.wav",
+            "candidate.wav",
+            "--codec",
+            "mp3_320",
+            "--codec",
+            "aac_256",
+            "--codec",
+            "aac_192",
+            "--target-dbtp",
+            "-1.0",
+        ]
+    )
+
+    assert codec_args.codec == ["mp3_320", "aac_256", "aac_192"]
+    assert codec_args.target_dbtp == -1.0
+    assert args.target_dbtp is None
+    assert args.codec_safety_margin_db == 0.1
+    assert args.max_lag_seconds == 2.0
+    assert args.max_events == 64
+    assert args.attack_warn_db == -0.75
+    assert args.attack_fail_db == -1.5
+    assert args.mono_warn_db == -0.5
+    assert args.mono_fail_db == -1.5
 
 
 def test_supercombine_marks_ozone_executable_migration_complete() -> None:

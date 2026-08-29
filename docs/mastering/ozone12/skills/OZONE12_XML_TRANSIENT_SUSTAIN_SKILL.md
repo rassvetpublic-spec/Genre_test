@@ -194,7 +194,7 @@ Meter автоматически:
 1. time-aligns reference/candidate по reduced-rate envelope;
 2. делает analysis-only active-RMS match;
 3. сравнивает одни и те же strong broad-band onset events;
-4. считает relative mono retention overall, вокруг drum events и по четырём полосам;
+4. считает relative mono retention overall и по четырём полосам;
 5. при final pass реально encode→decode MP3 320, AAC 256 и AAC 192 и измеряет decoded peaks.
 
 Primary drum guard = minimum of median attack-RMS delta and median attack-to-sustain delta. Default warning/fail thresholds настраиваются и остаются heuristics. Detector не является drum-stem separation.

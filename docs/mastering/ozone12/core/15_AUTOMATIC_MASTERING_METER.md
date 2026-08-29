@@ -34,7 +34,7 @@ loudness-matched listening.
 installed Genre_test environment
 NumPy
 SciPy
-FFmpeg + ffprobe for codec audit
+FFmpeg for codec audit
 ```
 
 Inputs are PCM/float WAV files.

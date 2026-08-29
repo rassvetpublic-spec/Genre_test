@@ -33,7 +33,9 @@ AUDIO_MASTERING ChatGPT project
         -> mastering/ozone12 = Ozone-specific subsystem
 ```
 
-The old repository remains available for history until the executable migration and parity checks are finished, then it can be frozen/archived. New issues, architecture decisions and production code belong in Genre_test.
+The executable migration and parity checks are complete. The old repository is
+frozen as history/provenance; all new issues, architecture decisions and
+production code belong in Genre_test.
 
 ## Imported in #100
 
