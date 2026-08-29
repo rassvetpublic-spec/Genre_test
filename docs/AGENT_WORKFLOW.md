@@ -1,6 +1,6 @@
 # Agent workflow for Genre_test
 
-This document defines how repository-aware agents collaborate without weakening explicit user architecture/merge authority.
+This document defines how repository-aware agents collaborate without weakening user architecture authority, exact-head validation, or the project's standing automatic MTD authorization.
 
 Read `AGENTS.md` first. GitHub Issues are task contracts; repository/GitHub state, not chat memory, carries durable workflow context.
 
@@ -44,8 +44,8 @@ REVIEW
                                      v
                            READY-MTD <head-sha>
                                      |
-                         explicit user MTD authority
-                       for this PR or approved plan
+                    standing project MTD authority
+                    or explicit user MTD override
                                      |
                                      v
                                   MERGED
@@ -83,9 +83,9 @@ They do not count as successful forward progress.
 | PULL REQUEST -> REVIEW | CODER | current head published for independent review |
 | REVIEW -> VALIDATION | QA_REVIEWER; AUDIO_SCIENCE when triggered | exact-head verdicts available |
 | VALIDATION -> READY-MTD | RELEASE_MANAGER | all required exact-head gates satisfied |
-| READY-MTD -> MERGED | explicit USER MTD, executed by RELEASE_MANAGER | immediate current-head revalidation |
+| READY-MTD -> MERGED | RELEASE_MANAGER under standing/explicit user MTD | immediate current-head revalidation |
 | MERGED -> POST-MERGE-VERIFIED | RELEASE_MANAGER | main CI/test state verified |
-| POST-MERGE-VERIFIED -> CLOSED | REPO_STEWARD verifies repository/task state | Issue complete, merged branch gone |
+| POST-MERGE-VERIFIED -> CLOSED | REPO_STEWARD verifies repository/task state | Issue complete, branch state confirmed |
 
 No role may skip a transition merely because it has broader GitHub credentials.
 
@@ -110,7 +110,7 @@ Until PR-2 implements the GitHub-native claim fields/templates, record the colli
 
 Use for repository/task state, overlapping work, stale branches, duplicated implementations, roadmap/current-file consistency, ignored artifacts, and source-of-truth questions.
 
-It may certify `STATE-CLEAR` / `CLAIM-APPROVED` or block work with `STATE-CONFLICT` / `CLAIM-BLOCKED`. It does not implement product code, approve architecture, declare READY-MTD, merge, or delete unmerged/ambiguous work.
+It may certify `STATE-CLEAR` / `CLAIM-APPROVED` or block work with `STATE-CONFLICT` / `CLAIM-BLOCKED`. It does not implement product code, approve architecture, declare READY-MTD, merge, or delete branches. Leftover merged branches are reported to `RELEASE_MANAGER`.
 
 ### RESEARCHER
 
@@ -178,7 +178,7 @@ INCONCLUSIVE
 
 `RELEASE_MANAGER` is not a second full QA reviewer and must not replace missing independent verdicts with its own judgement.
 
-Only `RELEASE_MANAGER` may execute merge and merged-head deletion, and only when explicit current MTD authority covers the exact ready PR/head.
+Only `RELEASE_MANAGER` may declare READY-MTD, execute merge, and delete the successfully merged head branch. In this project, standing automatic MTD authorizes that execution once an approved-scope PR reaches exact-head READY-MTD; no fresh token is required unless the user narrows/pauses/revokes that standing authority.
 
 ## Standard handoff core
 
@@ -207,19 +207,28 @@ If the receiver cannot reconstruct these fields from repository/GitHub state, th
 
 ## Exact-head readiness
 
-READY-MTD is not a floating property of a PR.
-
-It must always bind to the exact current head SHA:
+READY-MTD is not a floating property of a PR. It must always bind to the exact current head SHA:
 
 ```text
 READY-MTD <40-char-sha>
 ```
 
-If the head SHA changes after QA, Audio Science, validation, readiness, or MTD authorization, previous exact-head verdicts are stale and the PR returns to the required validation gates.
+If the head SHA changes after QA, Audio Science, validation, or readiness, previous exact-head verdicts are stale and the PR returns to the required validation gates.
 
 ## MTD semantics
 
-The accepted explicit merge tokens are:
+### Standing automatic MTD
+
+The user has granted standing automatic MTD authorization for the Genre_test project. It covers merge execution for PRs that:
+
+1. belong to an already approved task or sequential implementation plan;
+2. independently reach `READY-MTD <current-head-sha>`;
+3. pass immediate current-head revalidation;
+4. do not introduce new/material architecture, scope expansion, unrelated work, or unresolved decision points.
+
+A fresh `mtd` token is therefore not required for each ready PR while this standing authorization remains active.
+
+The accepted explicit merge tokens remain:
 
 ```text
 mtd
@@ -227,25 +236,20 @@ MTD
 мтд
 ```
 
-An explicit MTD can authorize either:
+They may be used by the user to authorize/narrow a one-off merge or train, but do not weaken the exact-head gates.
 
-1. one specific `READY-MTD <sha>` PR; or
-2. a sequential merge train across multiple planned PRs inside one already agreed project plan.
-
-For a sequential merge train, MTD remains valid only while the work stays inside that approved plan. It never authorizes unrelated PRs, silent scope expansion, or a new architecture decision.
-
-Each PR in the train still requires its own readiness gate:
+For every automatic or explicitly authorized sequential merge train:
 
 1. Re-read the current PR and current head SHA.
-2. Confirm the PR is part of the approved MTD plan.
+2. Confirm the PR is part of the approved plan/scope.
 3. Confirm required QA and Audio Science verdicts, CI and evidence apply to this exact head.
 4. Confirm the PR is mergeable and scope has not changed unexpectedly.
 5. Merge the PR.
 6. Verify the post-merge CI/test run on `main`.
-7. Confirm the merged head branch is deleted; GitHub automatic deletion is preferred.
+7. Confirm/delete the merged head branch; only `RELEASE_MANAGER` may perform explicit deletion.
 8. Only then proceed to the next planned `READY-MTD <sha>` PR.
 
-Stop the sequential MTD train and return to the user if any of the following occurs:
+Stop the train and return to the user if any of the following occurs:
 
 - CI or required validation fails;
 - the PR becomes non-mergeable or conflicts appear;
@@ -255,11 +259,11 @@ Stop the sequential MTD train and return to the user if any of the following occ
 - an approved contract must be amended;
 - the next PR is not part of the already agreed project plan.
 
-Auto-merge must not be enabled as a substitute for explicit MTD authority. If post-merge CI fails, do not continue the train until the failure is triaged.
+GitHub auto-merge must not be enabled as a substitute for these gates. If post-merge CI fails, do not continue the train until the failure is triaged.
 
 ## Protected baselines
 
-- Stable v0.4 analysis must remain usable.
+- Existing analysis must remain usable unless an approved migration changes it.
 - Active v0.5 retrieval must remain independently usable.
 - Optional restoration/mastering backends must fail independently rather than break normal startup.
 - Source audio is immutable.

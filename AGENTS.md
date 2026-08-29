@@ -9,26 +9,27 @@ The user is the final authority for:
 - scope expansion outside an already approved task/plan;
 - roadmap priority changes;
 - breaking contract/schema decisions that were not already approved;
-- merge authorization through explicit `mtd`, `MTD`, or `мтд`.
+- standing or one-off MTD authorization and its revocation/limits.
 
 `ARCHITECT` may certify architecture, ownership, decomposition, contracts, and acceptance criteria inside already approved constraints. If implementation requires a new/material architecture, product, safety, or release decision, the workflow must stop with `AMENDMENT-REQUIRED` or `NEEDS-USER-APPROVAL`; an agent must not infer approval from silence.
 
 ## Merge policy
 
 - Never commit directly to `main`.
-- Normal change flow: REQUEST -> SCOPED -> optional ARCHITECTURE-READY -> CLAIMED -> IMPLEMENTING -> REVIEW -> VALIDATION -> READY-MTD -> explicit user MTD -> MERGED -> POST-MERGE-VERIFIED -> CLOSED.
+- Normal change flow: REQUEST -> SCOPED -> optional ARCHITECTURE-READY -> CLAIMED -> IMPLEMENTING -> REVIEW -> VALIDATION -> READY-MTD -> MTD-authorized merge -> MERGED -> POST-MERGE-VERIFIED -> CLOSED.
 - `BLOCKED`, `NEEDS-EVIDENCE`, and `AMENDMENT-REQUIRED` are stop/escalation states, not successful forward progress.
-- No agent may merge a pull request unless the user explicitly issues `mtd`, `MTD`, or `мтд`, either for the current ready PR or for a previously agreed sequential MTD plan that includes it.
-- An explicit MTD may authorize a sequential merge train across multiple planned PRs within one project when the user has already approved that plan. It does not authorize unrelated PRs, unplanned scope expansion, or work outside that project plan.
-- Every PR in an authorized merge train must independently reach `READY-MTD <40-char-head-sha>` and be revalidated against that exact current head SHA before merge.
-- Any head SHA change invalidates the prior READY-MTD verdict and returns the PR to validation.
-- Stop the merge train and return to the user if CI fails, mergeability changes, an unexpected scope change appears, required evidence is missing, or a new product/architecture/safety/release decision is needed.
-- After every authorized merge: verify post-merge CI/test state and confirm the head branch is deleted. If automatic deletion did not occur, `RELEASE_MANAGER` may delete that merged head branch only inside the current authorized MTD cycle; otherwise report it for repository stewardship.
-- Do not enable auto-merge as a substitute for explicit MTD authority.
+- The user has granted **standing automatic MTD authorization for this Genre_test project**. Once a PR that belongs to an already approved task/plan reaches `READY-MTD <40-char-head-sha>`, `RELEASE_MANAGER` may execute `merge -> post-merge verification -> merged-head deletion` without requesting a fresh `mtd` token.
+- Standing automatic MTD never authorizes unrelated PRs, unplanned scope expansion, a new/material architecture decision, a changed contract outside approved scope, red/inconclusive evidence, or bypassing required QA/Audio Science gates.
+- The user may narrow, pause, or revoke standing automatic MTD at any time. Explicit `mtd`, `MTD`, or `мтд` remains valid as a one-off or scoped override when the user chooses to issue it.
+- Every PR in an automatic or explicitly authorized merge train must independently reach `READY-MTD <40-char-head-sha>` and be revalidated against that exact current head SHA immediately before merge.
+- Any head SHA change invalidates prior QA/Audio Science/READY-MTD verdicts and returns the PR to validation.
+- Stop the merge train and return to the user if CI fails, mergeability changes, unexpected scope appears, required evidence is missing/inconclusive, or a new product/architecture/safety/release decision is needed.
+- After every authorized merge, verify post-merge CI/test state on `main`. Only `RELEASE_MANAGER` may delete the successfully merged head branch; if cleanup cannot be proven safe, report it and stop rather than delegate destructive authority.
+- Do not enable GitHub auto-merge as a substitute for the repository's exact-head readiness and MTD process.
 
 ## Product boundary
 
-`Genre_test` is evolving into the local-first AUDIO_MASTERING studio-finish system. Stable v0.4 analysis and active v0.5 retrieval must remain independently usable while later repair/mastering subsystems are developed.
+`Genre_test` is evolving into the local-first AUDIO_MASTERING studio-finish system. Existing analysis and active v0.5 retrieval must remain independently usable while later repair/mastering subsystems are developed.
 
 Ozone 12 Advanced is an optional mastering backend inside Genre_test, not a separate product. REAPER is the render host for Ozone work.
 
@@ -75,13 +76,13 @@ Do not create a second active implementation of shared metrics inside an Ozone-s
 
 The specialized role set is intentionally limited to seven agents:
 
-- `REPO_STEWARD`: repository/task-state consistency, duplicate-scope detection, claim/hygiene checks. It does not implement product code, approve architecture, declare READY-MTD, or merge.
+- `REPO_STEWARD`: repository/task-state consistency, duplicate-scope detection, claim/hygiene checks. It does not implement product code, approve architecture, declare READY-MTD, merge, or delete branches.
 - `RESEARCHER`: external evidence and bounded proposals. It does not implement product code or silently change roadmap/scope.
 - `ARCHITECT`: architecture certification, subsystem ownership, contracts, decomposition, and acceptance criteria. New/material architecture decisions require explicit user approval.
 - `CODER`: the production implementation role for approved bounded work. It stops at a reviewable PR and does not approve or merge its own work.
 - `QA_REVIEWER`: independent software/code/test/regression verdict for the exact PR head SHA. It may block validation but does not declare READY-MTD.
 - `AUDIO_SCIENCE`: independent DSP/audio/mastering/Ozone/methodology verdict for the exact PR head SHA when the audio trigger applies. It may block validation but does not declare READY-MTD.
-- `RELEASE_MANAGER`: readiness aggregator and the only agent role allowed to execute merge/merged-head deletion, strictly inside explicit current MTD authority. It does not replace QA with a second full code review.
+- `RELEASE_MANAGER`: readiness aggregator and the only agent role allowed to declare READY-MTD and execute merge/merged-head deletion under valid standing or explicit MTD authority. It does not replace QA with a second full code review.
 
 The implementation agent must not be the sole reviewer of its own work. No agent may expand its own authority by editing governance outside an approved governance task.
 
@@ -116,9 +117,9 @@ Ordinary documentation/code changes outside those semantics do not require Audio
 ## Scope discipline
 
 - Prefer one focused Issue -> one focused PR when practical.
-- Do not silently expand v0.5 CLaMP work into v0.6/v0.7 implementation.
+- Do not silently expand current retrieval work into future repair/mastering implementation.
 - Research findings become proposals before implementation unless the user explicitly requests immediate code and the change is already within an approved Issue.
-- Preserve backward compatibility with stable analysis/retrieval unless a dedicated migration explicitly changes it.
+- Preserve backward compatibility with existing analysis/retrieval unless a dedicated migration explicitly changes it.
 - New optional backends must fail independently rather than breaking ordinary analysis startup.
 - Approved/allowed paths and explicit non-goals are binding. If implementation must cross them, stop with `AMENDMENT-REQUIRED`.
 
@@ -183,5 +184,6 @@ If these sources disagree, stop, identify the conflict, and prefer current `Genr
 - Do not commit local audio, private corpora, model weights, caches, `.venv`, runtime databases, or session renders unless a fixture is intentionally reviewed for Git inclusion.
 - Do not delete an unmerged branch merely because it looks stale.
 - A branch with an open PR, unique commits, or unclear ownership is not disposable.
-- Merged branches may be deleted only after post-merge verification; GitHub automatic head-branch deletion is preferred.
+- Merged branches may be deleted only by `RELEASE_MANAGER` after successful post-merge verification; GitHub automatic head-branch deletion is preferred.
+- `REPO_STEWARD` is report-only for leftover branches and repository cleanup recommendations.
 - Keep roadmap/current/TODO documents aligned with actual merged state, not merely open PR state.

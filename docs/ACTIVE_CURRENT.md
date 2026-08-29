@@ -1,15 +1,13 @@
 # ACTIVE / CURRENT
 
-Stable version: **0.4.0**  
-Stable status: **released**  
-Main release tag: `v0.4.0`  
-Active development version: **0.5.0.dev0**  
-Active development scope: **v0.5 CLaMP 3 semantic retrieval**  
-Epic: **#26**  
+Published stable version: **none**
+Active development version: **0.5.0.dev0**
+Active development scope: **v0.5 CLaMP 3 semantic retrieval**
+Epic: **#26**
 Current first implementation issue: **#27**
 
-Long-term product epic: **#49 SUPERCOMBINE**  
-Long-term execution TODO: `docs/SUPERCOMBINE_TODO.md`  
+Long-term product epic: **#49 SUPERCOMBINE**
+Long-term execution TODO: `docs/SUPERCOMBINE_TODO.md`
 Geekatplay reuse audit: `docs/GEEKATPLAY_ORG_AUDIT.md`
 
 ## Product north star
@@ -38,9 +36,9 @@ Planned long-term phases:
 - v0.9 ComfyUI/runtime orchestration — #46, #55;
 - v1.0 integrated SUPERCOMBINE.
 
-## Stable v0.4 implementation
+## Core analysis baseline
 
-Genre_test 0.4.0 remains a local Windows-first music profiling and regression system built around:
+The core analysis baseline remains a local Windows-first music profiling and regression system built around:
 
 ```text
 Audio
@@ -53,7 +51,7 @@ Audio
   -> history / Validation / build comparison
 ```
 
-No v0.5 retrieval work may silently change these outputs without separate review and evidence.
+Retrieval work may not silently change these outputs without separate review and evidence.
 
 ## Runtime baseline
 

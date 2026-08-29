@@ -6,7 +6,7 @@ Repository workflow changes must preserve the Agent System v2 authority model an
 
 ```text
 REQUEST -> SCOPED -> optional ARCHITECTURE-READY -> CLAIMED -> IMPLEMENTING
--> REVIEW -> VALIDATION -> READY-MTD <head-sha> -> explicit user MTD
+-> REVIEW -> VALIDATION -> READY-MTD <head-sha> -> MTD-authorized merge
 -> MERGED -> POST-MERGE-VERIFIED -> CLOSED
 ```
 
@@ -23,15 +23,17 @@ Do not weaken or bypass these rules:
 - `QA_REVIEWER` produces an exact-head software verdict, not READY-MTD;
 - `AUDIO_SCIENCE` produces an exact-head domain verdict when triggered, not READY-MTD;
 - `RELEASE_MANAGER` aggregates independent gates; it must not replace missing QA/Audio Science with its own second review;
-- only `RELEASE_MANAGER` may declare `READY-MTD <40-char-sha>` or execute merge/merged-head deletion, and only under valid explicit current MTD authority;
-- never enable auto-merge as a substitute for user authorization;
-- `mtd`, `MTD`, or `мтд` may authorize one exact-head ready PR or a sequential merge train across multiple planned PRs in one already agreed project plan;
-- sequential MTD authority never covers unrelated work, silent scope expansion, or a new architecture decision;
-- every PR in the train must independently pass exact-head READY-MTD/current-head validation;
+- only `RELEASE_MANAGER` may declare `READY-MTD <40-char-sha>` or execute merge/merged-head deletion;
+- the user has granted standing automatic MTD for this project, so an already approved-scope PR may be merged automatically by RELEASE_MANAGER after exact-head READY-MTD without a fresh token;
+- explicit `mtd`, `MTD`, or `мтд` remains a valid one-off/scoped override;
+- standing/sequential MTD authority never covers unrelated work, silent scope expansion, missing/inconclusive evidence, or a new architecture/product/safety/release decision;
+- every PR in a train must independently pass exact-head READY-MTD/current-head validation;
 - any PR head SHA change invalidates prior exact-head QA/Audio/readiness evidence;
-- after every merge, verify CI/test state on `main` and confirm/delete the merged head branch before continuing;
-- stop a sequential merge train on CI failure, conflict, unexpected scope, missing/inconclusive evidence, changed head without revalidation, or a new product/architecture/safety/release decision;
-- do not delete unmerged branches with unique commits, open PRs, or unclear ownership.
+- after every merge, verify CI/test state on `main`; only RELEASE_MANAGER may explicitly delete the merged head branch before continuing;
+- REPO_STEWARD is report-only for leftover branches and has no branch-delete authority;
+- stop an automatic/sequential merge train on CI failure, conflict, unexpected scope, missing/inconclusive evidence, changed head without revalidation, or a new decision point;
+- do not delete unmerged branches with unique commits, open PRs, or unclear ownership;
+- do not enable GitHub auto-merge as a substitute for governed readiness/MTD authority.
 
 Custom agents must use least-privilege intent and explicit contract sections for responsibilities, permissions, inputs, outputs, handoff, evidence, stop conditions, GitHub authority, and MTD interaction.
 

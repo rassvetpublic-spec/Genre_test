@@ -5,7 +5,7 @@
 1. [`../README.md`](../README.md) — основной README и быстрый вход.
 2. [`ACTIVE_CURRENT.md`](ACTIVE_CURRENT.md) — фактическое текущее состояние продукта.
 3. [`ARCHITECTURE.md`](ARCHITECTURE.md) — MAEST + AudioSet AST + DSP + AudioProfile.
-4. [`GPU_RUNTIME_0.4.md`](GPU_RUNTIME_0.4.md) — Python / PyTorch / CUDA / Blackwell runtime.
+4. [`GPU_RUNTIME.md`](GPU_RUNTIME.md) — Python / PyTorch / CUDA / Blackwell runtime.
 5. [`MODELS.md`](MODELS.md) — pinned model ids и revisions.
 6. [`VALIDATION_LAB.md`](VALIDATION_LAB.md) — Validation, history drift и build comparison.
 7. [`RUNTIME_DATA.md`](RUNTIME_DATA.md) — SQLite, logs, caches и results.

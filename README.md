@@ -1,11 +1,11 @@
 # Genre_test
 
-**Current development version: 0.5.0.dev0**  
-**Latest stable release: 0.4.0**
+**Current development version: 0.5.0.dev0**
+**Published stable release: none; active development line: 0.5.0.dev0**
 
 Genre_test is a local Windows-first music profiler and regression lab. Ordinary analysis combines **MAEST Discogs519 + pinned AudioSet AST + DSP** into an `AudioProfile`; Validation remains a dedicated reproducibility/drift workflow.
 
-## Stable v0.4.0 analysis baseline
+## Current analysis baseline
 
 Ordinary analysis can produce all three views from one inference pass:
 
@@ -91,20 +91,15 @@ Working-copy retrieval commands:
 
 During v0.5 development, `retrieval-setup` runs unattended. Model provenance remains documented; the distribution installer acceptance flow is deferred to v1.0.
 
-### Portable release
+### Portable packaging
 
-Current supported package:
+No packaged stable release is currently published. The former portable release
+has been retired from the active repository and from GitHub Releases/Tags.
 
-```text
-releases/Genre_test_0.4.0_portable.zip
-```
-
-The same archive is attached to GitHub Release `v0.4.0` together with `SHA256SUMS.txt`.
-
-The package does not contain Python, PyTorch or model weights. First launch prepares them automatically and uses normal user pip/Hugging Face caches while keeping the project `.venv` isolated.
+Genre_test_START.cmd retains packaged-mode bootstrap support for a future
+release, but there is no current release archive to download.
 
 ## GUI
-
 The Runtime Health window has three tabs:
 
 ```text
@@ -228,18 +223,14 @@ Large repeatable regression:
 
 Omit `-CompareModes` for a faster Auto-only validation pass.
 
-## Current release evidence
+## Current development evidence
 
-Accepted v0.4 release gates include:
-
-- Windows ensemble batch: 25/25 complete, semantic 25/25, file errors 0;
-- Accurate Validation: 25/25, file errors 0;
-- Safe Stop verified;
-- CUDA/Blackwell runtime verified on RTX 5070 Ti;
-- CI on Python 3.11 / 3.12 / 3.13 with Ruff, pytest and PowerShell/CUDA gates.
+The core analysis/runtime baseline remains covered by Windows ensemble,
+Validation, Safe Stop, CUDA/Blackwell, Ruff, pytest and PowerShell/runtime gates.
+Those checks are development evidence and are not advertised as an active
+packaged release.
 
 ## Integrated studio-finish direction
-
 `Genre_test` is the single engineering source of truth for the wider AUDIO_MASTERING project. The former standalone `OZONE12_MASTERING_LAB` is being absorbed as the Ozone 12 mastering subsystem rather than maintained as a second product.
 
 Canonical Ozone boundary:
@@ -251,7 +242,7 @@ tools/mastering/ozone12/
 src/genre_test/mastering/ozone12/
 ```
 
-Ozone 12 Advanced remains an **optional mastering backend**. Ordinary v0.4/v0.5 analysis and retrieval must not require Ozone or REAPER. The full v0.7 path is planned as:
+Ozone 12 Advanced remains an **optional mastering backend**. Ordinary analysis and retrieval must not require Ozone or REAPER. The full v0.7 path is planned as:
 
 ```text
 Genre_test preflight
