@@ -1,7 +1,19 @@
+import importlib
+from pathlib import Path
+import sys
+
 import pytest
 
-from tools.ai_review.errors import ContractError
-from tools.ai_review.schema import load_schema, validate_contract
+
+_REPO_ROOT = str(Path(__file__).resolve().parents[1])
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
+_errors = importlib.import_module("tools.ai_review.errors")
+_schema = importlib.import_module("tools.ai_review.schema")
+ContractError = _errors.ContractError
+load_schema = _schema.load_schema
+validate_contract = _schema.validate_contract
 
 
 def _valid_review():
