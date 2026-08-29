@@ -14,8 +14,9 @@ ConsultOrchestrator = _orchestrator.ConsultOrchestrator
 
 
 class FakeProvider:
-    def __init__(self, name):
+    def __init__(self, name, model):
         self.name = name
+        self.model = model
         self.calls = []
 
     def generate_json(self, *, instructions, input_text, schema, schema_name):
@@ -56,23 +57,35 @@ def _extract_context(text):
 
 
 def test_consult_uses_same_canonical_context_for_every_stage(tmp_path):
-    openai = FakeProvider("openai")
-    gemini = FakeProvider("gemini")
+    primary = FakeProvider("ollama", "gpt-oss:20b")
+    secondary = FakeProvider("gemini", "gemini-3.7-flash")
     result = ConsultOrchestrator(
-        openai=openai,
-        gemini=gemini,
+        primary=primary,
+        secondary=secondary,
         runs_dir=tmp_path,
         save_runs=False,
     ).consult("Choose a bounded implementation.")
 
-    calls = openai.calls + gemini.calls
+    calls = primary.calls + secondary.calls
     contexts = [_extract_context(call["input_text"]) for call in calls]
     assert len(set(contexts)) == 1
 
     digest = hashlib.sha256(contexts[0].encode("utf-8")).hexdigest()
     assert result["run"]["context_sha256"] == digest
     assert result["run"]["state"] == "COMPLETE"
+    assert result["run"]["primary_completed"] is True
+    assert result["run"]["secondary_completed"] is True
+    assert result["providers"]["primary"] == {
+        "name": "ollama",
+        "model": "gpt-oss:20b",
+    }
+    assert result["providers"]["secondary"] == {
+        "name": "gemini",
+        "model": "gemini-3.7-flash",
+    }
     assert result["final"]["recommendation"] == "recommendation"
+    assert len(primary.calls) == 3
+    assert len(secondary.calls) == 2
 
 
 def test_cli_exposes_consult_without_importing_provider_sdks():
