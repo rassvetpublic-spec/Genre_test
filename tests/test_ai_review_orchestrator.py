@@ -1,7 +1,7 @@
 import hashlib
 import importlib
-from pathlib import Path
 import sys
+from pathlib import Path
 
 
 _REPO_ROOT = str(Path(__file__).resolve().parents[1])
