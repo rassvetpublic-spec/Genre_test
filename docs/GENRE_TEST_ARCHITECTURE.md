@@ -104,7 +104,7 @@ For Blackwell, `CUDA available=True` alone is insufficient; the active `sm_xxx` 
 
 ## 6. Ozone mastering integration boundary
 
-Ozone 12 Advanced is the mastering backend. REAPER is the render host for reproducible automated/mastering renders.
+Ozone 12 Advanced is an **optional mastering backend** selected for the integration described by this supplement. REAPER is the reproducible render host when that Ozone backend is used. Ordinary analysis, catalog/search/retrieval, validation, and non-Ozone workflows must not require Ozone or REAPER.
 
 The inherited mastering topology is represented as a **conditional slot map**, not as an always-on chain.
 
