@@ -216,6 +216,35 @@ def test_new_role_env_can_override_legacy_openai_gemini_config(tmp_path, monkeyp
     assert settings.secondary_model == "gemini-3.7-flash"
 
 
+def test_partial_role_env_override_preserves_legacy_defaults(tmp_path, monkeypatch):
+    for name in (
+        "AI_REVIEW_PRIMARY_PROVIDER",
+        "AI_REVIEW_PRIMARY_MODEL",
+        "AI_REVIEW_SECONDARY_PROVIDER",
+        "AI_REVIEW_SECONDARY_MODEL",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    config_path = tmp_path / "legacy-config.yaml"
+    config_path.write_text(
+        json.dumps(
+            {
+                "openai_model": "legacy-openai-model",
+                "gemini_model": "legacy-gemini-model",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("AI_REVIEW_PRIMARY_MODEL", "override-openai-model")
+
+    settings = load_settings(config_path)
+
+    assert settings.primary_provider == "openai"
+    assert settings.primary_model == "override-openai-model"
+    assert settings.secondary_provider == "gemini"
+    assert settings.secondary_model == "legacy-gemini-model"
+
+
 def test_config_accepts_openai_gemini_topology(tmp_path, monkeypatch):
     for name in (
         "AI_REVIEW_PRIMARY_PROVIDER",
