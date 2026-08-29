@@ -20,7 +20,7 @@ A metric winner is not automatically a musical winner.
 
 GPU validation must include more than `torch.cuda.is_available()`.
 
-For the current 0.4 Blackwell baseline verify:
+For the verified Blackwell baseline inherited from v0.4 acceptance work, verify unless a newer repository contract explicitly supersedes it:
 
 ```text
 Torch >= 2.12.1
@@ -87,7 +87,9 @@ Validation rules:
 - compare duration before claiming a tempo change;
 - use onset/periodicity evidence rather than one raw `beat_track()` number;
 - mastering A/B should prefer a stable metric-level interpretation across variants of the same track;
-- if the source name or trusted session metadata contains BPM, treat it as validation evidence, not as classifier input truth unless explicitly enabled.
+- if the source name or trusted session metadata contains BPM, treat it as validation evidence, not as classifier input truth unless explicitly enabled;
+- unexplained BPM-estimator divergence between equal-duration non-time-stretched variants is a **diagnostic / NEEDS-EVIDENCE condition**, not by itself a hard reject;
+- promote BPM divergence to a hard reject only when independent timing, duration, or render evidence demonstrates an actual unintended tempo/timebase alteration.
 
 ## 6. Source-format validation
 
@@ -229,9 +231,11 @@ Examples of universal hard rejects:
 - clipping/decoded overs beyond the chosen delivery policy;
 - important mono cancellation;
 - clearly audible drum/punch destruction;
-- unexplained large BPM change between equal-duration processing variants;
+- independently verified unintended timing/duration/timebase alteration;
 - source-format metadata reported from the analysis-resample stream;
 - track-specific calibration values promoted as universal defaults.
+
+BPM-estimator divergence alone is intentionally excluded from this list; see the diagnostic/NEEDS-EVIDENCE rule in section 5.
 
 ## 14. Knowledge promotion gate
 
