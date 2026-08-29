@@ -245,6 +245,64 @@ def test_partial_role_env_override_preserves_legacy_defaults(tmp_path, monkeypat
     assert settings.secondary_model == "legacy-gemini-model"
 
 
+def test_mixed_role_config_preserves_unmigrated_legacy_model(tmp_path, monkeypatch):
+    for name in (
+        "AI_REVIEW_PRIMARY_PROVIDER",
+        "AI_REVIEW_PRIMARY_MODEL",
+        "AI_REVIEW_SECONDARY_PROVIDER",
+        "AI_REVIEW_SECONDARY_MODEL",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    config_path = tmp_path / "mixed-config.yaml"
+    config_path.write_text(
+        json.dumps(
+            {
+                "primary_provider": "ollama",
+                "primary_model": "gpt-oss:20b",
+                "gemini_model": "legacy-gemini-model",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    settings = load_settings(config_path)
+
+    assert settings.primary_provider == "ollama"
+    assert settings.primary_model == "gpt-oss:20b"
+    assert settings.secondary_provider == "gemini"
+    assert settings.secondary_model == "legacy-gemini-model"
+
+
+def test_mixed_secondary_role_config_preserves_legacy_primary_model(tmp_path, monkeypatch):
+    for name in (
+        "AI_REVIEW_PRIMARY_PROVIDER",
+        "AI_REVIEW_PRIMARY_MODEL",
+        "AI_REVIEW_SECONDARY_PROVIDER",
+        "AI_REVIEW_SECONDARY_MODEL",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    config_path = tmp_path / "mixed-config.yaml"
+    config_path.write_text(
+        json.dumps(
+            {
+                "openai_model": "legacy-openai-model",
+                "secondary_provider": "gemini",
+                "secondary_model": "new-gemini-model",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    settings = load_settings(config_path)
+
+    assert settings.primary_provider == "openai"
+    assert settings.primary_model == "legacy-openai-model"
+    assert settings.secondary_provider == "gemini"
+    assert settings.secondary_model == "new-gemini-model"
+
+
 def test_config_accepts_openai_gemini_topology(tmp_path, monkeypatch):
     for name in (
         "AI_REVIEW_PRIMARY_PROVIDER",
