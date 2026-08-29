@@ -31,4 +31,6 @@ preparatory correction / balance
 
 Protect focused transient attack and avoid uncontrolled sustain widening. REAPER is the render host. Ozone/REAPER must remain optional and must not become dependencies of ordinary analysis/retrieval startup.
 
-Any DSP/audio/Ozone PR requires independent `AUDIO_SCIENCE` review before `READY-MTD`.
+Independent `AUDIO_SCIENCE` review is mandatory before `READY-MTD` for changes affecting DSP/audio-analysis semantics, restoration/repair/stem processing, loudness/True Peak, transient, stereo/mono, codec methodology, A/B/X audio comparison or level matching, mastering assumptions, Ozone XML/ParamID/ElementChain/module-order semantics, or REAPER/Ozone render/readback compatibility.
+
+The Audio Science verdict must apply to the exact current PR head SHA. Any head change invalidates the old domain verdict and requires revalidation.
