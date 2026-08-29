@@ -88,27 +88,19 @@ def load_settings(path: str | Path | None = None) -> Settings:
     if not isinstance(raw, dict):
         raise ConfigurationError("config.yaml root must be an object.")
 
-    # v0.1 compatibility for external config files using the original keys.
-    # Translate legacy values into role defaults first, then apply each
-    # AI_REVIEW_* override independently so partial overrides preserve the
-    # untouched v0.1 provider/model values.
-    legacy = (
-        "primary_provider" not in raw
-        and "primary_model" not in raw
-        and "secondary_provider" not in raw
-        and "secondary_model" not in raw
-        and ("openai_model" in raw or "gemini_model" in raw)
+    # v0.1 compatibility is role-local rather than all-or-nothing. Seed each
+    # role from the corresponding legacy model when present, then allow the
+    # new file keys and AI_REVIEW_* environment variables to override each
+    # field independently. This supports legacy, mixed-migration, and fully
+    # role-neutral configs without silently dropping untouched legacy values.
+    primary_provider_default: object = (
+        "openai" if "openai_model" in raw else "ollama"
     )
-    if legacy:
-        primary_provider_default: object = "openai"
-        primary_model_default = raw.get("openai_model")
-        secondary_provider_default: object = "gemini"
-        secondary_model_default = raw.get("gemini_model")
-    else:
-        primary_provider_default = "ollama"
-        primary_model_default = "gpt-oss:20b"
-        secondary_provider_default = "gemini"
-        secondary_model_default = "gemini-3.7-flash"
+    primary_model_default: object = raw.get("openai_model", "gpt-oss:20b")
+    secondary_provider_default: object = "gemini"
+    secondary_model_default: object = raw.get(
+        "gemini_model", "gemini-3.7-flash"
+    )
 
     primary_provider_value = _setting(
         raw,
