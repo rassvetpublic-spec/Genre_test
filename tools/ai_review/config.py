@@ -11,6 +11,12 @@ from .errors import ConfigurationError
 
 _ENV_REF = re.compile(r"^\$\{([A-Z0-9_]+)\}$")
 _SUPPORTED_PROVIDERS = {"ollama", "openai", "gemini"}
+_PROVIDER_ENV_NAMES = (
+    "AI_REVIEW_PRIMARY_PROVIDER",
+    "AI_REVIEW_PRIMARY_MODEL",
+    "AI_REVIEW_SECONDARY_PROVIDER",
+    "AI_REVIEW_SECONDARY_MODEL",
+)
 
 
 @dataclass(frozen=True)
@@ -89,8 +95,12 @@ def load_settings(path: str | Path | None = None) -> Settings:
         raise ConfigurationError("config.yaml root must be an object.")
 
     # v0.1 compatibility for external config files using the original keys.
-    legacy = "primary_provider" not in raw and (
-        "openai_model" in raw or "gemini_model" in raw
+    # New AI_REVIEW_* role configuration intentionally takes precedence when supplied.
+    new_role_env_configured = any(os.getenv(name) for name in _PROVIDER_ENV_NAMES)
+    legacy = (
+        not new_role_env_configured
+        and "primary_provider" not in raw
+        and ("openai_model" in raw or "gemini_model" in raw)
     )
     if legacy:
         primary_provider_value: object = "openai"
