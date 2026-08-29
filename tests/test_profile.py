@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import replace
 
 from genre_test import __version__
-
 from genre_test.models import (
     AnalysisResult,
     AudioFeatures,
