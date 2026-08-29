@@ -92,6 +92,20 @@ Disagreement:
 
 No tuning on locked test audio. Track/source families must not cross splits.
 
+## Representative-region pack
+
+Backend tuning and candidate promotion must not depend on one arbitrary excerpt from a source. When the parent source contains the material, build a deterministic representative-region pack with these classes:
+
+- `QUIET` — low-level/sparse material;
+- `LOUD` — high-energy/dense material;
+- `TRANSIENT_RICH` — onset-dense drums or percussive events;
+- `VOCAL` — lead-vocal/front-consonant material when vocals are present;
+- `SUSTAIN_OR_TAIL` — held tones, reverberant tails or stable sustain.
+
+Each selected region records timestamps, selector revision, evidence used for selection and availability. A class that does not exist in the source is `N/A`; it must not be fabricated.
+
+For candidate search, evaluate the applicable gates on every relevant class before a full render is allowed. This explicitly catches settings that improve sustain or harshness while damaging quiet detail, vocal consonants, drum attacks or stereo tails.
+
 ## Candidate matrix
 
 Every eligible excerpt keeps `R0 ORIGINAL`.
@@ -132,9 +146,19 @@ Source and candidate:
 - spectral delta by bands and spectral-cutoff evidence;
 - high-band tonality/flatness and temporal instability;
 - mid/side energy, bandwise correlation, mono-loss estimate;
+- stereo-width damage relative to aligned source;
 - local marker precision/recall against reviewed intervals;
 - chunk-boundary continuity;
 - runtime, VRAM, RAM, load/warm time and real-time factor.
+
+For every aligned source/candidate pair, also compute an analysis-only removed-signal residual (`source - candidate`) after logged time alignment and gain compensation. Report at minimum:
+
+- removed-signal transient/onset leakage;
+- removed-signal useful harmonic-energy leakage;
+- removed-signal vocal-front/consonant leakage when a vocal reference/detector is available;
+- removed-signal stereo-side energy and width damage.
+
+The residual is diagnostic evidence, not an assumption that everything removed was a defect. Significant musical content in the residual is a damage gate and can force `REJECT` or `HUMAN_REVIEW` even when the target artifact metric improves.
 
 Stem routes additionally:
 
@@ -179,6 +203,9 @@ Primary success criterion is not preference alone:
 ```text
 artifact reduction improves
 AND musical damage stays below gate
+AND removed-signal leakage stays below applicable gate
+AND stereo/transient/vocal guards pass
+AND all relevant representative-region classes pass
 AND hard technical guards pass
 ```
 
@@ -190,6 +217,8 @@ Report per defect group and overall:
 - pairwise win/loss/tie versus original;
 - mean/median artifact-reduction score;
 - musical-damage rejection rate;
+- removed-signal leakage rejection/human-review rate;
+- per-region-class pass/fail/N/A rate;
 - hard-failure rate;
 - over-processing rate on clean controls;
 - runtime/resource cost;
@@ -207,6 +236,8 @@ A backend can become `SAFE` only when:
 - repeatability tolerance documented;
 - clean-control over-processing rate is acceptable;
 - no critical stereo, transient, vocal-identity or chunk-boundary failures;
+- removed-signal leakage gates are defined, versioned and pass on relevant representative-region classes;
+- representative-region selection is deterministic and full-render promotion requires all relevant classes to pass;
 - it beats original or DSP baseline on its eligible defect class under blind review;
 - failure/cancel/unload behavior is verified.
 
@@ -218,8 +249,9 @@ Otherwise it remains `PROBE_ONLY`, `EXPERIMENTAL` or `REJECTED`.
 - corpus manifest schema and validator;
 - annotation guide and reviewer form;
 - private-local corpus bootstrap script;
+- deterministic representative-region selector and manifest fields;
 - candidate processing manifests;
-- objective CSV/JSON reports;
+- objective CSV/JSON reports including removed-signal leakage metrics;
 - #54 comparison sessions;
 - benchmark report with per-defect recommendations;
 - license/runtime audit for every tested backend.
