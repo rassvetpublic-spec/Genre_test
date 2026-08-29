@@ -1,6 +1,6 @@
-# Genre_test Architecture
+# Genre_test legacy/Ozone architecture supplement
 
-Status: active architecture document
+Status: architecture supplement for legacy/Ozone integration. The canonical repository entry points remain `docs/ARCHITECTURE.md`, `docs/ACTIVE_CURRENT.md`, and the current roadmap; this document must not compete with or replace them.
 
 ## 1. Canonical system
 
@@ -8,9 +8,11 @@ Status: active architecture document
 
 `OZONE12_MASTERING_LAB` is frozen legacy reference only. Its reusable knowledge is normalized into `docs/LEGACY_PROJECT_KNOWLEDGE.md` and ADRs under `docs/DECISIONS/`.
 
-## 2. Product boundary
+This supplement records the architecture implications of that migration. For current whole-product ownership, active work, retrieval status, repair/stems direction, and release state, follow the canonical entry points above.
 
-Genre_test has two related but distinct responsibilities:
+## 2. Product boundary relevant to this supplement
+
+Genre_test spans several independently useful but connected responsibilities. The parts relevant to this legacy/Ozone integration are:
 
 1. **Audio understanding / profiling**
    - genre/family/style classification;
@@ -18,11 +20,18 @@ Genre_test has two related but distinct responsibilities:
    - BPM/key/source-format/DSP features;
    - validation, history and regression comparison.
 
-2. **Mastering decision support**
+2. **Catalog / search / retrieval**
+   - the active v0.5 CLaMP/MERT retrieval lane;
+   - persistent sidecar/catalog behavior defined by current repository contracts;
+   - retrieval remains an independent product responsibility and is not subordinated to mastering.
+
+3. **Mastering decision support**
    - evidence and guards for Ozone 12 mastering;
    - source/provenance validation;
    - transient/mono/codec/final-export checks;
    - future machine-readable recommendations.
+
+Repair, stems, mastering orchestration, A/B/X and broader studio-finish capabilities remain roadmap responsibilities and are governed by the canonical roadmap/current-state documents rather than by this supplement.
 
 Genre_test does **not** treat the classifier result as permission to activate mastering modules automatically without evidence.
 
@@ -73,7 +82,7 @@ A resampled internal stream must never be reported as the source file's native s
 
 ## 5. Device/runtime architecture
 
-Current GPU release baseline for 0.4:
+Verified Blackwell runtime evidence inherited from the v0.4 acceptance work established this baseline unless a newer repository contract explicitly supersedes it:
 
 ```text
 PyTorch 2.12.1+
