@@ -60,3 +60,4 @@ target-version = "py311"
 "src/genre_test/validation_gui.py" = ["BLE001"]
 "src/genre_test/themed_gui.py" = ["B010"]
 "src/genre_test/retrieval/cli.py" = ["B009"]
+"src/genre_test/retrieval/segments.py" = ["B008"]
