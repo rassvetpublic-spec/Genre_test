@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from .base import StructuredProvider
 from ..errors import ConfigurationError
+from .base import StructuredProvider
 
 
 _SUPPORTED_PROVIDERS = {"ollama", "openai", "gemini"}
