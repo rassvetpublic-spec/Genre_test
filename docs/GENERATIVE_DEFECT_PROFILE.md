@@ -154,13 +154,31 @@ A comparison record links source and candidate by hashes and includes:
 - per-band spectral delta;
 - transient attack retention;
 - mono retention and phase stability;
+- stereo-width damage relative to the aligned source;
+- removed-signal leakage metrics derived from an analysis-only aligned residual (`source - candidate`), including transient/onset leakage and, when available, vocal-front/consonant leakage;
 - clipping/NaN/silence/gain guards;
 - stem reconstruction residual where applicable;
 - analyzer robustness results under `SOURCE_RESTORATION`;
 - human ratings for artifact reduction and musical damage separately;
 - verdict: `ACCEPT | REJECT | INCONCLUSIVE | REGENERATE_SOURCE`.
 
-A lower marker count alone cannot select a winner.
+The aligned residual is diagnostic evidence only. It must not be rendered, normalized into a deliverable, or interpreted as pure defect content. Alignment and gain compensation must be logged so ordinary level differences do not masquerade as removed material.
+
+A lower marker count alone cannot select a winner. A candidate must also pass musical-damage guards. Significant drum-attack, vocal-front/consonant, useful harmonic, or stereo-image content in the removed signal is an explicit rejection or human-review trigger, according to versioned thresholds and confidence.
+
+## Representative-region gate
+
+Repair decisions must not rely on one arbitrary excerpt when a full source is available. Candidate evaluation uses a representative-region pack selected from the source:
+
+- `QUIET`;
+- `LOUD`;
+- `TRANSIENT_RICH`;
+- `VOCAL`;
+- `SUSTAIN_OR_TAIL`.
+
+Unavailable classes are recorded as `N/A`; they are never synthesized or guessed. Region selection must be deterministic for a fixed source/configuration and record timestamps plus selection evidence.
+
+A candidate may be promoted to full render only after all relevant selected region classes pass applicable defect-reduction and musical-damage gates. This prevents a setting that helps sustain material from silently damaging vocal consonants, drum attacks, quiet passages, or stereo tails.
 
 ## Separation safeguards
 
@@ -203,6 +221,7 @@ Failure of this profile must not break ordinary Analyze or mutate `AudioProfile`
 - at least one positive and one negative fixture per promoted detector;
 - reviewed marker inter-rater protocol;
 - compatibility mapping to TechnicalProfile fields;
-- before/after comparison schema;
+- before/after comparison schema with removed-signal leakage and stereo-width damage fields;
+- deterministic representative-region selection and per-class verdicts;
 - source/stem/derived lineage tests;
 - ordinary v0.4/v0.5 outputs unchanged.
