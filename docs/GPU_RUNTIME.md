@@ -1,8 +1,8 @@
-# Genre_test 0.4 GPU runtime
+# Genre_test GPU runtime
 
-## Release baseline
+## Runtime baseline
 
-Genre_test 0.4 targets the following reproducible Windows GPU runtime:
+Genre_test targets the following reproducible Windows GPU runtime:
 
 - PyTorch: **2.12.1** release baseline (`>=2.12.1` accepted by package metadata)
 - CUDA wheel runtime: **13.0** (`cu130`)
@@ -53,7 +53,7 @@ If the runtime is missing or mismatched, setup installs the pinned 2.12.1 `cu130
 
 ## CPU fallback
 
-CPU remains supported as a degraded mode. PyTorch >=2.12.1 CPU builds are accepted, but Runtime Health reports CUDA/GPU as WARN because the 0.4 accelerated release target is CUDA 13.0.
+CPU remains supported as a degraded mode. PyTorch >=2.12.1 CPU builds are accepted, but Runtime Health reports CUDA/GPU as WARN because the accelerated runtime target is CUDA 13.0.
 
 ## CI
 
@@ -64,4 +64,4 @@ Lightweight GitHub CI intentionally does not download the multi-gigabyte Torch C
 - setup contains the `cu130` installation route
 - unit tests validate CUDA 13 rejection/acceptance and native Blackwell detection with mocked Torch runtime objects
 
-A real Windows Blackwell CUDA smoke remains required before merging v0.4.0.
+A real Windows Blackwell CUDA smoke remains required before publishing a packaged release.

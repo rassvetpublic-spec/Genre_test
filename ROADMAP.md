@@ -24,17 +24,17 @@ Target outcome: remove audible defects, unstable synthetic artifacts and weak mi
 
 **Boundary:** the project does not optimize audio to evade AI-origin/provenance detectors, strip provenance/watermarks for concealment, or treat detector-score reduction as a mastering objective.
 
-Long-term epic: **#49**  
-Execution TODO: [`docs/SUPERCOMBINE_TODO.md`](docs/SUPERCOMBINE_TODO.md)  
+Long-term epic: **#49**
+Execution TODO: [`docs/SUPERCOMBINE_TODO.md`](docs/SUPERCOMBINE_TODO.md)
 Geekatplay org audit: [`docs/GEEKATPLAY_ORG_AUDIT.md`](docs/GEEKATPLAY_ORG_AUDIT.md)
 
-## Current release
+## Current development line
 
-**v0.4.0 — released**
+**0.5.0.dev0 — active development; no packaged stable release is currently published**
 
-Genre_test is currently a local music profiling and regression system:
+Genre_test currently provides the core local music profiling and regression system:
 
-```text
+`	ext
 Audio
   -> MAEST Discogs519 fine-style evidence
   -> AudioSet AST semantic evidence
@@ -43,17 +43,17 @@ Audio
   -> AudioProfile schema 4
   -> Normal / SUNO / Distributor outputs
   -> history / Validation / build comparison
-```
+`
 
-The v0.4 release line remains the stable analysis baseline while v0.5 retrieval development proceeds independently.
+The former packaged release line is retired. Core analysis behavior remains a
+regression baseline while v0.5 retrieval development proceeds.
 
-## ACTIVE: v0.5 — CLaMP 3 semantic retrieval and catalog intelligence
-
-Epic: **#26**  
-Detailed roadmap: [`docs/CLAMP3_ROADMAP.md`](docs/CLAMP3_ROADMAP.md)  
-Architecture: [`docs/CLAMP3_ARCHITECTURE.md`](docs/CLAMP3_ARCHITECTURE.md)  
-Execution checklist: [`docs/CLAMP3_TODO.md`](docs/CLAMP3_TODO.md)  
-Output scope: [`docs/CLAMP3_OUTPUT_SCOPE.md`](docs/CLAMP3_OUTPUT_SCOPE.md)  
+## ACTIVE: v0.5
+Epic: **#26**
+Detailed roadmap: [`docs/CLAMP3_ROADMAP.md`](docs/CLAMP3_ROADMAP.md)
+Architecture: [`docs/CLAMP3_ARCHITECTURE.md`](docs/CLAMP3_ARCHITECTURE.md)
+Execution checklist: [`docs/CLAMP3_TODO.md`](docs/CLAMP3_TODO.md)
+Output scope: [`docs/CLAMP3_OUTPUT_SCOPE.md`](docs/CLAMP3_OUTPUT_SCOPE.md)
 Deferred ideas: [`docs/FAR_TODO.md`](docs/FAR_TODO.md)
 
 Selected direction: **CLaMP 3** for shared multilingual text↔music embeddings.
@@ -163,7 +163,7 @@ For v0.5:
 
 ### v0.5 exit criteria
 
-- core v0.4 analysis/reference behavior remains green;
+- core analysis/reference behavior remains green;
 - CLaMP/MERT identity pinned and reproducible;
 - retrieval absent => Analyze still works and reports Retrieval N/A;
 - repeated same-input embedding is stable within documented tolerance;

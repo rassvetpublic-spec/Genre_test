@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from genre_test import __version__
+
 from genre_test.models import (
     AnalysisResult,
     AudioFeatures,
@@ -49,7 +51,7 @@ def _base_result(confidence: str = "low-medium") -> AnalysisResult:
         secondary_style="Pop Rock",
         analysis_mode="auto",
         schema_version=4,
-        analyzer_version="0.4.0",
+        analyzer_version=__version__,
     )
 
 

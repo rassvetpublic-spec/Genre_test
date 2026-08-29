@@ -1,0 +1,19 @@
+#!/bin/sh
+# Genre_test local safety guard.
+# GitHub Free/private does not provide server-side protected main for this repo,
+# so configured clones block accidental direct pushes locally.
+
+while read local_ref local_sha remote_ref remote_sha
+do
+    case "$remote_ref" in
+        refs/heads/main)
+            echo >&2 ""
+            echo >&2 "BLOCKED: direct push to main is forbidden by Genre_test repository policy."
+            echo >&2 "Use branch -> Pull Request -> CI -> merge."
+            echo >&2 ""
+            exit 1
+            ;;
+    esac
+done
+
+exit 0
