@@ -35,6 +35,20 @@ class FakeResponse:
         return json.dumps(self.payload).encode("utf-8")
 
 
+class FakeRawResponse:
+    def __init__(self, payload: bytes):
+        self.payload = payload
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def read(self):
+        return self.payload
+
+
 def test_ollama_provider_posts_schema_constrained_non_streaming_request(monkeypatch):
     captured = {}
     structured = {"title": "ok"}
@@ -84,6 +98,23 @@ def test_ollama_provider_wraps_connection_failures(monkeypatch):
     provider = OllamaProvider(model="gpt-oss:20b", max_output_tokens=1024)
 
     with pytest.raises(ProviderError, match="connection refused"):
+        provider.generate_json(
+            instructions="system",
+            input_text="input",
+            schema={"type": "object"},
+            schema_name="proposal",
+        )
+
+
+def test_ollama_provider_rejects_malformed_api_envelope(monkeypatch):
+    monkeypatch.setattr(
+        _ollama,
+        "urlopen",
+        lambda request, timeout: FakeRawResponse(b"not-json"),
+    )
+    provider = OllamaProvider(model="gpt-oss:20b", max_output_tokens=1024)
+
+    with pytest.raises(ProviderError, match="API response was not valid JSON"):
         provider.generate_json(
             instructions="system",
             input_text="input",
@@ -157,6 +188,59 @@ def test_default_config_selects_free_stack(tmp_path, monkeypatch):
     assert settings.primary_model == "gpt-oss:20b"
     assert settings.secondary_provider == "gemini"
     assert settings.secondary_model == "gemini-3.7-flash"
+
+
+def test_new_role_env_can_override_legacy_openai_gemini_config(tmp_path, monkeypatch):
+    config_path = tmp_path / "legacy-config.yaml"
+    config_path.write_text(
+        json.dumps(
+            {
+                "openai_model": "${OPENAI_MODEL}",
+                "gemini_model": "${GEMINI_MODEL}",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("OPENAI_MODEL", raising=False)
+    monkeypatch.delenv("GEMINI_MODEL", raising=False)
+    monkeypatch.setenv("AI_REVIEW_PRIMARY_PROVIDER", "ollama")
+    monkeypatch.setenv("AI_REVIEW_PRIMARY_MODEL", "gpt-oss:20b")
+    monkeypatch.setenv("AI_REVIEW_SECONDARY_PROVIDER", "gemini")
+    monkeypatch.setenv("AI_REVIEW_SECONDARY_MODEL", "gemini-3.7-flash")
+
+    settings = load_settings(config_path)
+
+    assert settings.primary_provider == "ollama"
+    assert settings.primary_model == "gpt-oss:20b"
+    assert settings.secondary_provider == "gemini"
+    assert settings.secondary_model == "gemini-3.7-flash"
+
+
+def test_config_accepts_openai_gemini_topology(tmp_path, monkeypatch):
+    for name in (
+        "AI_REVIEW_PRIMARY_PROVIDER",
+        "AI_REVIEW_PRIMARY_MODEL",
+        "AI_REVIEW_SECONDARY_PROVIDER",
+        "AI_REVIEW_SECONDARY_MODEL",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        json.dumps(
+            {
+                "primary_provider": "openai",
+                "primary_model": "openai-test-model",
+                "secondary_provider": "gemini",
+                "secondary_model": "gemini-test-model",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    settings = load_settings(config_path)
+    assert settings.primary_provider == "openai"
+    assert settings.secondary_provider == "gemini"
 
 
 def test_config_rejects_identical_primary_and_secondary(tmp_path):
