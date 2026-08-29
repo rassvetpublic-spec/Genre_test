@@ -37,7 +37,7 @@ Backend-neutral measurements belong to Genre_test common QC/TechnicalProfile and
 - loudness/True Peak and before/after guards;
 - derived-asset lineage and processing manifests.
 
-Executable promotion is tracked by #101.
+Executable promotion was completed by #101 through #103, #106 and #107.
 
 ### Ozone-specific layer
 
@@ -81,3 +81,12 @@ Prefer the native/lossless source. If only MP3/AAC survives, keep the lossy file
 - `../../../tools/mastering/ozone12/` — initial Ozone-specific validators/patchers.
 
 See [`MIGRATION_FROM_OZONE12_MASTERING_LAB.md`](MIGRATION_FROM_OZONE12_MASTERING_LAB.md) for source hashes, omissions and follow-up work.
+
+## Retired standalone runtime
+
+The old standalone `ARCHITECTURE_v1`, P0.1-P0.7 harness and
+`tools/autocheck` are historical evidence only and are intentionally not
+migrated. Future REAPER/Ozone execution belongs to a Genre_test-native v0.7
+`MasteringBackend` contract and must reuse shared technical/QC rather than
+restore duplicate legacy tooling. The retained evidence rules are documented in
+[`EXECUTABLE_MIGRATION.md`](EXECUTABLE_MIGRATION.md).

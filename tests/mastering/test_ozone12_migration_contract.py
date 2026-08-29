@@ -36,8 +36,41 @@ def test_migration_doc_records_deferred_render_boundary_and_blocked_semantics() 
     text = (ROOT / "docs/mastering/ozone12/EXECUTABLE_MIGRATION.md").read_text(
         encoding="utf-8"
     )
-    assert "CONSOLIDATED for the current executable-migration scope" in text
+    assert "COMPLETE for the approved #101 executable-migration scope" in text
     assert "BLOCKED` must never be promoted to `PASS`" in text
     assert "REAPER/Ozone rendering" in text
     assert "intentionally deferred" in text
     assert "old autocheck is not copied" in text
+    assert "status: RETIRED / NOT MIGRATED" in text
+    assert "must not revive or" in text
+    assert "copy the retired standalone P0/autocheck architecture" in text
+
+
+def test_operational_mastering_docs_use_shared_qc_cli() -> None:
+    docs_root = ROOT / "docs/mastering/ozone12"
+    operational_text = "\n".join(
+        path.read_text(encoding="utf-8") for path in docs_root.rglob("*.md")
+    )
+
+    assert "python tools/stage_toolkit/oz12_mastering_meter.py" not in operational_text
+    assert "--decoded-peak-target-dbtp" not in operational_text
+    assert "--keep-codec-files" not in operational_text
+
+    meter_doc = (
+        docs_root / "core/15_AUTOMATIC_MASTERING_METER.md"
+    ).read_text(encoding="utf-8")
+    checklist = (
+        docs_root / "checklists/FINAL_APPROVAL_CHECKLIST.md"
+    ).read_text(encoding="utf-8")
+    assert "genre-test-mastering-qc" in meter_doc
+    assert "genre-test-mastering-qc" in checklist
+
+
+def test_supercombine_marks_ozone_executable_migration_complete() -> None:
+    todo = (ROOT / "docs/SUPERCOMBINE_TODO.md").read_text(encoding="utf-8")
+
+    assert (
+        "- [x] migrate Ozone executable toolkit by ownership and promote "
+        "backend-neutral mastering metrics (#101" in todo
+    )
+    assert "- [x] finish Ozone executable XML/preset toolkit migration (#101" in todo

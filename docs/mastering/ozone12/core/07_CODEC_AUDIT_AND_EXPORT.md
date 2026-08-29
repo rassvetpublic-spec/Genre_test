@@ -53,16 +53,17 @@ attenuation_dB = max(0, measured_decoded_TP - target_TP + safety_margin)
 
 ## Automatic decoded-peak audit
 
-```bash
-python tools/stage_toolkit/oz12_mastering_meter.py \
-  --reference "PRE_MAX_BASE.wav" \
-  --candidate "NATIVE_FINAL.wav" \
-  --outdir "reports/final_meter"
+```powershell
+genre-test-mastering-qc "PRE_MAX_BASE.wav" "NATIVE_FINAL.wav" `
+  --codec mp3_320 `
+  --codec aac_256 `
+  --codec aac_192 `
+  --output "reports/final_qc.json"
 ```
 
-Команда реально кодирует и явно декодирует MP3 320, AAC 256 и AAC 192, затем измеряет decoded true peak FFmpeg `ebur128=peak=true`. Без `--decoded-peak-target-dbtp` результат остаётся `MEASURED`. Для declared target добавить параметр и, при необходимости, применить рассчитанный codec-specific trim; после этого повторить весь pass.
+Команда реально кодирует и явно декодирует MP3 320, AAC 256 и AAC 192, затем измеряет decoded true peak FFmpeg `ebur128=peak=true`. Без `--target-dbtp` результат остаётся измеренным evidence без проверки против выдуманного ceiling. Для declared target добавить, например, `--target-dbtp -1.0` и, при необходимости, применить рассчитанный codec-specific trim; после этого повторить весь pass.
 
-`--keep-codec-files` сохраняет encoded/decoded audio для прослушивания. По умолчанию временные codec-файлы удаляются, а JSON/CSV/Markdown metrics остаются.
+Активный CLI пишет полный JSON через `--output`; временные codec-файлы удаляются. Если для слуховой проверки нужны постоянные encoded/decoded файлы, их следует создать отдельным воспроизводимым delivery-preview шагом и связать с source/candidate identity.
 
 ## Reject signs
 

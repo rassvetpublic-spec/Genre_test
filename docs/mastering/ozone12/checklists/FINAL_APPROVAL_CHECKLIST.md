@@ -3,7 +3,7 @@
 - [ ] Native DAW/Ozone WAV 48 kHz / 24-bit, Normalize Off.
 - [ ] Если есть float winner: sample/null comparison выполнен; residual соответствует dither/noise floor.
 - [ ] Loudness-matched A/B сохраняет musical priority и drum attack.
-- [ ] `oz12_mastering_meter.py`: event-aligned drum-attack guard проверен; alerts прослушаны, а не приняты вслепую.
+- [ ] `genre-test-mastering-qc`: transient-retention guard проверен; alerts прослушаны, а не приняты вслепую.
 - [ ] Mono не теряет важный vocal/instrument/kick/bass.
 - [ ] Automatic mono-loss overall/event/by-band проверен относительно принятой base; mono fold-down прослушан.
 - [ ] MP3 320, AAC 256 и AAC 192 decoded audit выполнен.

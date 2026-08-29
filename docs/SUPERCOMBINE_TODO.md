@@ -50,7 +50,7 @@ The objective is studio-ready audio with audible generative defects corrected. T
 - [ ] common before/after metric snapshot
 - [ ] common error/unknown/fallback semantics
 - [x] establish integrated Ozone 12 knowledge/config namespace in Genre_test (#100)
-- [ ] migrate remaining Ozone executable toolkit and promote backend-neutral mastering metrics (#101)
+- [x] migrate Ozone executable toolkit by ownership and promote backend-neutral mastering metrics (#101; completed by #103, #106 and #107)
 
 ---
 
@@ -166,7 +166,7 @@ tools/mastering/ozone12/
 src/genre_test/mastering/ozone12/
 ```
 
-The standalone `OZONE12_MASTERING_LAB` repository is migration/history evidence after #100, not a second roadmap. #101 completes executable migration and promotes drum-attack, mono/stereo and decoded-codec measurements into backend-neutral Genre_test technical/QC code.
+The standalone `OZONE12_MASTERING_LAB` repository is migration/history evidence after #100, not a second roadmap. #101 completed executable migration by ownership and promoted drum-attack, mono/stereo and decoded-codec measurements into backend-neutral Genre_test technical/QC code. Its standalone P0/autocheck runtime is retired and will not be copied; the future REAPER/Ozone bridge is a Genre_test-native v0.7 implementation.
 
 ## Mastering orchestration
 
@@ -178,7 +178,7 @@ The standalone `OZONE12_MASTERING_LAB` repository is migration/history evidence 
 - [ ] render backend abstraction
 - [ ] REAPER render-host bridge
 - [x] Ozone knowledge/config/XML schema boundary integrated (#100)
-- [ ] finish Ozone executable XML/preset toolkit migration (#101)
+- [x] finish Ozone executable XML/preset toolkit migration (#101; completed by #103, #106 and #107)
 - [ ] Ozone preset/XML runtime bridge
 - [ ] stage progress / heartbeat / cancel
 - [ ] Safe / Probe / Refine candidate generation

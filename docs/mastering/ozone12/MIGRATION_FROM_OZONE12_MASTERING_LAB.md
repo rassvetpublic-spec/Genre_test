@@ -1,7 +1,7 @@
 # Migration from OZONE12_MASTERING_LAB
 
 Issue: #100  
-Follow-up executable/common-metrics migration: #101  
+Completed executable/common-metrics migration: #101
 Migration date: 2026-08-28
 
 ## Source identity
@@ -54,28 +54,33 @@ The first consolidation PR intentionally imports the compact active knowledge/co
 - duplicate repo-level workflows and standalone project governance;
 - the full legacy mastering-meter executable as a second permanent implementation.
 
-The large executable toolkit is split by ownership in #101: backend-neutral attack/mono/codec metrics move toward common Genre_test TechnicalProfile/QC, while Ozone XML/preset/render code stays namespaced under mastering/ozone12.
+The executable toolkit was split by ownership in #101: backend-neutral attack/mono/codec metrics moved to common Genre_test TechnicalProfile/QC, while Ozone XML/preset code remains namespaced under mastering/ozone12. REAPER/Ozone rendering remains a later Genre_test-native v0.7 backend.
 
 ## Path normalization note
 
-Some imported v1.4.1 documents preserve historical relative references such as `tables/...` or `tools/stage_toolkit/...` because they are evidence-bearing source material. The canonical integrated locations are:
+Some imported v1.4.1 documents preserve historical relative references such as `tables/...` because they are evidence-bearing source material. Operational commands must use the canonical integrated locations and active Genre_test CLI:
 
 ```text
 docs/mastering/ozone12/
 config/mastering/ozone12/
 tools/mastering/ozone12/
 src/genre_test/mastering/ozone12/
+genre-test-mastering-qc
 ```
 
-New code/docs must use the integrated paths. #101 owns executable-path cleanup while promoting shared metrics.
+New code/docs must use these integrated paths. References to the retired
+`tools/stage_toolkit/oz12_mastering_meter.py` are provenance only and must not
+appear as operational instructions.
 
 ## Non-regression boundary
 
 This consolidation must not change the active v0.4 analysis baseline or v0.5 CLaMP retrieval behavior. No Ozone plugin or REAPER runtime is imported into normal analysis startup. Full render orchestration remains a v0.7 feature.
 
-## Merge/freeze gate
+## Completed merge/freeze record
 
-1. #100 PR CI green and explicit user `mtd`.
-2. Integrated docs/config become canonical for new mastering work.
-3. #101 completes executable/common-metric migration and parity checks.
-4. Only then freeze/archive standalone `OZONE12_MASTERING_LAB`.
+1. #100 established the canonical integrated boundary.
+2. #101 completed executable/common-metric ownership migration.
+3. Integrated docs/config became canonical for new mastering work.
+4. Standalone `OZONE12_MASTERING_LAB` was frozen as history/provenance.
+5. Its P0/autocheck runtime was retired rather than copied; future render
+   execution is a new Genre_test-native v0.7 backend milestone.

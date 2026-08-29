@@ -3,7 +3,7 @@
 Issue: #101  
 Parent consolidation: #100
 
-Status: **CONSOLIDATED for the current executable-migration scope**.
+Status: **COMPLETE for the approved #101 executable-migration scope**.
 
 Source snapshot:
 
@@ -63,6 +63,32 @@ SKIP     = explicitly non-applicable
 ```
 
 `BLOCKED` must never be promoted to `PASS`. Future render/readback gates should preserve source/target hashes, plugin identity/version/build, active ElementChain, loaded-state identity, readback result, render invocation state, and negative-test evidence without depending on the legacy repository layout.
+
+## Final disposition of the legacy P0 harness
+
+```text
+legacy ARCHITECTURE_v1 / P0.1-P0.7 / tools/autocheck
+status: RETIRED / NOT MIGRATED
+```
+
+This is an intentional architecture decision, not unfinished migration work.
+The standalone harness modeled a separate product, repository layout, package
+manifest and duplicate meter stack. Importing it would add obsolete code and
+compete with Genre_test ownership.
+
+Only transferable evidence principles remain canonical:
+
+- immutable source and target identities;
+- pre-render state/readback verification;
+- fail-closed handling of missing or mismatched evidence;
+- `BLOCKED` is never reported as `PASS`;
+- active `ElementChain`, plugin version/build and render identity are recorded;
+- negative render-gate tests must prove that a rejected state does not render.
+
+When v0.7 reaches REAPER/Ozone execution, its harness must be designed natively
+around the versioned Genre_test `MasteringBackend` request/result contract and
+the shared `genre-test-mastering-qc` implementation. It must not revive or
+copy the retired standalone P0/autocheck architecture.
 
 ## Safety changes made during migration
 
