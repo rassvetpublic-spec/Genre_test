@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReviewResult",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "verdict": {"type": "string", "enum": ["PASS", "REVISE", "BLOCK"]},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "evidence_status": {"type": "string", "enum": ["SUFFICIENT", "INSUFFICIENT"]},
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "severity": {"type": "string", "enum": ["blocker", "major", "minor", "nit"]},
+          "rule": {"type": "string"},
+          "evidence": {"type": "string"},
+          "location": {"type": "string"},
+          "problem": {"type": "string", "minLength": 1},
+          "required_change": {"type": "string", "minLength": 1}
+        },
+        "required": ["severity", "rule", "evidence", "location", "problem", "required_change"]
+      }
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "severity": {"type": "string", "enum": ["blocker", "major", "minor", "nit"]},
+          "rule": {"type": "string"},
+          "evidence": {"type": "string"},
+          "location": {"type": "string"},
+          "problem": {"type": "string", "minLength": 1},
+          "required_change": {"type": "string", "minLength": 1}
+        },
+        "required": ["severity", "rule", "evidence", "location", "problem", "required_change"]
+      }
+    },
+    "summary": {"type": "string", "minLength": 1}
+  },
+  "required": ["verdict", "confidence", "evidence_status", "blockers", "issues", "summary"]
+}

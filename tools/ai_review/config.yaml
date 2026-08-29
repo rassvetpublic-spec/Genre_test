@@ -1,0 +1,6 @@
+{
+  "openai_model": "${OPENAI_MODEL}",
+  "gemini_model": "${GEMINI_MODEL}",
+  "max_output_tokens": 4096,
+  "runs_dir": "tools/ai_review/runs"
+}

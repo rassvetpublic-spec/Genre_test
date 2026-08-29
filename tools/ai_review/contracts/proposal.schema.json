@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Proposal",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "title": {"type": "string", "minLength": 1},
+    "summary": {"type": "string", "minLength": 1},
+    "recommendation": {"type": "string", "minLength": 1},
+    "assumptions": {"type": "array", "items": {"type": "string"}},
+    "risks": {"type": "array", "items": {"type": "string"}},
+    "steps": {"type": "array", "items": {"type": "string"}},
+    "evidence_needed": {"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["title", "summary", "recommendation", "assumptions", "risks", "steps", "evidence_needed"]
+}
