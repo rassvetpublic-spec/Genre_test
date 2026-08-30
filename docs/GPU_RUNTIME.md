@@ -61,6 +61,6 @@ CPU remains supported as a degraded mode. PyTorch >=2.12.1 CPU builds are accept
 
 Lightweight GitHub CI intentionally does not download the multi-gigabyte Torch CUDA wheel. CI uses Python 3.13 as the primary quality/runtime-contract baseline and Python 3.12 only for compatibility pytest coverage. Static launcher/PowerShell/manifest/Ruff gates therefore run once instead of once per Python version.
 
-Documentation-only pull requests use the lightweight CI path and skip Python installation, Ruff and pytest. After merge, `main` receives only a lightweight Python 3.13 merged-tree smoke instead of a second full compatibility suite.
+Documentation-only pull requests use the lightweight path: they skip heavy Python setup, Ruff and the full pytest suite, but run lightweight repository contract tests on Python 3.13. The required `test (...)` contexts propagate preflight failures instead of becoming non-blocking skips. After merge, `main` receives only a lightweight Python 3.13 merged-tree smoke instead of a second full compatibility suite.
 
 A real Windows Blackwell CUDA smoke remains required before publishing a packaged release.
