@@ -84,7 +84,11 @@ def _to_mono(audio: np.ndarray) -> np.ndarray:
     return np.ascontiguousarray(mono, dtype=np.float32)
 
 
-def _mfcc_metrics(y: np.ndarray, sr: int, cfg: TemporalStructureConfig) -> dict[str, float | None]:
+def _mfcc_metrics(
+    y: np.ndarray,
+    sr: int,
+    cfg: TemporalStructureConfig,
+) -> dict[str, float | None]:
     n_fft = min(cfg.n_fft, max(256, 2 ** int(np.floor(np.log2(max(256, y.size))))))
     hop = min(cfg.hop_length, max(64, n_fft // 4))
     mel = librosa.feature.melspectrogram(
@@ -117,7 +121,9 @@ def _mfcc_metrics(y: np.ndarray, sr: int, cfg: TemporalStructureConfig) -> dict[
 
 
 def _rhythm_metrics(
-    y: np.ndarray, sr: int, cfg: TemporalStructureConfig
+    y: np.ndarray,
+    sr: int,
+    cfg: TemporalStructureConfig,
 ) -> tuple[dict[str, float | int | None], np.ndarray, np.ndarray, np.ndarray]:
     onset_env = librosa.onset.onset_strength(y=y, sr=sr, hop_length=cfg.hop_length)
     onset_frames = librosa.onset.onset_detect(
@@ -127,7 +133,11 @@ def _rhythm_metrics(
         units="frames",
         backtrack=False,
     )
-    onset_times = librosa.frames_to_time(onset_frames, sr=sr, hop_length=cfg.hop_length)
+    onset_times = librosa.frames_to_time(
+        onset_frames,
+        sr=sr,
+        hop_length=cfg.hop_length,
+    )
 
     ioi_cv = _cv(np.diff(onset_times)) if onset_times.size >= 2 else None
     tempo_value: float | None = None
@@ -145,15 +155,23 @@ def _rhythm_metrics(
 
     deviations_ms = np.asarray([], dtype=np.float64)
     if tempo_value is not None and onset_times.size and beat_frames.size:
-        beat_times = librosa.frames_to_time(beat_frames, sr=sr, hop_length=cfg.hop_length)
+        beat_times = librosa.frames_to_time(
+            beat_frames,
+            sr=sr,
+            hop_length=cfg.hop_length,
+        )
         if beat_times.size:
             subdivision_s = 60.0 / tempo_value / cfg.grid_subdivisions_per_beat
             phase = (onset_times - float(beat_times[0])) / subdivision_s
-            deviations_ms = np.abs(phase - np.round(phase)) * subdivision_s * 1000.0
+            deviations_ms = (
+                np.abs(phase - np.round(phase)) * subdivision_s * 1000.0
+            )
 
     if deviations_ms.size:
         grid_median = _finite(np.median(deviations_ms))
-        grid_iqr = _finite(np.percentile(deviations_ms, 75) - np.percentile(deviations_ms, 25))
+        grid_iqr = _finite(
+            np.percentile(deviations_ms, 75) - np.percentile(deviations_ms, 25)
+        )
         locked_ratio = _finite(np.mean(deviations_ms <= cfg.beat_lock_tolerance_ms))
     else:
         grid_median = grid_iqr = locked_ratio = None
@@ -209,7 +227,10 @@ def _transient_metrics(
         }
 
     count = min(int(onset_times.size), cfg.max_transients)
-    window_samples = max(32, int(round(sr * cfg.transient_window_ms / 1000.0)))
+    window_samples = max(
+        32,
+        int(round(sr * cfg.transient_window_ms / 1000.0)),
+    )
     preroll = int(round(sr * cfg.transient_preroll_ms / 1000.0))
     vectors: list[np.ndarray] = []
     energies: list[float] = []
@@ -233,11 +254,19 @@ def _transient_metrics(
         upper = np.triu_indices(similarity_matrix.shape[0], k=1)
         similarities = similarity_matrix[upper]
 
-    flux_values = onset_env[onset_frames] if onset_frames.size else np.asarray([], dtype=np.float64)
+    flux_values = (
+        onset_env[onset_frames]
+        if onset_frames.size
+        else np.asarray([], dtype=np.float64)
+    )
     return {
         "transient_count": int(len(vectors)),
-        "attack_similarity_median": _finite(np.median(similarities)) if similarities.size else None,
-        "attack_similarity_p95": _finite(np.percentile(similarities, 95)) if similarities.size else None,
+        "attack_similarity_median": (
+            _finite(np.median(similarities)) if similarities.size else None
+        ),
+        "attack_similarity_p95": (
+            _finite(np.percentile(similarities, 95)) if similarities.size else None
+        ),
         "attack_energy_cv": _finite(_cv(np.asarray(energies))),
         "attack_time_cv": _finite(_cv(np.asarray(peak_times_ms))),
         "spectral_flux_cv": _finite(_cv(np.asarray(flux_values))),
@@ -245,9 +274,14 @@ def _transient_metrics(
 
 
 def _spectral_artifact_metrics(
-    y: np.ndarray, sr: int, cfg: TemporalStructureConfig
+    y: np.ndarray,
+    sr: int,
+    cfg: TemporalStructureConfig,
 ) -> dict[str, float | int | None]:
-    n_fft = min(4096, max(512, 2 ** int(np.floor(np.log2(max(512, min(y.size, 4096)))))))
+    n_fft = min(
+        4096,
+        max(512, 2 ** int(np.floor(np.log2(max(512, min(y.size, 4096)))))),
+    )
     hop = max(128, n_fft // 4)
     magnitude = np.abs(librosa.stft(y=y, n_fft=n_fft, hop_length=hop))
     if magnitude.shape[1] == 0:
@@ -271,7 +305,10 @@ def _spectral_artifact_metrics(
     high_freqs = freqs[mask]
     baseline = medfilt(high_db, kernel_size=9)
     residual = high_db - baseline
-    peaks, properties = find_peaks(residual, prominence=cfg.spectral_peak_prominence_db)
+    peaks, properties = find_peaks(
+        residual,
+        prominence=cfg.spectral_peak_prominence_db,
+    )
     if peaks.size < 2:
         return {
             "periodic_peak_score": 0.0,
@@ -285,7 +322,9 @@ def _spectral_artifact_metrics(
     selected_freqs = high_freqs[selected]
     spacings = np.diff(selected_freqs)
     spacing_mean = float(np.mean(spacings)) if spacings.size else 0.0
-    spacing_cv = float(np.std(spacings) / spacing_mean) if spacing_mean > 1e-12 else 1.0
+    spacing_cv = (
+        float(np.std(spacings) / spacing_mean) if spacing_mean > 1e-12 else 1.0
+    )
     regularity = float(np.clip(1.0 - spacing_cv, 0.0, 1.0))
 
     high_mag = magnitude[mask]
@@ -296,12 +335,16 @@ def _spectral_artifact_metrics(
         hi = min(frame_db.shape[0], int(peak) + 5)
         neighborhood = frame_db[lo:hi]
         local_baseline = np.median(neighborhood, axis=0)
-        persistence_values.append(float(np.mean(frame_db[int(peak)] - local_baseline >= 3.0)))
+        persistence_values.append(
+            float(np.mean(frame_db[int(peak)] - local_baseline >= 3.0))
+        )
 
     return {
         "periodic_peak_score": _finite(regularity),
         "peak_spacing_hz": _finite(np.median(spacings)) if spacings.size else None,
-        "peak_persistence": _finite(np.mean(persistence_values)) if persistence_values else None,
+        "peak_persistence": (
+            _finite(np.mean(persistence_values)) if persistence_values else None
+        ),
         "candidate_peak_count": int(peaks.size),
     }
 
@@ -325,8 +368,19 @@ def analyze_temporal_structure(
     y = _to_mono(audio)
     duration_s = float(y.size / sample_rate_hz)
     mfcc = _mfcc_metrics(y, sample_rate_hz, cfg)
-    rhythm, onset_frames, onset_times, onset_env = _rhythm_metrics(y, sample_rate_hz, cfg)
-    transients = _transient_metrics(y, sample_rate_hz, onset_frames, onset_times, onset_env, cfg)
+    rhythm, onset_frames, onset_times, onset_env = _rhythm_metrics(
+        y,
+        sample_rate_hz,
+        cfg,
+    )
+    transients = _transient_metrics(
+        y,
+        sample_rate_hz,
+        onset_frames,
+        onset_times,
+        onset_env,
+        cfg,
+    )
     spectral = _spectral_artifact_metrics(y, sample_rate_hz, cfg)
     return TemporalStructureProfileV1(
         schema="temporal-structure-profile/1",
