@@ -168,6 +168,19 @@ def test_supersession_cycle_is_rejected(tmp_path: Path) -> None:
         sync.validate_registry(sync.load_registry(registry_path), tmp_path)
 
 
+def test_symlinked_generated_output_is_rejected_without_clobber(tmp_path: Path) -> None:
+    _, output_path = _prepare(tmp_path)
+    victim = tmp_path / "victim.md"
+    victim.write_text("keep me\n", encoding="utf-8")
+    try:
+        output_path.symlink_to(victim)
+    except OSError as exc:
+        pytest.skip(f"symlink creation unavailable: {exc}")
+
+    assert sync.main(["--repo-root", str(tmp_path), "--write"]) == 2
+    assert victim.read_text(encoding="utf-8") == "keep me\n"
+
+
 @pytest.mark.parametrize(
     "path",
     [

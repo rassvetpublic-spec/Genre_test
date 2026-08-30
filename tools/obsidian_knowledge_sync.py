@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
+import tempfile
 from collections import defaultdict
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -100,12 +102,52 @@ def _resolved_inside_repo(repo_root: Path, path: Path, *, field: str) -> Path:
     return resolved_path
 
 
+def _fixed_repo_path(repo_root: Path, relative_path: Path, *, field: str) -> Path:
+    if relative_path.is_absolute() or ".." in relative_path.parts:
+        raise RegistryError(f"{field}: fixed path must remain repository-relative")
+
+    resolved_root = repo_root.resolve()
+    current = resolved_root
+    for part in relative_path.parts:
+        current = current / part
+        if current.is_symlink():
+            raise RegistryError(f"{field}: symlinked path component is forbidden: {current}")
+
+    resolved = _resolved_inside_repo(resolved_root, current, field=field)
+    if resolved != current:
+        raise RegistryError(f"{field}: canonical path resolves to a different location: {current}")
+    return current
+
+
 def _existing_repo_file(repo_root: Path, rel_path: PurePosixPath, *, field: str) -> Path:
     candidate = repo_root.joinpath(*rel_path.parts)
     resolved = _resolved_inside_repo(repo_root, candidate, field=field)
     if not resolved.is_file():
         raise RegistryError(f"{field}: referenced file does not exist: {rel_path.as_posix()}")
     return resolved
+
+
+def _atomic_write_text(output_path: Path, content: str) -> None:
+    temp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+            dir=output_path.parent,
+            prefix=f".{output_path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+            temp_path = Path(handle.name)
+        os.replace(temp_path, output_path)
+        temp_path = None
+    finally:
+        if temp_path is not None and temp_path.exists():
+            temp_path.unlink()
 
 
 def _require_string(entry: dict[str, Any], key: str, label: str) -> str:
@@ -429,20 +471,20 @@ def main(argv: list[str] | None = None) -> int:
     repo_root = args.repo_root.resolve()
 
     try:
-        registry_path = _resolved_inside_repo(
+        registry_path = _fixed_repo_path(
             repo_root,
-            repo_root / DEFAULT_REGISTRY,
+            DEFAULT_REGISTRY,
             field="registry",
         )
-        output_path = _resolved_inside_repo(
+        output_path = _fixed_repo_path(
             repo_root,
-            repo_root / DEFAULT_OUTPUT,
+            DEFAULT_OUTPUT,
             field="generated output",
         )
 
         if args.write:
             _, _, rendered = build(repo_root, registry_path)
-            output_path.write_text(rendered, encoding="utf-8")
+            _atomic_write_text(output_path, rendered)
             print(f"wrote {DEFAULT_OUTPUT.as_posix()}")
             return 0
 
