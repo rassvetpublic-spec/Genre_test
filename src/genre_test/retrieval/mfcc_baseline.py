@@ -4,6 +4,7 @@ from pathlib import Path
 
 import librosa
 import numpy as np
+import scipy
 
 from genre_test.audio import load_audio
 
@@ -17,7 +18,14 @@ N_MFCC = 20
 N_CHROMA = 12
 N_CONTRAST_BANDS = 6  # librosa returns n_bands + 1 = 7 values
 EMBEDDING_DIM = 78
-PREPROCESSING_VERSION = "mfcc20-chroma12-contrast7-meanstd-sr22050-mono-nfft2048-hop512-v1"
+TARGET_RMS = 0.1
+EXTRACTOR_IMPLEMENTATION = (
+    f"librosa-{librosa.__version__}-numpy-{np.__version__}-scipy-{scipy.__version__}"
+)
+PREPROCESSING_VERSION = (
+    "mfcc20-chroma12-contrast7-meanstd-sr22050-mono-nfft2048-hop512-"
+    f"rms{TARGET_RMS:g}-{EXTRACTOR_IMPLEMENTATION}-v2"
+)
 
 
 def mfcc_baseline_info() -> RetrievalBackendInfo:
@@ -25,7 +33,7 @@ def mfcc_baseline_info() -> RetrievalBackendInfo:
 
     return RetrievalBackendInfo(
         backend_name="mfcc-timbre78",
-        backend_version="1",
+        backend_version="2",
         clamp_code_revision=None,
         clamp_weight_name=None,
         clamp_weight_sha256=None,
@@ -40,11 +48,23 @@ def mfcc_baseline_info() -> RetrievalBackendInfo:
     )
 
 
+def _normalize_analysis_level(samples: np.ndarray) -> np.ndarray:
+    """Normalize RMS so global gain does not masquerade as timbral distance."""
+
+    rms = float(np.sqrt(np.mean(np.square(samples.astype(np.float64, copy=False)))))
+    if not np.isfinite(rms) or rms <= 1e-12:
+        raise ValueError("audio must contain measurable non-silent energy")
+    scale = TARGET_RMS / rms
+    return (samples * scale).astype(np.float32, copy=False)
+
+
 def extract_mfcc78(audio: np.ndarray, *, sample_rate: int = SAMPLE_RATE) -> np.ndarray:
     """Extract a deterministic 78D MFCC/chroma/spectral-contrast fingerprint.
 
     This is a model-free *timbral retrieval benchmark* representation, not a
     genre classifier and not a replacement for CLaMP/MERT semantic embeddings.
+    Input RMS is normalized before extraction so a pure gain change does not
+    alter the intended timbral representation.
     """
 
     samples = np.asarray(audio, dtype=np.float32)
@@ -56,6 +76,8 @@ def extract_mfcc78(audio: np.ndarray, *, sample_rate: int = SAMPLE_RATE) -> np.n
         raise ValueError(f"audio is too short for MFCC baseline: need >= {N_FFT} samples")
     if not np.all(np.isfinite(samples)):
         raise ValueError("audio must contain only finite samples")
+
+    samples = _normalize_analysis_level(samples)
 
     mfcc = librosa.feature.mfcc(
         y=samples,
