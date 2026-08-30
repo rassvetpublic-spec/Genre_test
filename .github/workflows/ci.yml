@@ -28,15 +28,19 @@ jobs:
         run: |
           set -euo pipefail
           git diff --check "$BASE_SHA" "$HEAD_SHA"
-          git diff --name-status --diff-filter=ACMRD "$BASE_SHA" "$HEAD_SHA" > changed_files.txt
+          git diff --name-status "$BASE_SHA" "$HEAD_SHA" > changed_files.txt
           cat changed_files.txt
 
           full_suite=false
           while IFS=$'\t' read -r status path1 path2; do
-            if [[ "$status" == D* ]]; then
-              full_suite=true
-              break
-            fi
+            case "$status" in
+              A*|M*|R*|C*)
+                ;;
+              *)
+                full_suite=true
+                break
+                ;;
+            esac
 
             for path in "$path1" "$path2"; do
               [[ -z "$path" ]] && continue
@@ -66,6 +70,7 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq 'requires-python = ">=3.12,<3.14"' pyproject.toml
+          grep -Fq 'MIN_PYTHON_VERSION = (3, 12)' src/genre_test/runtime_health.py
           if grep -Fq "'-3.11'" scripts/setup.ps1; then
             echo 'Python 3.11 is still accepted by the core setup.' >&2
             exit 1
@@ -112,6 +117,7 @@ jobs:
           test "$(genre-test --version)" = "Genre_test 0.5.0.dev0"
           grep -Fq 'requires-python = ">=3.12,<3.14"' pyproject.toml
           grep -Fq 'target-version = "py313"' pyproject.toml
+          grep -Fq 'MIN_PYTHON_VERSION = (3, 12)' src/genre_test/runtime_health.py
           python -c "import sys; assert sys.version_info[:2] == (3, 13)"
 
           grep -Fq 'if exist "%ROOT%.git" set "MODE=WORKING"' Genre_test_START.cmd
