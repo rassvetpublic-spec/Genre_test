@@ -48,3 +48,23 @@ def test_legacy_prompt_is_compatibility_only() -> None:
     assert "docs/research/RESEARCH_OPERATING_RULES.md" in text
     assert "docs/research/RESEARCH_RADAR.md" in text
     assert "independent copy" in text
+
+
+def test_legacy_runs_path_redirects_to_canonical_runs() -> None:
+    text = (
+        ROOT
+        / "docs"
+        / "development"
+        / "research_radar"
+        / "runs"
+        / "README.md"
+    ).read_text(encoding="utf-8")
+    assert "../../../research/runs/" in text
+    assert "raw search dumps" in text
+
+
+def test_stale_generated_nodes_are_detected(tmp_path: Path) -> None:
+    stale = tmp_path / "docs" / "research" / "obsidian" / "TOPICS" / "old.md"
+    stale.parent.mkdir(parents=True)
+    stale.write_text(f"{radar.MARKER}\n", encoding="utf-8")
+    assert radar._stale_generated_files(set(), tmp_path) == [stale]

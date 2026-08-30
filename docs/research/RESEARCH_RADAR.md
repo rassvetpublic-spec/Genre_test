@@ -75,9 +75,9 @@ registered AI-audio tools.
 next run. Initial/null values mean not run or not established; they must never
 be filled from chat memory or guesswork.
 
-Reproducible run evidence belongs in the project's designated research/run
-evidence location. Do not commit raw search-result dumps, copied webpages,
-temporary prompts, or unfiltered model output.
+Reproducible Radar run evidence belongs under `docs/research/runs/`. Do not commit
+raw search-result dumps, copied webpages, temporary prompts, or unfiltered model
+output.
 
 A concise run record should preserve:
 
@@ -116,8 +116,8 @@ Do not commit `.obsidian/` workspace settings as part of Radar state.
 ## 7. Compatibility facade
 
 The historical paths under `docs/development/research_radar/` remain available
-for older automation. They are generated compatibility views and redirect the
-reader to this v2 system.
+for older automation, including a `runs/` compatibility redirect. They are
+generated compatibility views and redirect the reader to this v2 system.
 
 In particular, `RESEARCH_PROMPT.md` is no longer an independent giant prompt.
 It is a stable bootstrap entrypoint that instructs an external Researcher to
