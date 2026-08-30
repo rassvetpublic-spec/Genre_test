@@ -1,11 +1,11 @@
-# MFCC Source-of-Knowledge Registry
+# MFCC Handcrafted Acoustic Source-of-Knowledge Registry
 
 Status: **research evidence / Issue #139**
 Related: **#33, #36, #44, #137**
 
 ## Purpose
 
-This registry records the external evidence behind the model-free MFCC timbral-retrieval baseline, the limits of each source, and the project decisions derived from them.
+This registry records the external evidence behind the model-free MFCC/chroma/spectral-contrast retrieval baseline, the limits of each source, and the project decisions derived from them.
 
 Evidence flow:
 
@@ -43,9 +43,9 @@ Relevant behavior:
 
 Genre_test use:
 
-- motivates a cheap independent timbral comparator;
+- motivates a cheap independent handcrafted acoustic comparator;
 - motivates the initial `20 MFCC + 12 chroma + 7 contrast -> mean/std -> 78D` shape;
-- does not prove those parameters are optimal for Genre_test.
+- does not prove those parameters or their relative weighting are optimal for Genre_test.
 
 ---
 
@@ -61,7 +61,7 @@ Relevant facts:
 
 Genre_test use:
 
-- `mfcc-timbre78` is intentionally mono;
+- the baseline is intentionally mono;
 - stereo/phase information remains a separate TechnicalProfile concern;
 - MFCC parameters and extractor implementation identity belong in the backend fingerprint.
 
@@ -109,7 +109,7 @@ MFCC
 
 Genre_test use:
 
-- supports future research under #44/#137 where temporal timbral evidence is synchronized to musical time;
+- supports future research under #44/#137 where temporal MFCC evidence is synchronized to musical time;
 - candidate research features include MFCC delta/delta-2 and beat-synchronous summaries.
 
 Boundary:
@@ -131,7 +131,7 @@ Relevant behavior:
 
 Genre_test use:
 
-- supports the hypothesis that MFCC trajectories may help conservative timbral change-point evidence for #44;
+- supports the hypothesis that MFCC trajectories may help conservative acoustic change-point evidence for #44;
 - does not justify Verse/Chorus/Bridge/Drop naming.
 
 ---
@@ -143,17 +143,17 @@ Source: https://www.reddit.com/r/audioengineering/comments/1rkldh7/audio_similar
 
 Useful observation:
 
-MFCC-style and learned embeddings can both be useful, but a combined score is not meaningful until the target notion of similarity is defined.
+Handcrafted features and learned embeddings can both be useful, but a combined score is not meaningful until the target notion of similarity is defined.
 
 Genre_test interpretation:
 
 ```text
 semantic similarity
-!= timbral similarity
+!= handcrafted acoustic similarity
 != structural novelty
 ```
 
-Benchmark CLaMP/MERT and MFCC independently in #36 before any score fusion. No Reddit weights or thresholds are adopted.
+Benchmark CLaMP/MERT and the handcrafted baseline independently in #36 before any score fusion. No Reddit weights or thresholds are adopted.
 
 ---
 
@@ -187,7 +187,7 @@ A practitioner discussion reports stronger in-the-wild generalization from learn
 Genre_test interpretation:
 
 - consistent with CLaMP/MERT remaining the learned semantic retrieval path;
-- MFCC remains a comparator/complement, not a replacement simply because it is cheaper.
+- the handcrafted baseline remains a comparator/complement, not a replacement simply because it is cheaper.
 
 Boundary: anecdotal and not a music-retrieval benchmark.
 
@@ -207,83 +207,103 @@ Relevant findings:
 Genre_test interpretation:
 
 - reject the shortcut `MFCC -> CNN/SVM -> GTZAN headline accuracy -> replace MAEST`;
-- MAEST/AST production classification stays separate from MFCC retrieval research;
+- MAEST/AST production classification stays separate from handcrafted retrieval research;
 - any future classifier change requires modern project-owned reviewed fixtures.
 
 ---
 
 ## Project-owned conclusions
 
-### C1 — MFCC is complementary evidence
+### C1 — MFCC/chroma/contrast is complementary acoustic evidence
 
 ```text
 MAEST       -> fine-style / genre evidence
 AST         -> semantic evidence
 CLaMP/MERT  -> semantic / multilingual retrieval
-MFCC78      -> cheap timbral retrieval baseline
+ACOUSTIC78  -> cheap handcrafted acoustic baseline
 MFCC temporal research -> possible structure/artifact evidence (#44/#137)
 ```
 
-MFCC does not replace MAEST, AST or CLaMP/MERT.
+Because the 78D representation contains chroma, it is **not a timbre-only axis**. Chroma contributes pitch-class/harmonic information and can respond to key/harmony/transposition. The backend and documentation therefore use `mfcc-acoustic78` / handcrafted acoustic terminology.
 
 ### C2 — Similarity axes remain separate until calibrated
 
 No production formula such as:
 
 ```text
-combined = 0.8 * clamp + 0.2 * mfcc
+combined = 0.8 * clamp + 0.2 * acoustic78
 ```
 
 is allowed without #36 project-owned relevance evidence.
 
 ### C3 — Implementation identity is part of vector compatibility
 
-The current V2 fingerprint records:
+The current V3 fingerprint records:
 
-- mono 22.05 kHz preprocessing;
+- mono 22.05 kHz preprocessing and strict sample-rate enforcement;
 - FFT/hop and feature counts;
 - fixed RMS analysis-level policy;
-- aggregation policy;
+- minimum usable input RMS (`-80 dBFS`);
+- mean/std aggregation policy;
+- equal feature-family norm weighting before final L2 normalization;
 - Librosa version;
 - NumPy version;
 - SciPy version;
 - baseline algorithm revision.
 
-A changed extractor runtime therefore creates a different fingerprint and requires re-embedding rather than silently mixing vectors.
+A changed extractor runtime or preprocessing contract therefore creates a different fingerprint and requires re-embedding rather than silently mixing vectors.
 
-### C4 — Gain dependence review finding is resolved in V2
+### C4 — Global-gain dependence is controlled
 
-The original PR #140 review correctly identified that MFCC coefficient 0 carries log-energy information and a pure global gain change could rotate the final 78D vector even after L2 normalization.
+MFCC coefficient 0 carries log-energy information, so a pure global gain change can rotate a raw concatenated vector even after final L2 normalization.
 
 Resolution:
 
-- normalize valid non-silent input to a fixed RMS analysis level (`0.1`) before extraction;
+- reject inputs below the V3 usable-signal gate;
+- normalize valid input to fixed RMS `0.1` before extraction;
 - retain all 20 MFCC coefficients;
-- add gain-variant unit tests for quieter and louder copies of identical material;
-- reject effectively silent inputs instead of manufacturing a normalized timbral vector.
+- test quieter and louder copies of identical material.
 
-This resolves the implementation blocker. It does not prove retrieval value; #36 still owns benchmark evidence.
+This controls global-gain sensitivity for the benchmark. It does not prove retrieval value; #36 still owns relevance evidence.
 
-### C5 — Extractor-version drift review finding is resolved in V2
-
-The original PR #140 review also identified that broad dependency ranges can resolve different Librosa/NumPy/SciPy implementations.
+### C5 — Extractor-version and sample-rate drift are controlled
 
 Resolution:
 
-- include those runtime versions in `preprocessing_version`;
-- because `preprocessing_version` contributes to `RetrievalBackendInfo.fingerprint`, incompatible runtimes no longer share the same embedding identity;
-- a version change therefore forces separate cache/index identity and re-embedding semantics.
+- include Librosa/NumPy/SciPy runtime versions in `preprocessing_version`;
+- require the encoded `22_050 Hz` analysis rate at both public extraction and decoder boundaries;
+- because `preprocessing_version` contributes to `RetrievalBackendInfo.fingerprint`, incompatible runtimes/preprocessing policies no longer share the same embedding identity.
+
+### C6 — Feature-family scale is explicit in V3
+
+MFCC, chroma and spectral-contrast statistics use different numerical scales. Raw concatenation followed by one global L2 normalization would create an implicit and undocumented weighting policy.
+
+V3 therefore:
+
+```text
+MFCC mean/std block      -> block L2
+chroma mean/std block    -> block L2
+contrast mean/std block  -> block L2
+three equal-norm blocks  -> concatenate -> final L2
+```
+
+Each family contributes equal vector norm before any future #36 calibration. This is a declared benchmark policy, not a claim that equal weighting is optimal.
+
+### C7 — Practical near-silence is rejected before amplification
+
+Exact-zero detection is insufficient because dither, codec residue or quantization noise can have nonzero RMS. V3 rejects inputs below `-80 dBFS RMS` before scaling to the target analysis level. The threshold is part of the fingerprint and remains benchmark policy subject to #36 corpus validation.
 
 ---
 
 ## Benchmark hypotheses — not product claims
 
-| Retrieval relation | MFCC78 expected utility | CLaMP/MERT expected utility |
+| Retrieval relation | ACOUSTIC78 expected utility | CLaMP/MERT expected utility |
 |---|---:|---:|
 | exact / near duplicate | high | high |
-| gain variant | high after V2 level normalization | high |
+| gain variant | high after V3 level normalization | high |
 | mastering / codec variant | benchmark required | high / benchmark required |
 | similar timbral balance | high | medium/high |
+| same key/harmony | can influence score via chroma | semantic relevance varies |
 | instrumentation similarity | medium/high | high |
 | same subgenre | low/medium | high |
 | broad semantic genre | low/medium | high |
@@ -294,11 +314,11 @@ These are hypotheses, not acceptance thresholds.
 
 ## Graduation rule
 
-MFCC knowledge is integrated as a benchmark utility when:
+The handcrafted baseline may graduate from benchmark utility only when:
 
 1. source facts remain traceable to this registry;
-2. implementation parameters and extractor runtime identity are versioned;
-3. gain and version-drift implementation findings remain covered by tests;
+2. preprocessing, weighting and extractor runtime identity are versioned;
+3. gain, near-silence, sample-rate and family-weighting findings remain covered by tests;
 4. #36 measures real retrieval quality and perturbation robustness;
 5. any future #44/#137 temporal use receives independent DSP/audio-science validation;
 6. unsupported community claims remain hypotheses, not product truth.
