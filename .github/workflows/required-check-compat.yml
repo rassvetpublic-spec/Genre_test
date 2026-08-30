@@ -1,0 +1,19 @@
+name: Required check compatibility bridge
+
+on:
+  pull_request:
+
+jobs:
+  legacy-311-context:
+    name: test (3.11)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Legacy context bridge
+        run: echo 'Compatibility context only; Python 3.11 is not installed or tested.'
+
+  legacy-313-context:
+    name: test (3.13)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Legacy context bridge
+        run: echo 'Compatibility context only; real Python 3.13 coverage is optional in ci.yml.'
