@@ -1,7 +1,7 @@
 # Engineering evidence retained from historical project/chat work — 2026-08-30
 
-Status: **historical evidence / regression rationale, not current-state authority**  
-Issue: **#135**  
+Status: **historical evidence / regression rationale, not current-state authority**
+Issue: **#135**
 Supersedes the useful evidence content of stale PR #133.
 
 ## Authority boundary
