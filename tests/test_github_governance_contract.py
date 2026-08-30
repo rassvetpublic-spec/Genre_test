@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 RULESET = ROOT / "config" / "github" / "rulesets" / "protect-main.json"
 ACTIVE = ROOT / "docs" / "ACTIVE_CURRENT.md"
