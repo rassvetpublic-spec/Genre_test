@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "updated": "2026-08-30",
+  "authority": "canonical_machine_state",
+  "run_sequence": 0,
+  "last_run": null,
+  "last_successful_run": null,
+  "known_source_ids": ["clamp3-architecture","cyanite","temporal-structure-sources","open-source-audio-rnd","ai-audio-tool-test-registry","shimmer","generative-audio-repair-sources","mcp-source-registry"],
+  "topic_state": {
+    "retrieval-evaluation":{"last_checked":null,"last_material_change":null,"status":"NOT_RUN"},
+    "audio-text-embeddings":{"last_checked":null,"last_material_change":null,"status":"NOT_RUN"},
+    "ai-audio-detection":{"last_checked":null,"last_material_change":null,"status":"NOT_RUN"},
+    "generative-audio-repair":{"last_checked":null,"last_material_change":null,"status":"NOT_RUN"},
+    "mastering-qc":{"last_checked":null,"last_material_change":null,"status":"NOT_RUN"},
+    "agent-orchestration":{"last_checked":null,"last_material_change":null,"status":"NOT_RUN"}
+  },
+  "suppressed_candidates": [],
+  "follow_up": [],
+  "notes": "Bootstrap state only. No external Research Radar run is recorded by this change."
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "updated": "2026-08-30",
+  "authority": "canonical_machine_state",
+  "entries": [
+    {"id":"clamp3-architecture","title":"CLaMP3 Architecture","kind":"project_reference","status":"ACTIVE","canonical_path":"docs/CLAMP3_ARCHITECTURE.md","topics":["audio-text-embeddings","retrieval-evaluation"]},
+    {"id":"cyanite","title":"Cyanite External Reference","kind":"external_reference","status":"SOURCE_VERIFIED","canonical_path":"docs/CYANITE_EXTERNAL_REFERENCE.md","topics":["audio-text-embeddings","retrieval-evaluation"]},
+    {"id":"temporal-structure-sources","title":"Temporal Structure Sources","kind":"source_registry","status":"ACTIVE","canonical_path":"docs/TEMPORAL_STRUCTURE_SOURCES.md","topics":["ai-audio-detection","generative-audio-repair"]},
+    {"id":"open-source-audio-rnd","title":"Open Source Audio R&D References","kind":"source_registry","status":"ACTIVE","canonical_path":"docs/OPEN_SOURCE_AUDIO_RND_REFERENCES.md","topics":["ai-audio-detection","generative-audio-repair","mastering-qc"]},
+    {"id":"ai-audio-tool-test-registry","title":"AI Audio Tool Test Registry","kind":"domain_registry","status":"ACTIVE","canonical_path":"docs/research/AI_AUDIO_TOOL_TEST_REGISTRY.json","topics":["ai-audio-detection","generative-audio-repair"]},
+    {"id":"shimmer","title":"Shimmer External Reference","kind":"external_reference","status":"SOURCE_VERIFIED","canonical_path":"docs/SHIMMER_EXTERNAL_REFERENCE.md","topics":["generative-audio-repair","mastering-qc"]},
+    {"id":"generative-audio-repair-sources","title":"Generative Audio Repair Source Registry","kind":"source_registry","status":"ACTIVE","canonical_path":"docs/GENERATIVE_AUDIO_REPAIR_SOURCE_REGISTRY.md","topics":["generative-audio-repair","mastering-qc"]},
+    {"id":"mcp-source-registry","title":"MCP Source Registry","kind":"source_registry","status":"ACTIVE","canonical_path":"docs/MCP_SOURCE_REGISTRY.md","topics":["agent-orchestration"]}
+  ]
+}
