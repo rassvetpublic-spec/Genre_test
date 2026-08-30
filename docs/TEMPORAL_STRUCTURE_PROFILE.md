@@ -15,6 +15,33 @@ The profile is **not** an AI-origin classifier. No field proves that audio is AI
 human-made, SUNO-produced, or produced by any other named generator. Values are evidence for
 corpus research and before/after repair comparison only.
 
+## Research evidence chain
+
+External literature and code references are pinned in:
+
+```text
+docs/TEMPORAL_STRUCTURE_SOURCES.md
+```
+
+Project-owned evidence must then follow the staged protocol in:
+
+```text
+docs/TEMPORAL_STRUCTURE_RESEARCH_PIPELINE.md
+```
+
+Canonical sequence:
+
+```text
+literature/source claim
+    -> corpus benchmark
+    -> feature distributions
+    -> calibration
+    -> locked validation
+    -> repair validation
+```
+
+The extractor being implemented does not imply that later stages are complete. Until corpus measurements exist, distribution/calibration state must be recorded as `NOT_MEASURED` / `NOT_STARTED`, never replaced by assumed detector percentages.
+
 ## Implementation
 
 Module:
@@ -154,6 +181,8 @@ Minimum corpus matrix before interpretive thresholds are allowed:
 Report distributions, overlap, false-positive behaviour, genre sensitivity and processing
 sensitivity. Do not publish a universal `AI/HUMAN` threshold from one corpus.
 
+Detailed parent-family splitting, duration axes, distribution statistics, calibration records, locked-test rules and repair-validation gates are defined in `TEMPORAL_STRUCTURE_RESEARCH_PIPELINE.md`.
+
 ## Repair use
 
 For a repair candidate, store source and candidate profiles beside existing musical-damage guards.
@@ -189,4 +218,5 @@ A lower artifact-evidence value alone must never select a repair winner.
 - explicit invalid-input tests;
 - separate algorithm/config identity;
 - no AI probability or named-generator output;
+- pinned source registry and explicit benchmark/calibration/repair-validation protocol;
 - no merge without explicit MTD.
