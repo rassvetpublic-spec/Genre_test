@@ -1,7 +1,7 @@
 # Suno v5.5 mastering research — 2026-08-30
 
-Status: **research hypotheses / not production defaults**  
-Issue: **#144**  
+Status: **research hypotheses / not production defaults**
+Issue: **#144**
 Materialized in repository: **2026-08-31**
 
 ## Purpose
@@ -23,7 +23,7 @@ Existing `docs/mastering/ozone12/core/16_SUNO55_LOSSY_SOURCE_TS_MASTERING_PROTOC
 
 ### S1 — Suno v5.5 Remaster community regression report
 
-Class: **COMMUNITY OBSERVATION**  
+Class: **COMMUNITY OBSERVATION**
 Source: https://www.reddit.com/r/SunoAI/comments/1vnu1tv/community_alert_suno_v55_remaster_engine/
 
 Reported in one direct community A/B:
@@ -43,7 +43,7 @@ Genre_test use: fixture discovery and regression hypothesis only.
 
 ### S2 — MasterForge Suno v5 vs v5.5 comparative measurements
 
-Class: **THIRD-PARTY MEASUREMENT**  
+Class: **THIRD-PARTY MEASUREMENT**
 Source: https://masterforge.app/blog/suno-v5-vs-v5-5/
 
 The source reports genre-dependent changes in spectral centroid, 2–5 kHz presence, sub-bass and stereo width across a small multi-genre comparison. Direction differs by genre rather than moving uniformly.
@@ -58,7 +58,7 @@ Genre_test use: reinforces measured, genre/section-conditioned decisions instead
 
 ### S3 — iZotope Ozone workflow: Bass Control before Impact
 
-Class: **VENDOR WORKFLOW REFERENCE**  
+Class: **VENDOR WORKFLOW REFERENCE**
 Source: https://www.izotope.com/community/blog/10-steps-to-a-quick-master-in-ozone
 
 Useful workflow idea: when both modules are needed, low-end balance/punch/sustain control can precede broader Impact microdynamic shaping.
@@ -72,7 +72,7 @@ Genre_test use: benchmark the causal order `Bass Control -> Impact` under low-en
 
 ### S4 — Suno Band Manager Studio Editor reference
 
-Class: **UPSTREAM / COMMUNITY REFERENCE**  
+Class: **UPSTREAM / COMMUNITY REFERENCE**
 Source: https://github.com/zarlor/suno-band-manager/blob/main/src/skills/_shared/references/STUDIO-EDITOR-REFERENCE.md
 
 Useful secondary interpretation: Suno Remaster should be treated operationally as a new generative candidate/variant rather than assumed to be a deterministic EQ-style cleanup pass.
