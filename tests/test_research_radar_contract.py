@@ -68,3 +68,62 @@ def test_stale_generated_nodes_are_detected(tmp_path: Path) -> None:
     stale.parent.mkdir(parents=True)
     stale.write_text(f"{radar.MARKER}\n", encoding="utf-8")
     assert radar._stale_generated_files(set(), tmp_path) == [stale]
+
+
+def test_manual_notes_reject_duplicate_marker_pairs() -> None:
+    text = (
+        f"{radar.MANUAL_START}\none\n{radar.MANUAL_END}\n"
+        f"{radar.MANUAL_START}\ntwo\n{radar.MANUAL_END}\n"
+    )
+    try:
+        radar.extract_manual_notes(text)
+    except radar.RadarError:
+        pass
+    else:
+        raise AssertionError("duplicate manual-note pairs must fail closed")
+
+
+def test_canonical_path_cannot_escape_repository(tmp_path: Path) -> None:
+    (tmp_path / "docs" / "research" / "data").mkdir(parents=True)
+    outside = tmp_path.parent / "outside-radar-test.md"
+    outside.write_text("outside", encoding="utf-8")
+    topics = {
+        "schema_version": 1,
+        "authority": "canonical_machine_state",
+        "topics": [
+            {
+                "id": "topic",
+                "status": "ACTIVE",
+                "keywords": ["x"],
+                "exclusions": ["y"],
+            }
+        ],
+    }
+    sources = {
+        "schema_version": 1,
+        "authority": "canonical_machine_state",
+        "entries": [
+            {
+                "id": "source",
+                "topics": ["topic"],
+                "canonical_path": "../outside-radar-test.md",
+            }
+        ],
+    }
+    state = {
+        "schema_version": 1,
+        "authority": "canonical_machine_state",
+        "run_sequence": 0,
+        "known_source_ids": ["source"],
+        "topic_state": {"topic": {"status": "NOT_RUN"}},
+        "suppressed_candidates": [],
+        "follow_up": [],
+    }
+    try:
+        radar.validate_state(topics, sources, state, tmp_path)
+    except radar.RadarError:
+        pass
+    else:
+        raise AssertionError("canonical_path traversal must fail closed")
+    finally:
+        outside.unlink(missing_ok=True)

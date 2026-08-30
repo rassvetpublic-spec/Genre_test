@@ -89,14 +89,32 @@ def validate_state(
         if unknown:
             raise RadarError(f"source {source['id']} has unknown topics: {unknown}")
         canonical = source.get("canonical_path")
-        if not isinstance(canonical, str) or not (root / canonical).is_file():
+        if not isinstance(canonical, str) or not canonical.strip():
+            raise RadarError(f"source {source['id']} canonical_path is invalid: {canonical!r}")
+        canonical_path = Path(canonical)
+        if canonical_path.is_absolute() or ".." in canonical_path.parts:
+            raise RadarError(
+                f"source {source['id']} canonical_path must stay repository-relative: {canonical}"
+            )
+        target = (root / canonical_path).resolve()
+        try:
+            target.relative_to(root.resolve())
+        except ValueError as exc:
+            raise RadarError(
+                f"source {source['id']} canonical_path escapes repository: {canonical}"
+            ) from exc
+        if not target.is_file():
             raise RadarError(f"source {source['id']} canonical_path missing: {canonical}")
     seq = state_doc.get("run_sequence")
     if not isinstance(seq, int) or isinstance(seq, bool) or seq < 0:
         raise RadarError("RESEARCH_STATE.run_sequence must be non-negative int")
     known = state_doc.get("known_source_ids")
-    if not isinstance(known, list) or len(known) != len(set(known)) or set(known) - source_ids:
-        raise RadarError("RESEARCH_STATE.known_source_ids is inconsistent")
+    if (
+        not isinstance(known, list)
+        or len(known) != len(set(known))
+        or set(known) != source_ids
+    ):
+        raise RadarError("RESEARCH_STATE.known_source_ids must match the source registry exactly")
     topic_state = state_doc.get("topic_state")
     if not isinstance(topic_state, dict) or set(topic_state) != topic_ids:
         raise RadarError("RESEARCH_STATE.topic_state must cover every topic exactly")
@@ -116,12 +134,16 @@ def validate_state(
 def extract_manual_notes(existing: str | None) -> str:
     if not existing:
         return "\n\n"
+    start_count = existing.count(MANUAL_START)
+    end_count = existing.count(MANUAL_END)
+    if start_count == 0 and end_count == 0:
+        return "\n\n"
+    if start_count != 1 or end_count != 1:
+        raise RadarError("manual-notes markers must occur exactly once as one pair")
     start = existing.find(MANUAL_START)
     end = existing.find(MANUAL_END)
-    if start < 0 and end < 0:
-        return "\n\n"
-    if start < 0 or end < 0 or end < start:
-        raise RadarError("malformed manual-notes markers")
+    if end < start:
+        raise RadarError("manual-notes markers are out of order")
     return existing[start + len(MANUAL_START) : end]
 
 
