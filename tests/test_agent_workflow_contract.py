@@ -208,6 +208,10 @@ def test_issue_form_has_exact_required_structural_contract() -> None:
         assert type_match.group(1) in INTERACTIVE_ISSUE_TYPES
         assert re.search(rf"(?m)^    id: {re.escape(item_id)}$", block)
         assert re.search(
+            r"(?m)^    attributes:\s*\n      label:\s*\S.*$",
+            block,
+        )
+        assert re.search(
             r"(?m)^    validations:\s*\n      required: true\s*$",
             block,
         )
