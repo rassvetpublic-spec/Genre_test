@@ -1,31 +1,60 @@
-# Technical task: implement Model Context Protocol (MCP) in Genre_test
+# Technical task: implement Genre_test Product MCP façade
 
 Status: **planned task; implementation is not authorized merely by this file**  
+Track: **Product MCP / Track P**  
+Roadmap: **v0.9**  
 Related Issue: **#146**  
 Protocol baseline checked: **MCP 2026-07-28**  
 Architecture: [`MCP_ARCHITECTURE_PROPOSAL.md`](MCP_ARCHITECTURE_PROPOSAL.md)  
 Sources: [`MCP_SOURCE_REGISTRY.md`](MCP_SOURCE_REGISTRY.md)
 
+This document does not define the earlier QA evidence-consumer **Track Q**.
+
 ## 0. Purpose
 
-Implement a minimal, stable and safe MCP adapter layer over existing Genre_test capabilities so MCP-aware AI clients can use typed project capabilities without depending on internal PowerShell commands, Python entrypoints, temporary directories, console parsing or REAPER invocation details.
+Implement a minimal, stable and safe **Product MCP** adapter layer over existing Genre_test capabilities so MCP-aware AI clients can use typed project capabilities without depending on internal PowerShell commands, Python entrypoints, temporary directories, console parsing or REAPER invocation details.
 
 Primary principle:
 
-> MCP does not replace Genre_test core, CLI, retrieval, QC, REAPER, Ozone or GitHub governance. MCP is an adapter over existing/stable service boundaries.
+> Product MCP does not replace Genre_test core, CLI, retrieval, QC, REAPER, Ozone or GitHub governance. Product MCP is an adapter over existing/stable service boundaries.
 
 After implementation an AI consumer should primarily know **what** Genre_test can do rather than **how** its internals are wired.
+
+### Relationship to QA Evidence Track
+
+A separate early engineering track may consume read-only evidence through direct sources or MCP adapters.
+
+Its dependency direction is:
+
+```text
+QA evidence collector
+    -> Evidence Source abstraction
+    -> direct/local/GitHub/MCP source
+    -> ReviewEvidencePack
+```
+
+Track Q does **not** use or authorize:
+
+```text
+src/genre_test/mcp/**
+```
+
+and does not authorize the Product MCP server described by this document.
+
+The canonical evidence contract must be transport-independent. An MCP server/client is not required merely to define or test `ReviewEvidencePackV1`.
+
+Everything below in this document describing `src/genre_test/mcp/`, `get_project_status()`, `runtime_doctor()`, `analyze_audio()`, `get_qc_report()`, `compare_runs()` or other Genre_test server capabilities belongs to **Track P** unless explicitly amended by a later approved architecture task.
 
 ---
 
 ## 1. Preconditions before production implementation
 
-Production MCP code must not start until all of these are true:
+Production Product MCP code must not start until all of these are true:
 
-1. The user explicitly approves MCP roadmap placement: remain v0.9 or promote a bounded read-only infrastructure track earlier.
+1. Track P remains a **v0.9 Product MCP task**. Starting Track Q earlier does not satisfy or bypass the Track P implementation preconditions.
 2. Current MCP protocol revision is rechecked against [`MCP_SOURCE_REGISTRY.md`](MCP_SOURCE_REGISTRY.md).
 3. Official Python SDK compatibility for the selected protocol revision is verified and a version/revision is selected for pinning.
-4. Existing Genre_test service boundaries are inventoried.
+4. Existing Genre_test service boundaries are inventoried and stable enough for the intended Product MCP surface.
 5. No overlapping implementation Issue/branch/PR exists.
 6. The implementation Issue defines exact allowed paths and acceptance criteria.
 
@@ -47,6 +76,7 @@ Do not:
 8. Make remote/cloud MCP mandatory for local use.
 9. Change audio/DSP/retrieval/mastering semantics merely to fit MCP.
 10. Break the existing human CLI/launcher workflow.
+11. Treat early Track Q evidence work as authorization for Product MCP implementation.
 
 ---
 
@@ -858,7 +888,7 @@ Only after separate approval and read-only evidence.
 
 ## 29. Architecture rejection criteria
 
-`ARCHITECT` should reject an implementation if:
+`ARCHITECT` should reject a Product MCP implementation if:
 
 1. MCP handlers duplicate core business logic.
 2. Generic shell/PowerShell execution is exposed.
@@ -870,7 +900,8 @@ Only after separate approval and read-only evidence.
 8. External contract requires parsing human console prose.
 9. Security-negative tests are absent.
 10. The implementation assumes legacy `initialize`/session semantics as the new modern core despite targeting `2026-07-28`.
-11. Roadmap placement was silently accelerated.
+11. Product MCP roadmap placement was silently accelerated.
+12. Early Track Q work is used as a substitute for Product MCP service-boundary readiness.
 
 ---
 
@@ -898,11 +929,11 @@ Independent `QA_REVIEWER` should verify at least:
 
 ---
 
-## 31. Definition of Done — read-only MVP
+## 31. Definition of Done — read-only Product MCP MVP
 
-The MVP is complete only when all applicable items are true:
+The Product MCP MVP is complete only when all applicable items are true:
 
-- [ ] User-approved roadmap placement exists.
+- [ ] Product MCP remains authorized for its roadmap placement and stable-service preconditions are met.
 - [ ] Selected protocol revision revalidated.
 - [ ] Official Python SDK version/revision pinned.
 - [ ] MCP server starts locally on supported Windows environment.
@@ -949,7 +980,7 @@ Write capabilities require all read-only criteria plus:
 
 ## 33. Final success criterion
 
-MCP is architecturally successful if a new compatible AI client can connect to Genre_test and use approved capabilities without knowing:
+Product MCP is architecturally successful if a new compatible AI client can connect to Genre_test and use approved capabilities without knowing:
 
 - internal PowerShell commands;
 - internal Python entrypoints;
@@ -960,6 +991,6 @@ MCP is architecturally successful if a new compatible AI client can connect to G
 
 At the same time, existing human workflows remain independently usable and MCP does not become a privileged bypass around Genre_test safety/governance.
 
-## 34. Short assignment for an implementation agent
+## 34. Short assignment for a future Product MCP implementation agent
 
-> Design and implement a minimal local-first MCP adapter over existing Genre_test capabilities. Revalidate the current MCP specification and pin an official Python SDK version before coding. Begin with modern discovery plus read-only Resources and narrow typed Tools. Keep all business logic in reusable Genre_test services, not MCP handlers. Do not expose arbitrary shell, PowerShell, filesystem or direct-main operations. Add strict schemas, structured errors, security-negative tests, existing-pipeline regression tests and protocol smoke validation. Develop through focused PRs with exact-head CI/QA and preserve current Genre_test governance. Controlled write capabilities require a separate follow-up approval.
+> Design and implement a minimal local-first **Product MCP / Track P** adapter over existing stable Genre_test capabilities when the v0.9/stable-service preconditions are met. Revalidate the current MCP specification and pin an official Python SDK version before coding. Begin with modern discovery plus read-only Resources and narrow typed Tools. Keep all business logic in reusable Genre_test services, not MCP handlers. Do not expose arbitrary shell, PowerShell, filesystem or direct-main operations. Add strict schemas, structured errors, security-negative tests, existing-pipeline regression tests and protocol smoke validation. Develop through focused PRs with exact-head CI/QA and preserve current Genre_test governance. Controlled write capabilities require a separate follow-up approval. Early Track Q evidence work does not authorize this Product MCP implementation.
