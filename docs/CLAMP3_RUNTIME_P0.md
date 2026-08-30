@@ -1,6 +1,6 @@
 # CLaMP 3 P0 — selected runtime and final Windows hardware acceptance
 
-Status: **hardware acceptance PASS on PR #72; merge still requires explicit MTD**.
+Status: **hardware acceptance PASS; PR #72 merged on 2026-08-27 under authorized MTD**.
 
 Related: #26, #27, #29, #41.
 
@@ -168,7 +168,7 @@ CPU performance is not part of this P0 benchmark and remains a later portable/re
 
 ## Health/error boundary
 
-The retrieval backend is optional and isolated from ordinary v0.4 analysis.
+The retrieval backend is optional and isolated from ordinary core analysis.
 
 Health semantics are `OK / WARN / FAIL / N/A`. Missing assets/source and unavailable backends are represented structurally; sidecar inference failures do not alter MAEST/AST core execution. The sidecar protocol includes structured model/file missing, invalid-request, CUDA OOM and inference-failure errors.
 
@@ -319,10 +319,10 @@ The original spike requested exact initial environment-creation time and complet
 
 ## CI boundary
 
-PR #72 CI is green on Python 3.11, 3.12 and 3.13, including Ruff and pytest. CI intentionally does not download CLaMP/MERT/XLM-R multi-GB assets. The real model/GPU run remains a local hardware gate.
+PR #72 CI was green on Python 3.11, 3.12 and 3.13, including Ruff and pytest. CI intentionally did not download CLaMP/MERT/XLM-R multi-GB assets. The real model/GPU run remained a local hardware gate and passed as recorded above.
 
 ## P0 conclusion
 
 The hardened target-PC gate is accepted as final hardware evidence for #27/#29. The selected v0.5 architecture is **isolated persistent CLaMP 3 SAAS sidecar with corrected MERT v3 preprocessing identity**.
 
-Issues #27/#29 may be marked acceptance-complete, but PR #72 and the issue implementation state must remain unmerged/open until the user gives explicit **MTD**.
+Issues #27/#29 are acceptance-complete and PR #72 is merged. That historical merge used its explicit user MTD authorization. Current future PR release governance is defined by `AGENTS.md` / `docs/AGENT_WORKFLOW.md`: exact-head review/CI/readiness gates remain mandatory, and approved-scope `READY-MTD <40-char-sha>` PRs may use the **standing automatic MTD authorization**.

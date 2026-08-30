@@ -1,14 +1,14 @@
 # CLaMP 3 Retrieval Architecture
 
-Status: **proposed / implementation started**  
+Status: **v0.5 implementation architecture**  
 Epic: **#26**  
-Runtime spike: **#27**
+Runtime decision: **#27 complete**
 
 ## Architectural principle
 
 CLaMP 3 is a new **retrieval backend**, not a replacement classifier.
 
-Existing v0.4 path stays authoritative for current profile outputs:
+Existing analysis/profile path stays authoritative for current profile outputs:
 
 ```text
 Audio
@@ -60,9 +60,9 @@ SearchHit[]
 
 ## Runtime boundary
 
-The first implementation must treat CLaMP as optional.
+CLaMP remains optional and must not break Core Analyze when unavailable.
 
-Preferred provisional design while #27 is open:
+Selected v0.5 design after #27 compatibility/isolation work:
 
 ```text
 Genre_test core process
@@ -70,23 +70,23 @@ Python 3.11-3.13 / Torch 2.12.1 / cu130
         |
         | local machine-only subprocess protocol
         v
-CLaMP sidecar runtime
-upstream-compatible Python/Torch stack
+persistent isolated CLaMP sidecar runtime
+Python 3.12 / upstream-compatible dependency stack
         |
         +--> MERT
         +--> CLaMP 3
 ```
 
-Why isolate first:
+Why the isolated persistent sidecar was selected:
 
-- upstream CLaMP requirements are older than core;
-- upstream quick start targets Python 3.10/CUDA 11.8;
-- core CUDA/Blackwell route is already released and tested;
+- upstream CLaMP requirements differ from the core runtime;
+- the core CUDA/Blackwell route is already released and tested;
 - retrieval is optional;
 - model/runtime faults must not break Analyze;
-- large model lifecycle can be managed independently.
+- large model lifecycle can be managed independently;
+- persistence avoids paying cold-start/model-load cost for every request.
 
-The sidecar decision is provisional until compatibility measurements in #27 are complete.
+#27 is complete. Consolidating CLaMP into the core environment is not the current baseline and would require new compatibility evidence and an explicit architecture decision.
 
 ## Core / sidecar protocol
 
@@ -185,16 +185,14 @@ Retrieval state should be separate from existing history:
 ```text
 .genre_test/
   history.sqlite3
-  retrieval/
-    retrieval.sqlite3
-    vectors/
-    index/
-    cache/
+  retrieval.sqlite3
 ```
 
-Why separate DB:
+Runtime/model/upstream assets remain in the flat project state under `.genre_test/runtimes/`, `.genre_test/models/`, and `.genre_test/upstream/` as defined by current contracts.
 
-- v0.4 history remains stable;
+Why separate retrieval DB:
+
+- analysis history remains stable;
 - vector schema can evolve independently;
 - a retrieval reset does not destroy analysis history;
 - embedding model revisions can coexist for comparison.

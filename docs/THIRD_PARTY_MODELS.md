@@ -135,7 +135,7 @@ Policy:
 
 - do not copy all upstream research dependencies into core `pyproject.toml`;
 - install only runtime dependencies actually required by our inference adapter;
-- keep them in the isolated Python 3.12 sidecar until #27 proves a safer consolidation route;
+- keep them in the **#27-selected isolated persistent Python 3.12 sidecar**; core-native CLaMP inference was intentionally not selected;
 - avoid training/evaluation-only dependencies;
 - complete a dependency-license inventory before v0.5 release.
 

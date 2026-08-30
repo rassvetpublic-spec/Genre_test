@@ -1,23 +1,42 @@
 # ACTIVE / CURRENT
 
-Published stable version: **none**
-Active development version: **0.5.0.dev0**
-Active development scope: **v0.5 CLaMP 3 semantic retrieval**
-Active v0.5 epic: **#26**
-
+Published stable version: **none**  
+Active development version: **0.5.0.dev0**  
+Active milestone: **v0.5 CLaMP 3 semantic retrieval**  
+Milestone epic: **#26**  
 Long-term product epic: **#49 SUPERCOMBINE**
-Long-term execution TODO: `docs/SUPERCOMBINE_TODO.md`
-Geekatplay reuse audit: `docs/GEEKATPLAY_ORG_AUDIT.md`
 MCP adapter architecture proposal: **#146** (`REQUEST`; architecture/roadmap placement pending; no MCP implementation authorized by this status entry)
+
+`Genre_test/main` plus current GitHub Issues/PR state is the canonical engineering source of truth. A fresh repository-aware agent should start with `docs/REPOSITORY_COLD_START.md` and must not depend on chat history for durable project state.
+
+## Current execution state
+
+There is deliberately no single hard-coded "current first implementation issue" in this file. GitHub Issues are task contracts and their live state changes faster than this summary.
+
+For v0.5 execution, use:
+
+1. open Issues under epic **#26** for live task state and acceptance criteria;
+2. `docs/CLAMP3_TODO.md` for the current implementation/acceptance checklist;
+3. the assigned Issue/PR for the exact next allowed action.
+
+Known P0 state at this snapshot:
+
+- **#27 runtime compatibility/isolation** — completed and merged via PR #72; selected architecture is an isolated persistent subprocess sidecar;
+- **#28 retrieval schemas/protocol** — implementation foundation complete in main;
+- **#29 real CLaMP 3 + MERT backend** — implementation and hardened target-PC evidence complete in main;
+- **#30 persistent embedding cache/index** — implementation foundation is in main; real-catalog acceptance remains open;
+- **#41 model licensing/provenance** — still open and remains a v0.5 release gate.
+
+If no Issue is assigned, a new agent must not invent work from chat memory. It should inspect current open Issues and dependencies, then choose only a task that is unambiguously claimable under `AGENTS.md`.
 
 ## Product north star
 
-Genre_test is no longer planned as only a genre analyzer. The post-v0.5 direction is a local-first finishing workstation for generative songs:
+Genre_test is evolving from a genre/profile analyzer into a local-first studio-finish workstation for generative songs:
 
 ```text
 Generated mix / stems
   -> Analyze / Catalog / Search
-  -> Technical QC + markers
+  -> Technical QC + timestamped markers
   -> Repair artifacts
   -> Vocal/stem post-processing
   -> Mix/master orchestration
@@ -26,79 +45,64 @@ Generated mix / stems
   -> Delivery / studio-ready master
 ```
 
-The target is removal of audible defects and weak/raw generative production characteristics while keeping immutable sources, evidence provenance and reproducible processing manifests. **AI-detector evasion / provenance concealment is not a product objective.**
+The target is removal of audible defects, unstable synthetic artifacts and weak/raw production characteristics while preserving immutable sources, evidence provenance and reproducible processing manifests.
+
+**AI-origin detector evasion, watermark stripping and provenance concealment are not product objectives.**
 
 Planned long-term phases:
 
-- v0.6 Repair & Stem Lab — #50, #51, #52; Apollo compatibility/restoration robustness is tracked in #63 under #50;
+- v0.6 Repair & Stem Lab — #50, #51, #52; Apollo research is tracked under #63;
 - v0.7 Studio Finish / mastering orchestration — including #54 comparison lab;
 - v0.8 Metadata/Catalog/Delivery — #53, #56;
 - v0.9 ComfyUI/runtime orchestration — #46, #55;
 - v1.0 integrated SUPERCOMBINE.
 
-## Core analysis baseline
+See `ROADMAP.md` and `docs/SUPERCOMBINE_TODO.md`.
 
-The core analysis baseline remains a local Windows-first music profiling and regression system built around:
+## Protected core analysis baseline
+
+The protected ordinary-analysis baseline remains:
 
 ```text
 Audio
   -> MAEST Discogs519 fine-style evidence
   -> AudioSet AST semantic evidence
-  -> BPM / key / source metadata
+  -> BPM / key / native source metadata
   -> deterministic profile fusion
   -> AudioProfile schema 4
   -> Normal / SUNO / Distributor views
   -> history / Validation / build comparison
 ```
 
-Retrieval work may not silently change these outputs without separate review and evidence.
+Retrieval, repair and mastering work may not silently change these outputs without a dedicated reviewed migration.
 
-## Runtime baseline
+Stable core runtime:
 
-Stable core:
+- Python 3.11 / 3.12 / 3.13 x64;
+- PyTorch 2.12.1;
+- NVIDIA CUDA 13.0 / cu130;
+- RTX 5070 Ti / `sm_120` proven on the target workstation;
+- CPU-only mode supported;
+- FFmpeg required for extended decode fallback.
 
-- Python 3.11 / 3.12 / 3.13 x64
-- PyTorch 2.12.1
-- NVIDIA: CUDA 13.0 / cu130
-- Blackwell requires native active architecture; RTX 5070 Ti `sm_120` verified
-- CPU-only supported; GUI reports `CUDA: N/A | GPU: N/A`
-- NVIDIA present but unusable CUDA is a runtime failure, not CPU fallback
-- FFmpeg bootstrap and diagnostics included
-- public pinned Hugging Face analysis models work anonymously; token optional
+The supported user entry point is `Genre_test_START.cmd`. Scripts under `scripts/` are implementation details unless a task contract says otherwise.
 
-### Actual target workstation inventory — 2026-08-26
+## Active v0.5: CLaMP 3 retrieval
 
-```text
-Windows 11 Pro Insider Preview 10.0.26220
-Python 3.12 + 3.13 installed
-Python 3.10/3.11 not registered
-Core Python 3.12.10
-RTX 5070 Ti / 16303 MiB / driver 610.88
-compute capability 12.0
-Torch 2.12.1+cu130
-CUDA 13.0
-native sm_120 present
-FFmpeg available
-```
+Selected backend family: **CLaMP 3 SAAS + MERT + XLM-R** behind an **optional isolated persistent Python 3.12 subprocess sidecar**.
 
-Evidence: `docs/CLAMP3_WINDOWS_SPIKE_2026-08-26.md`.
-
-The current CLaMP spike therefore prioritizes a **modern isolated Python 3.12 Blackwell-capable sidecar**. The older upstream Python 3.10/CUDA 11.8 environment is reference evidence only and is not the target RTX 5070 Ti production route.
-
-## Active v0.5 direction: CLaMP 3
-
-Selected backend family: **CLaMP 3**.
+The isolated route was selected after real target-PC validation. The older upstream Python 3.10/CUDA 11.8 recipe is reference evidence only; core-native CLaMP inference was intentionally not selected.
 
 Purpose:
 
-- audio→audio semantic similarity;
-- Russian/multilingual free-text→music search;
+- audio-to-audio semantic similarity;
+- Russian/multilingual free-text-to-music search;
 - representative segment search;
 - custom segment search;
 - persistent local catalog embeddings;
 - deterministic Core Sound summary;
 - later controlled zero-shot descriptors;
-- conservative tempo/structure timeline after segment foundation.
+- conservative tempo/structure timeline after the segment foundation.
 
 Planned GUI surface:
 
@@ -106,79 +110,46 @@ Planned GUI surface:
 Анализ | Каталог | Поиск | Validation | Проверка
 ```
 
-CLaMP 3 is an independent retrieval subsystem. It does not replace MAEST, AudioSet AST, tempo/key DSP, AudioProfile, history, or Validation.
+CLaMP 3 does not replace MAEST, AudioSet AST, tempo/key DSP, AudioProfile, history, Validation or build comparison. Retrieval failure must not break ordinary Analyze startup.
 
-Detailed docs:
+Current-state retrieval contracts:
 
-- `docs/CLAMP3_ROADMAP.md`
 - `docs/CLAMP3_ARCHITECTURE.md`
 - `docs/CLAMP3_RUNTIME.md`
+- `docs/CLAMP3_RUNTIME_P0.md`
+- `docs/CLAMP3_RETRIEVAL_ACCEPTANCE.md`
+- `docs/THIRD_PARTY_MODELS.md`
+
+Planning/scope references are useful for phase intent but are **not current-state authority**; if they conflict with `Genre_test/main`, live GitHub state, or the current-state contracts above, the current sources win:
+
+- `docs/CLAMP3_ROADMAP.md`
 - `docs/CLAMP3_TODO.md`
 - `docs/CLAMP3_OUTPUT_SCOPE.md`
-- `docs/FAR_TODO.md`
-- `docs/THIRD_PARTY_MODELS.md`
-- `docs/SUPERCOMBINE_TODO.md`
-- `docs/GEEKATPLAY_ORG_AUDIT.md`
 
-## Retrieval runtime status
-
-The CLaMP 3 runtime integration is currently in **compatibility-spike** phase (#27).
-
-Captured upstream code snapshot for the spike:
+Current retrieval state layout is flat under `.genre_test/`:
 
 ```text
-sanderwood/clamp3
-9016d2b0c8d12d1aa79c2e0ab201e6822bdc83a8
+.genre_test/
+  history.sqlite3
+  retrieval.sqlite3
+  logs/
+  models/
+  runtimes/clamp3/.venv/
+  upstream/clamp3/
 ```
-
-Current provisional architecture is an **optional isolated subprocess sidecar**, pending real MERT/CLaMP inference measurements.
-
-Expected optional health behavior:
-
-```text
-Retrieval: N/A   backend not installed/enabled
-Retrieval: OK    backend/model/index ready
-Retrieval: WARN  usable degraded/stale state
-Retrieval: FAIL  installed/configured but not operational
-```
-
-Retrieval N/A/FAIL must not make ordinary Analyze unusable.
 
 ## Third-party model gate
 
-CLaMP 3 is published with MIT metadata, but the documented CLaMP audio path relies on `m-a-p/MERT-v1-95M`, whose current public model card declares `CC-BY-NC-4.0`.
+CLaMP code/selected weight provenance is recorded, while the documented audio path uses `m-a-p/MERT-v1-95M`, whose model terms remain a release constraint tracked by **#41**.
 
-Until #41 is resolved:
+Until that gate is complete:
 
-- retrieval development is optional/experimental;
-- no MERT weights are committed or bundled in portable ZIPs;
-- the MERT-backed stack is not described as commercially unrestricted;
-- exact model revisions/checksums/licenses must be shown in provenance diagnostics before release indexing.
+- the MERT-backed retrieval backend remains optional/experimental for release-policy purposes;
+- no MERT weights are committed or bundled;
+- the stack is not described as commercially unrestricted;
+- exact model revisions/checksums/licenses remain part of provenance diagnostics and release documentation.
 
-## v0.5 output scope
-
-Promoted into active v0.5 work:
-
-- **#43 Core Sound** — deterministic evidence-aware human description;
-- **#44 Tempo / Structure Map** — conservative segment tempo/change-point output;
-- **#37 controlled descriptors** — mood/character/movement/energy plus small vocal and production-era experiments, but only after calibration;
-- **#45 TechnicalProfile** — selective objective Music Suite metrics/markers;
-- **#48 Resource Monitor** — live CPU/RAM/GPU/VRAM telemetry.
-
-Explicitly deferred to `docs/FAR_TODO.md`:
-
-- rich vocal register/timbre/diction/spatial profile;
-- detailed kick/snare/hat/808 decomposition;
-- perceptual production/mastering labels beyond validated TechnicalProfile metrics;
-- plug-in/processor inference;
-- creative arrangement advice;
-- semantic Verse/Chorus/Bridge/Drop naming;
-- detailed motif/transcription analysis;
-- AI-origin detection;
-- million-track ANN infrastructure;
-- cloud/external integrations.
-
-Truth hierarchy:
+## v0.5 output truth rule
 
 ```text
 MEASURED / MODEL EVIDENCE
@@ -187,41 +158,11 @@ MEASURED / MODEL EVIDENCE
   -> OPTIONAL CREATIVE RECOMMENDATIONS (future)
 ```
 
-Descriptions must never outrun their evidence.
+Descriptions must never outrun their evidence. CLaMP similarity is not automatically a calibrated semantic fact, and structure change-points must not be promoted to Verse/Chorus/Drop labels without evidence.
 
-## v0.5 issue map
+## Large-catalog evidence
 
-P0:
-
-- #27 runtime compatibility/isolation
-- #28 retrieval schemas/protocol
-- #29 real CLaMP+MERT backend
-- #30 persistent embedding cache/index
-- #41 model license/provenance
-
-P1:
-
-- #31 audio similarity
-- #32 Russian free-text search
-- #33 segment/representative search
-- #43 deterministic Core Sound
-- #34 GUI Catalog/Search
-- #35 CLI/export
-- #36 retrieval benchmark/regression
-- #45 TechnicalProfile foundation
-- #48 Resource Monitor
-
-P2:
-
-- #37 zero-shot descriptor experiments
-- #44 tempo/structure map
-- #38 Windows bootstrap/portable
-- #39 index current 10,436-track catalog
-- #40 docs/migration/release gate
-
-## Current large-catalog evidence
-
-The first real retrieval corpus is available from the completed historical v0.4 collection run:
+Existing v0.4 history provides the first real retrieval corpus:
 
 ```text
 10,439 discovered files
@@ -230,27 +171,26 @@ The first real retrieval corpus is available from the completed historical v0.4 
 ~775 h audio
 ```
 
-This existing analysis/history should be reused as catalog metadata. CLaMP indexing should not unnecessarily rerun MAEST/AST.
+This history should be reused as catalog metadata. Retrieval indexing must not unnecessarily rerun MAEST/AST.
 
 ## Geekatplay integration status
 
-Forks exist:
+Existing forks:
 
 ```text
 rassvetpublic-spec/music-suite
 rassvetpublic-spec/ComfyUI-MusicMapper-nodes
 ```
 
-Selected ideas beyond the existing fork work are documented in `docs/GEEKATPLAY_ORG_AUDIT.md`.
+`docs/GEEKATPLAY_ORG_AUDIT.md` is the canonical reuse audit. Selected directions include:
 
-Especially useful directions:
-
-- Music Suite metadata/markers/mastering orchestration patterns;
+- Music Suite technical metrics/markers and mastering-orchestration patterns;
 - Song Geometry Mapper time/feature/edge concepts;
-- Sonic Holodeck heavy-model cache concept;
-- ABCvers synchronized comparison UX;
-- Asset Vault integrity/provenance/lineage and safe-operation patterns;
-- Whisper-related transcription architectures as research references only.
+- synchronized comparison ideas from ABCvers;
+- asset integrity/provenance/lineage patterns;
+- model-cache/runtime patterns for future shared GPU scheduling.
+
+These are evidence/reuse inputs, not permission to copy code without per-upstream provenance and license checks.
 
 ## Retained analysis regression baseline (from retired v0.4 line)
 
@@ -265,44 +205,38 @@ These behaviors remain useful regression expectations even though the v0.4 relea
 - CPU-only UI does not offer CUDA
 - History and log paths clickable
 
-## AudioProfile
+## Ozone 12 mastering consolidation
 
-- MAEST remains the fine-style classifier
-- pinned MIT AudioSet AST provides independent semantic evidence
-- genre/family reconciliation prevents contradictory published profiles
-- weak AST family evidence retains absolute-confidence protection
-- semantic failure in auto mode falls back to MAEST-only
+`Genre_test` is the only active engineering destination for AUDIO_MASTERING.
 
-## Tempo and metadata
-
-- tempo-v2 handles half/double and short-loop 3:2 ambiguity
-- source sample rate / bit depth / channels / bitrate come from original source
-- independent BPM ground-truth remains future calibration work
-- #44 must preserve backward compatibility with global tempo-v2 until benchmark evidence justifies any replacement
-
-## Validation / history
-
-Default working-copy paths:
+Ozone 12 Advanced is an optional v0.7 mastering backend and REAPER is its render host. The active Ozone knowledge/config/tooling boundary is:
 
 ```text
-C:\GIT\Genre_test\.genre_test\history.sqlite3
-C:\GIT\Genre_test\.genre_test\logs\genre_test.log
-C:\GIT\Genre_test\results\
+docs/mastering/ozone12/
+config/mastering/ozone12/
+tools/mastering/ozone12/
+src/genre_test/mastering/ozone12/
 ```
 
-Retrieval state will be separate under `.genre_test/retrieval/` so indexing changes cannot destroy analysis history.
+The standalone `OZONE12_MASTERING_LAB` repository and `legacy/OZONE12_MASTERING_LAB/` are frozen migration/provenance evidence. New mastering architecture and implementation belong in Genre_test.
 
-Current history identity includes analyzer version, Git commit, schema, model revision, analysis mode, run id and timestamp.
+Backend-neutral measurements belong in shared technical/QC layers; Ozone XML, ParamID/schema/build guards, `ElementChain`, preset construction and REAPER/Ozone render logic stay inside the Ozone boundary.
 
-Validation keeps explicit `DRIFT: STABLE/MINOR/SIGNIFICANT/CRITICAL` terminology.
+See `docs/mastering/ozone12/README.md` and `docs/mastering/ozone12/MIGRATION_FROM_OZONE12_MASTERING_LAB.md`.
 
-## Release packaging
+## Release state
 
-Published stable release: **none**.
+There is **no currently published packaged stable release**. The former v0.4 portable release line has been retired from the active repository and GitHub Releases/Tags.
 
-The former `v0.4.0` GitHub Release/tag and its active portable-package artifacts are retired. Historical v0.4 analysis behavior remains regression evidence only; it is not a current release channel.
+`Genre_test_START.cmd` retains packaged-mode bootstrap capability for a future release, but no historical v0.4 ZIP or checksum file is an active release artifact or source of truth.
 
-`v0.5` retrieval runtime/model weights are **not** currently distributed as a stable package. Future packaging must pass its dedicated release gate.
+## Governance and merge policy
+
+`AGENTS.md` is authoritative for repository governance.
+
+Key current rule: the project has **standing automatic MTD authorization** for already approved-scope work. Once a PR reaches exact-head `READY-MTD <40-char-sha>` with all required QA, Audio Science when triggered, CI, scope and evidence gates satisfied, `RELEASE_MANAGER` may merge, verify `main`, and delete the merged head branch without requesting a fresh MTD token.
+
+Standing MTD does **not** authorize new/material architecture decisions, scope expansion, unrelated work, missing/inconclusive evidence, or bypassing required review gates. Explicit `mtd`, `MTD` or `мтд` remains a valid scoped override.
 
 ## Repository governance
 
@@ -323,10 +257,21 @@ Current governance baseline:
 
 Repository-owned governance configuration/check tooling lives under `config/github/`, `scripts/github-*.ps1`, and `CHECK_GOVERNANCE.cmd`.
 
-## Current development rule
+## Cold-start acceptance
 
-`Genre_test_START.cmd` is the single supported user entry point for dependency installation, environment checks, optional retrieval runtime management and application startup. Files under `scripts/` are internal implementation details invoked by the launcher.
+A fresh agent with only `Genre_test/main` and live GitHub state must be able to recover:
 
-`AGENTS.md` and `docs/AGENT_WORKFLOW.md` are canonical for merge authority. The user has granted **standing automatic MTD** for already approved Genre_test work: once a PR reaches exact-head `READY-MTD <40-char-head-sha>` and all required QA/Audio Science/CI/mergeability/evidence gates are satisfied, `RELEASE_MANAGER` may execute merge → post-merge verification → merged-head deletion without requesting a fresh `mtd` token.
+```text
+PRODUCT
+CURRENT VERSION
+CURRENT MILESTONE
+CURRENT ARCHITECTURE
+PROTECTED BASELINES
+COMPLETED WORK
+ACTIVE / BLOCKED WORK
+GOVERNANCE
+ASSIGNED TASK CONTRACT
+NEXT ALLOWED ACTION
+```
 
-Standing automatic MTD does **not** authorize unrelated scope, a new/material architecture or contract decision, red/inconclusive evidence, missing required review, or bypassing repository protection. Stop and return to the user on CI failure, conflict/non-mergeability, unexpected scope, missing/inconclusive evidence, or a new material decision.
+The exact recovery procedure and conflict policy are defined in `docs/REPOSITORY_COLD_START.md`.
