@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "updated": "2026-08-30",
   "purpose": "Machine-readable coverage ledger for AI-audio detection, provenance/watermark robustness, forensic analysis, controlled adversarial robustness evaluation, vocoder artifact benchmarking, restoration and cleanup references.",
   "lifecycle": [
@@ -11,6 +11,36 @@
     "RETEST_REQUIRED",
     "RETESTED_AFTER_DEFENSE",
     "REJECTED"
+  ],
+  "watch_policy": {
+    "enabled": true,
+    "cadence": "weekly",
+    "default_day": "FRIDAY",
+    "watch_for": [
+      "release",
+      "commit",
+      "model_or_checkpoint",
+      "detector_method",
+      "watermark_or_provenance_change",
+      "adversarial_or_defense_method",
+      "benchmark_or_evaluation_change",
+      "api_or_access_change",
+      "material_readme_or_architecture_change"
+    ],
+    "on_material_change": [
+      "record_upstream_revision",
+      "summarize_change",
+      "assess_genre_test_value",
+      "set_RETEST_REQUIRED_when_behavior_may_change",
+      "update_test_plan_or_blocker",
+      "retest_before_promoting_new_claims"
+    ]
+  },
+  "required_watch_fields": [
+    "watch_required",
+    "last_checked",
+    "upstream_revision",
+    "retest_on_change"
   ],
   "required_result_fields": [
     "fixture_id",
@@ -33,6 +63,10 @@
       "test_required": true,
       "test_mode": "local_controlled",
       "blocker": null,
+      "watch_required": true,
+      "last_checked": "2026-08-30",
+      "upstream_revision": null,
+      "retest_on_change": true,
       "notes": "Use only as a controlled robustness transform source. Preserve perceptual/content impact and follow with defense/provenance retest."
     },
     {
@@ -44,6 +78,10 @@
       "test_required": true,
       "test_mode": "local_controlled",
       "blocker": null,
+      "watch_required": true,
+      "last_checked": "2026-08-30",
+      "upstream_revision": null,
+      "retest_on_change": true,
       "notes": "Validate fake-lossless, cutoff and AI-audio heuristics separately; do not treat unverified 2D-FFT/Suno-specific claims as ground truth."
     },
     {
@@ -55,6 +93,10 @@
       "test_required": true,
       "test_mode": "local_controlled",
       "blocker": null,
+      "watch_required": true,
+      "last_checked": "2026-08-30",
+      "upstream_revision": null,
+      "retest_on_change": true,
       "notes": "Matched resynthesis benchmark against other vocoder families; measure spectral periodicity, HF behavior, phase/coherence and transients."
     },
     {
@@ -66,6 +108,10 @@
       "test_required": true,
       "test_mode": "local_controlled",
       "blocker": null,
+      "watch_required": true,
+      "last_checked": "2026-08-30",
+      "upstream_revision": null,
+      "retest_on_change": true,
       "notes": "Matched comparison with Vocos; alias-free design is a hypothesis source, not proof of artifact absence."
     },
     {
@@ -77,6 +123,10 @@
       "test_required": true,
       "test_mode": "local_controlled",
       "blocker": null,
+      "watch_required": true,
+      "last_checked": "2026-08-30",
+      "upstream_revision": null,
+      "retest_on_change": true,
       "notes": "Primary attack-defense benchmark source. Track clean vs challenged accuracy, confidence drift, FPR/FNR movement, audibility and defensive retest."
     },
     {
@@ -88,6 +138,10 @@
       "test_required": true,
       "test_mode": "local_controlled",
       "blocker": null,
+      "watch_required": true,
+      "last_checked": "2026-08-30",
+      "upstream_revision": null,
+      "retest_on_change": true,
       "notes": "Use as supporting reproducibility/reference pipeline for adversarial detector evaluation."
     },
     {
@@ -99,6 +153,10 @@
       "test_required": true,
       "test_mode": "local_controlled",
       "blocker": null,
+      "watch_required": true,
+      "last_checked": "2026-08-30",
+      "upstream_revision": null,
+      "retest_on_change": true,
       "notes": "Track separately from the containing adversarial-evaluation repository because detector-family behavior is an independent result."
     },
     {
@@ -110,6 +168,10 @@
       "test_required": true,
       "test_mode": "local_controlled",
       "blocker": null,
+      "watch_required": true,
+      "last_checked": "2026-08-30",
+      "upstream_revision": null,
+      "retest_on_change": true,
       "notes": "Independent detector-family benchmark; preserve exact checkpoint/config and dataset identity."
     },
     {
@@ -121,6 +183,10 @@
       "test_required": true,
       "test_mode": "local_controlled",
       "blocker": null,
+      "watch_required": true,
+      "last_checked": "2026-08-30",
+      "upstream_revision": null,
+      "retest_on_change": true,
       "notes": "Separate result row despite being exposed through the same repository."
     },
     {
@@ -132,6 +198,10 @@
       "test_required": true,
       "test_mode": "local_controlled",
       "blocker": null,
+      "watch_required": true,
+      "last_checked": "2026-08-30",
+      "upstream_revision": null,
+      "retest_on_change": true,
       "notes": "Separate result row despite being exposed through the same repository."
     },
     {
@@ -143,6 +213,10 @@
       "test_required": true,
       "test_mode": "local_controlled",
       "blocker": null,
+      "watch_required": true,
+      "last_checked": "2026-08-30",
+      "upstream_revision": null,
+      "retest_on_change": true,
       "notes": "Positive-control watermark system for localization, codec/edit robustness and calibration."
     },
     {
@@ -154,6 +228,10 @@
       "test_required": true,
       "test_mode": "local_controlled",
       "blocker": null,
+      "watch_required": true,
+      "last_checked": "2026-08-30",
+      "upstream_revision": null,
+      "retest_on_change": true,
       "notes": "Judge with loudness-matched A/B, content-retention and delta-oriented QC; generated HF detail is not assumed faithful."
     },
     {
@@ -165,6 +243,10 @@
       "test_required": true,
       "test_mode": "local_controlled",
       "blocker": null,
+      "watch_required": true,
+      "last_checked": "2026-08-30",
+      "upstream_revision": null,
+      "retest_on_change": true,
       "notes": "Cross-reference docs/SHIMMER_EXTERNAL_REFERENCE.md. Test cleanup-before-mastering, Removed/Delta audition, loudness-matched A/B, HF Mid/Side cleanup and transient safety."
     },
     {
@@ -176,6 +258,10 @@
       "test_required": true,
       "test_mode": "external_authorized_only",
       "blocker": "Requires current terms/privacy review and an audio fixture explicitly authorized for third-party disclosure.",
+      "watch_required": true,
+      "last_checked": "2026-08-30",
+      "upstream_revision": null,
+      "retest_on_change": true,
       "notes": "Record service/model revision or UNKNOWN and preserve returned score semantics."
     },
     {
@@ -187,6 +273,10 @@
       "test_required": true,
       "test_mode": "external_authorized_only",
       "blocker": "Requires access plus current terms/privacy review and an authorized disclosure fixture.",
+      "watch_required": true,
+      "last_checked": "2026-08-30",
+      "upstream_revision": null,
+      "retest_on_change": true,
       "notes": "Do not treat vendor output as ground truth."
     },
     {
@@ -198,6 +288,10 @@
       "test_required": true,
       "test_mode": "external_authorized_only",
       "blocker": "Requires service access plus current terms/privacy review and an authorized disclosure fixture.",
+      "watch_required": true,
+      "last_checked": "2026-08-30",
+      "upstream_revision": null,
+      "retest_on_change": true,
       "notes": "Preserve product/revision identity when exposed."
     },
     {
@@ -209,6 +303,10 @@
       "test_required": true,
       "test_mode": "external_authorized_only",
       "blocker": "Requires enterprise/demo/API access plus current terms/privacy review and an authorized disclosure fixture.",
+      "watch_required": true,
+      "last_checked": "2026-08-30",
+      "upstream_revision": null,
+      "retest_on_change": true,
       "notes": "External disagreement is benchmark evidence, not majority-vote truth."
     },
     {
@@ -220,6 +318,10 @@
       "test_required": true,
       "test_mode": "external_authorized_only",
       "blocker": "Requires current access/terms/privacy review and an authorized disclosure fixture.",
+      "watch_required": true,
+      "last_checked": "2026-08-30",
+      "upstream_revision": null,
+      "retest_on_change": true,
       "notes": "Preserve exact access date and returned verdict semantics."
     },
     {
@@ -231,6 +333,10 @@
       "test_required": true,
       "test_mode": "external_authorized_only",
       "blocker": "Requires current terms/privacy review and an authorized disclosure fixture.",
+      "watch_required": true,
+      "last_checked": "2026-08-30",
+      "upstream_revision": null,
+      "retest_on_change": true,
       "notes": "Accessible external comparison candidate; raw/structured output should be retained only when terms permit."
     }
   ]
