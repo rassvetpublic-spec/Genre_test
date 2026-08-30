@@ -36,13 +36,13 @@ def test_compact_summary_reports_key_capabilities() -> None:
 @pytest.mark.parametrize(
     ("version_info", "expected_status"),
     [
-        ((3, 11, 0), "OK"),
+        ((3, 11, 0), "FAIL"),
         ((3, 12, 0), "OK"),
         ((3, 13, 0), "OK"),
         ((3, 14, 0), "FAIL"),
     ],
 )
-def test_python_component_supports_311_through_313(
+def test_python_component_supports_312_through_313(
     monkeypatch: pytest.MonkeyPatch,
     version_info: tuple[int, int, int],
     expected_status: str,
@@ -52,7 +52,7 @@ def test_python_component_supports_311_through_313(
     component = runtime_health._python_component()
 
     assert component.status == expected_status
-    assert component.details == "Supported: >=3.11,<3.14"
+    assert component.details == "Supported: >=3.12,<3.14"
 
 
 def _blackwell_cuda(*, native: bool = True, cuda_version: str = "13.0") -> SimpleNamespace:
