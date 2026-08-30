@@ -16,7 +16,8 @@ RUNTIME BASELINE
 ----------------
 - Windows 10/11 x64
 - Windows PowerShell 5.1 for packaged bootstrap
-- Python 3.11 / 3.12 / 3.13 x64
+- Python 3.13 x64 primary; Python 3.12 x64 fallback
+- Python 3.11 is not supported
 - PyTorch 2.12.1
 - NVIDIA CUDA 13.0 / cu130 when NVIDIA hardware is used
 - CPU-only mode supported
