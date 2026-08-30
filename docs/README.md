@@ -12,6 +12,10 @@
 8. [`SAFE_STOP.md`](SAFE_STOP.md) — Safe Stop semantics.
 9. [`../ROADMAP.md`](../ROADMAP.md) — единственный актуальный roadmap.
 
+## External R&D references
+
+- [`CYANITE_EXTERNAL_REFERENCE.md`](CYANITE_EXTERNAL_REFERENCE.md) — Cyanite как внешний benchmark/taxonomy reference для retrieval, descriptors, representative segments, structure и BPM/tempo; содержит официальные источники и явную границу `EXTERNAL_REFERENCE`, не production truth.
+
 ## Правило актуальности
 
 Активная продуктовая документация описывает v0.4.x. Старые portable/runtime инструкции 0.3.x удалены из активного дерева. Исторические данные при необходимости остаются доступны через Git history и импорт старых result snapshots в Validation.
