@@ -229,15 +229,15 @@ def _transient_metrics(
     count = min(int(onset_times.size), cfg.max_transients)
     window_samples = max(
         32,
-        int(round(sr * cfg.transient_window_ms / 1000.0)),
+        round(sr * cfg.transient_window_ms / 1000.0),
     )
-    preroll = int(round(sr * cfg.transient_preroll_ms / 1000.0))
+    preroll = round(sr * cfg.transient_preroll_ms / 1000.0)
     vectors: list[np.ndarray] = []
     energies: list[float] = []
     peak_times_ms: list[float] = []
 
     for onset_s in onset_times[:count]:
-        onset_sample = int(round(float(onset_s) * sr))
+        onset_sample = round(float(onset_s) * sr)
         start = max(0, onset_sample - preroll)
         segment = y[start : min(y.size, start + window_samples)]
         if segment.size < 16:
@@ -260,7 +260,7 @@ def _transient_metrics(
         else np.asarray([], dtype=np.float64)
     )
     return {
-        "transient_count": int(len(vectors)),
+        "transient_count": len(vectors),
         "attack_similarity_median": (
             _finite(np.median(similarities)) if similarities.size else None
         ),
