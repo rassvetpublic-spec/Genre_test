@@ -8,9 +8,9 @@ import scipy
 from genre_test.retrieval import mfcc_baseline
 from genre_test.retrieval.mfcc_baseline import (
     EMBEDDING_DIM,
-    MFCCBaselineExtractor,
     SAMPLE_RATE,
     TARGET_RMS,
+    MFCCBaselineExtractor,
     extract_mfcc78,
     mfcc_baseline_info,
 )
