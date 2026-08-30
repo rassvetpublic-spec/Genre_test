@@ -11,6 +11,7 @@ from .errors import ConfigurationError
 
 _ENV_REF = re.compile(r"^\$\{([A-Z0-9_]+)\}$")
 _SUPPORTED_PROVIDERS = {"ollama", "openai", "gemini"}
+_DEFAULT_OLLAMA_HOST = "http://127.0.0.1:11434"
 
 
 @dataclass(frozen=True)
@@ -137,17 +138,25 @@ def load_settings(path: str | Path | None = None) -> Settings:
             "primary and secondary provider/model must differ for independent consultation."
         )
 
-    ollama_host_value = _setting(
-        raw,
-        key="ollama_host",
-        env_name="AI_REVIEW_OLLAMA_HOST",
-        default="http://127.0.0.1:11434",
-    )
-    if not isinstance(ollama_host_value, str) or not ollama_host_value.strip():
-        raise ConfigurationError("ollama_host must resolve to a non-empty string.")
-    ollama_host = ollama_host_value.strip().rstrip("/")
-    if not (ollama_host.startswith("http://") or ollama_host.startswith("https://")):
-        raise ConfigurationError("ollama_host must start with http:// or https://.")
+    uses_ollama = primary_provider == "ollama" or secondary_provider == "ollama"
+    if uses_ollama:
+        ollama_host_value = _setting(
+            raw,
+            key="ollama_host",
+            env_name="AI_REVIEW_OLLAMA_HOST",
+            default=_DEFAULT_OLLAMA_HOST,
+        )
+        if not isinstance(ollama_host_value, str) or not ollama_host_value.strip():
+            raise ConfigurationError("ollama_host must resolve to a non-empty string.")
+        ollama_host = ollama_host_value.strip().rstrip("/")
+        if not (
+            ollama_host.startswith("http://") or ollama_host.startswith("https://")
+        ):
+            raise ConfigurationError("ollama_host must start with http:// or https://.")
+    else:
+        # Ollama is an optional backend. Stale or unresolved Ollama-only
+        # settings must not break a topology that selects only other providers.
+        ollama_host = _DEFAULT_OLLAMA_HOST
 
     max_output_tokens = int(
         os.getenv("AI_REVIEW_MAX_OUTPUT_TOKENS", raw.get("max_output_tokens", 4096))
