@@ -28,7 +28,7 @@ jobs:
         run: |
           set -euo pipefail
           git diff --check "$BASE_SHA" "$HEAD_SHA"
-          git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" > changed_files.txt
+          git diff --name-only --diff-filter=ACMRD "$BASE_SHA" "$HEAD_SHA" > changed_files.txt
           cat changed_files.txt
 
           full_suite=false
