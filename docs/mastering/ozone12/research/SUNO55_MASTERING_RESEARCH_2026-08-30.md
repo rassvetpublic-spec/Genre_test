@@ -164,26 +164,43 @@ This is a measurement/validation partition, not permission to invent semantic se
 
 ## H4 — `Bass Control -> Impact` is a benchmark hypothesis
 
-Candidate order when both jobs are measured as necessary:
+The experiment must change the target ordering while keeping downstream correction equivalent. Reference candidate A:
 
 ```text
 repair / corrective stage
--> EQ / Dynamic EQ as needed
+-> EQ / early Dynamic EQ as needed
 -> Bass Control
 -> Impact
 -> Clarity / Stabilizer as needed
 -> Imager
+-> final Dynamic EQ / de-essing as needed
 -> Maximizer
 ```
 
+Ordering control B changes only the target pair when practical:
+
+```text
+repair / corrective stage
+-> EQ / early Dynamic EQ as needed
+-> Impact
+-> Bass Control
+-> Clarity / Stabilizer as needed
+-> Imager
+-> final Dynamic EQ / de-essing as needed
+-> Maximizer
+```
+
+The post-Imager final Dynamic EQ/de-essing slot is bypassable but must exist identically in both comparison chains so widening-exposed Side harshness or imbalance is not confounded with the Bass Control/Impact ordering question.
+
 Question to test:
 
-> Does stabilizing low-end balance/punch/sustain before broader microdynamic shaping preserve attack and reduce limiter-driven drum loss better than alternative orderings?
+> Does stabilizing low-end balance/punch/sustain before broader microdynamic shaping preserve attack and reduce limiter-driven drum loss better than the controlled alternative ordering?
 
 Required comparison:
 
 - same source and matched downstream loudness;
-- single ordering change where practical;
+- target pair ordering is the only intended causal difference where practical;
+- same bypass/activation state for all downstream modules in both candidates;
 - transient attack-to-sustain retention;
 - low-band peak/sustain behavior;
 - mono/stereo guards;
