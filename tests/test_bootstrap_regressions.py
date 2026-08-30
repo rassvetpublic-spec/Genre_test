@@ -27,6 +27,16 @@ def test_core_setup_prefers_python313_and_retires_python311():
     assert "Python 3.11/3.12/3.13" not in launcher
 
 
+def test_core_setup_recreates_an_existing_unsupported_virtualenv():
+    setup = (ROOT / "scripts" / "setup.ps1").read_text(encoding="utf-8")
+
+    assert "if (Test-Path $venvPython)" in setup
+    assert "$venvVersion -notmatch '^3\\.(12|13)\\|64$'" in setup
+    assert "Existing .venv uses unsupported Python" in setup
+    assert "Recreating it with Python $($runtime.Version)" in setup
+    assert "Remove-Item -Recurse -Force $venvDir" in setup
+
+
 def test_setup_detects_nvidia_hardware_even_when_nvidia_smi_is_not_on_path():
     setup = (ROOT / "scripts" / "setup.ps1").read_text(encoding="utf-8")
     assert "function Test-NvidiaHardware" in setup
