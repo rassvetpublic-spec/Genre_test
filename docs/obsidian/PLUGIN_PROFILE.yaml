@@ -1,0 +1,250 @@
+schema: genre-test-obsidian-plugin-profile
+phase: 0
+status: pre-migration
+issue: 169
+depends_on:
+  - issue: 142
+    pr: 167
+    role: accepted Research Radar v2 ownership model
+
+principles:
+  plugin_soft: true
+  git_repository_is_top_level_truth_boundary: true
+  canonical_format_is_subsystem_owned: true
+  markdown_can_be_canonical_contract: true
+  json_can_be_canonical_mutable_state: true
+  generated_markdown_must_not_be_independent_state: true
+  bidirectional_json_markdown_sync_authorized: false
+  community_plugin_required_for_data_integrity: false
+  plugin_installation_authorized_in_p0: false
+  dot_obsidian_full_commit_authorized: false
+  ci_may_depend_on_obsidian: false
+  researcher_may_depend_on_obsidian: false
+  one_fact_one_canonical_owner_many_views: true
+
+obsidian_directory_ownership:
+  docs/obsidian:
+    role: global Obsidian and knowledge architecture policy
+    authority: human_maintained_contracts
+    generated: false
+    may_copy_research_radar_mutable_state: false
+  docs/research/obsidian:
+    role: Research Radar v2 Obsidian-friendly generated projection
+    authority: generated_projection
+    generated: true
+    canonical_input:
+      - docs/research/data/RADAR_TOPICS.json
+      - docs/research/data/SOURCE_REGISTRY.json
+      - docs/research/data/RESEARCH_STATE.json
+    manual_notes_authority: annotation_only
+  rule: A future global HOME may link to the Research Radar HOME but must not duplicate its mutable state.
+
+research_radar_v2:
+  canonical_process_markdown:
+    - docs/research/RESEARCH_OPERATING_RULES.md
+    - docs/research/RESEARCH_RADAR.md
+  canonical_mutable_json:
+    - docs/research/data/RADAR_TOPICS.json
+    - docs/research/data/SOURCE_REGISTRY.json
+    - docs/research/data/RESEARCH_STATE.json
+  specialized_json_registries_allowed: true
+  obsidian_projection_root: docs/research/obsidian
+  compatibility_projection_root: docs/development/research_radar
+  generation_direction: JSON_TO_MARKDOWN
+  manual_projection_notes:
+    allowed: true
+    authority: annotation_only
+    must_not_override_canonical_json: true
+  p0_may_modify_radar_paths: false
+
+core:
+  - name: Properties
+    role: structured metadata on Markdown where the owning document/subsystem uses it
+    authority: interface_or_document_metadata
+    must_not_override:
+      - canonical subsystem JSON state
+
+  - name: Bases
+    role: database-like views over repository-backed Properties and generated projections
+    authority: derived_view
+    must_not_own:
+      - Research Radar mutable state
+      - project governance state
+      - canonical keyword/topic state
+
+  - name: Backlinks
+    role: incoming-link navigation
+    authority: derived_view
+
+  - name: Graph
+    role: visual link graph
+    authority: visualization
+
+  - name: Tags
+    role: controlled taxonomy navigation
+    authority: document_metadata_view
+
+  - name: Canvas
+    role: optional architecture/workflow visualization and navigation map
+    authority: visualization
+    rule: facts represented on Canvas must point back to canonical repository owners; Canvas-only facts are forbidden
+
+required: []
+
+recommended:
+  - name: Notebook Navigator
+    plugin_id: notebook-navigator
+    role: primary large-vault navigation and document browser
+    must_not_own:
+      - canonical metadata definitions
+      - taxonomy
+      - source-of-truth state
+
+  - name: Omnisearch
+    plugin_id: omnisearch
+    role: ranked full-text/BM25-style local search and optional agent retrieval surface
+    authority: derived_search
+    must_not_own:
+      - canonical Researcher state
+      - knowledge index
+      - keyword registry
+
+  - name: Breadcrumbs
+    plugin_id: breadcrumbs
+    role: UI for typed relationships and hierarchical navigation
+    authority: derived_view
+    must_not_own:
+      - relation schema
+      - canonical relation serialization
+
+  - name: Templater
+    plugin_id: templater-obsidian
+    role: ergonomic creation of schema-conformant human-maintained notes
+    must_not_own:
+      - schema definition
+      - generated subsystem state
+
+  - name: QuickAdd
+    plugin_id: quickadd
+    role: user commands/macros for creating common project note types
+    must_not_own:
+      - source-of-truth state
+      - Research Radar JSON mutation policy
+
+  - name: Linter
+    plugin_id: obsidian-linter
+    role: author-side Markdown/YAML normalization
+    must_not_own:
+      - CI acceptance
+      - canonical schema
+
+  - name: Tag Wrangler
+    plugin_id: tag-wrangler
+    role: taxonomy maintenance UI
+    mass_write_policy: dangerous
+    must_not_own:
+      - taxonomy definition
+
+optional:
+  - name: Dataview
+    plugin_id: dataview
+    role: advanced derived queries not covered cleanly by Bases
+    authority: derived_view
+    note: Bases remains preferred for ordinary dashboards to reduce plugin lock-in.
+
+  - name: Smart Connections
+    plugin_id: smart-connections
+    role: semantic discovery of potentially related notes
+    authority: hint_only
+    note: Local semantic discovery may be useful; Pro-only integrations/features are never required by project contracts.
+    promotion_rule: A semantic suggestion becomes project knowledge only after verification and recording under the appropriate canonical owner.
+
+  - name: Various Complements
+    plugin_id: various-complements
+    role: writing/autocomplete convenience for recurring terminology
+
+  - name: Metadata Menu
+    plugin_id: metadata-menu
+    role: optional metadata editing UI
+    authority: interface
+    note: Not a foundation because project metadata must remain editable and valid without it.
+
+deferred_not_approved:
+  - name: VaultQuery
+    plugin_id: vaultquery
+    reason: Official Obsidian CLI and repository-owned tooling cover current automation needs without adding a SQL write surface over canonical files.
+    write_access: forbidden_in_p0
+
+  - name: Waypoint
+    plugin_id: waypoint
+    reason: Generated MOC behavior could overlap repository-owned derived indexes/projections.
+
+  - name: Graph Analysis
+    plugin_id: graph-analysis
+    reason: Not required for P0; graph analytics can be reconsidered after relation/index contracts stabilize.
+
+  - name: Word Cloud
+    plugin_id: word-cloud
+    reason: Visualization must consume project-owned deterministic tag/term/keyword counts rather than define them.
+
+official_cli:
+  status: preferred_optional_local_interface
+  plugin: false
+  headless_backend: false
+  ci_dependency: forbidden
+  cloud_researcher_dependency: forbidden
+  critical_state_storage: forbidden
+  policy: docs/obsidian/CLI_POLICY.md
+
+derived_layers:
+  KNOWLEDGE_INDEX:
+    authority: derived_index
+    rebuildable: true
+    may_reference_canonical_json: true
+    may_override_canonical_json: false
+
+  TERM_REGISTRY:
+    authority: domain_canonical_only_if_separately_approved
+    scope: terminology_only
+    must_not_own:
+      - Research Radar run state
+      - Research Radar topic status
+      - Research Radar source status
+
+  KEYWORD_MAP:
+    research_semantics:
+      authority: generated_view_only
+      canonical_input: docs/research/data/RADAR_TOPICS.json
+    non_research_semantics:
+      authority: separate_index_only_if_non_overlapping
+    independent_duplicate_research_map: forbidden
+
+  Bases:
+    authority: derived_view
+
+  Canvas:
+    authority: visualization
+
+future_dot_obsidian_policy:
+  may_commit_after_separate_review:
+    - selected portable settings
+    - selected non-secret workspace-independent configuration
+  do_not_commit_by_default:
+    - plugin binaries
+    - caches
+    - embeddings
+    - local indexes
+    - workspace/session state
+    - machine-specific paths
+    - credentials
+    - API keys
+    - secrets
+
+phase0_non_goals:
+  - install plugins
+  - commit .obsidian
+  - generate plugin-specific state
+  - migrate existing Markdown
+  - modify docs/research or docs/development/research_radar
+  - create a second Research Radar keyword or state owner
+  - make any community plugin a runtime or CI requirement
