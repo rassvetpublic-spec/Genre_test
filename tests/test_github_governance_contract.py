@@ -1,10 +1,15 @@
 import json
+import shutil
+import subprocess
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 RULESET = ROOT / "config" / "github" / "rulesets" / "protect-main.json"
 ACTIVE = ROOT / "docs" / "ACTIVE_CURRENT.md"
 CHECK_CMD = ROOT / "CHECK_GOVERNANCE.cmd"
+RULESET_SCRIPT = ROOT / "scripts" / "github-rulesets.ps1"
 
 
 def _rule(config: dict, rule_type: str) -> dict:
@@ -61,3 +66,23 @@ def test_current_state_does_not_restore_retired_v04_or_explicit_mtd_only_rule():
 def test_governance_entrypoint_checks_server_ruleset():
     text = CHECK_CMD.read_text(encoding="utf-8")
     assert "github-rulesets.ps1" in text
+
+
+def test_ruleset_powershell_script_parses_when_pwsh_is_available():
+    pwsh = shutil.which("pwsh")
+    if pwsh is None:
+        pytest.skip("PowerShell is unavailable on this host")
+
+    script_path = str(RULESET_SCRIPT).replace("'", "''")
+    command = (
+        "$tokens = $null; $errors = $null; "
+        f"[System.Management.Automation.Language.Parser]::ParseFile('{script_path}', "
+        "[ref]$tokens, [ref]$errors) | Out-Null; "
+        "if ($errors.Count -gt 0) { $errors | Format-List | Out-String | Write-Error; exit 1 }"
+    )
+    subprocess.run(
+        [pwsh, "-NoProfile", "-Command", command],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
