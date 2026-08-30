@@ -31,13 +31,16 @@ A Reddit comment or third-party implementation is not scientific ground truth. C
 ## S1 — `horacio/simil`: model-free music-similarity baseline
 
 Type: **UPSTREAM CODE**
-Source: https://github.com/horacio/simil
+Repository: https://github.com/horacio/simil
+Inspected revision: `cb6da9ccd5ea6c675b66ad8d3b378f0a6ca322de`
+Pinned implementation: https://github.com/horacio/simil/blob/cb6da9ccd5ea6c675b66ad8d3b378f0a6ca322de/simil/embedders/mfcc.py
 
-Relevant behavior:
+Relevant behavior verified at the pinned revision:
 
-- provides MFCC as a fast model-free music-similarity path;
+- provides an MFCC + chroma + spectral-contrast embedder;
 - uses 20 MFCC coefficients, 12 chroma bins and 7 spectral-contrast values;
 - aggregates mean + standard deviation to 78 dimensions;
+- uses 22.05 kHz mono input and final L2 normalization;
 - keeps MFCC, Discogs-EffNet and CLAP as separate embedding spaces;
 - presents learned music embeddings as stronger for semantic/music-aware similarity.
 
@@ -45,7 +48,8 @@ Genre_test use:
 
 - motivates a cheap independent handcrafted acoustic comparator;
 - motivates the initial `20 MFCC + 12 chroma + 7 contrast -> mean/std -> 78D` shape;
-- does not prove those parameters or their relative weighting are optimal for Genre_test.
+- does not prove those parameters or their relative weighting are optimal for Genre_test;
+- Genre_test does not copy the upstream clip-selection or implicit weighting policy.
 
 ---
 
@@ -61,7 +65,7 @@ Relevant facts:
 
 Genre_test use:
 
-- the baseline is intentionally mono;
+- the feature extractor is intentionally mono;
 - stereo/phase information remains a separate TechnicalProfile concern;
 - MFCC parameters and extractor implementation identity belong in the backend fingerprint.
 
@@ -74,16 +78,7 @@ Source: https://essentia.upf.edu/reference/streaming_MFCC.html
 
 Relevant facts:
 
-Essentia exposes materially different MFCC choices including:
-
-- Mel-band count and frequency bounds;
-- coefficient count;
-- DCT type;
-- liftering;
-- log-compression policy;
-- magnitude vs power spectrum;
-- Mel warping and filter normalization;
-- sample rate.
+Essentia exposes materially different MFCC choices including Mel-band count/frequency bounds, coefficient count, DCT type, liftering, log-compression policy, magnitude vs power spectrum, Mel warping/filter normalization and sample rate.
 
 Genre_test use:
 
@@ -141,9 +136,7 @@ Genre_test use:
 Type: **COMMUNITY OBSERVATION**
 Source: https://www.reddit.com/r/audioengineering/comments/1rkldh7/audio_similarity_grading_question/
 
-Useful observation:
-
-Handcrafted features and learned embeddings can both be useful, but a combined score is not meaningful until the target notion of similarity is defined.
+Useful observation: handcrafted features and learned embeddings can both be useful, but a combined score is not meaningful until the target notion of similarity is defined.
 
 Genre_test interpretation:
 
@@ -162,9 +155,7 @@ Benchmark CLaMP/MERT and the handcrafted baseline independently in #36 before an
 Type: **COMMUNITY OBSERVATION**
 Source: https://www.reddit.com/r/DSP/comments/1j52go2
 
-Useful observation:
-
-A hobby speaker-verification implementation using MFCC/delta matching reportedly degrades strongly when noise/hum is added.
+Useful observation: a hobby speaker-verification implementation using MFCC/delta matching reportedly degrades strongly when noise/hum is added.
 
 Genre_test interpretation:
 
@@ -180,9 +171,7 @@ Boundary: speech verification is not music retrieval; this source motivates test
 Type: **COMMUNITY OBSERVATION**
 Source: https://www.reddit.com/r/MachineLearning/comments/1chmi0e
 
-Useful observation:
-
-A practitioner discussion reports stronger in-the-wild generalization from learned audio embeddings than from traditional MFCC/filterbank/prosodic features in their task.
+Useful observation: a practitioner discussion reports stronger in-the-wild generalization from learned audio embeddings than from traditional MFCC/filterbank/prosodic features in their task.
 
 Genre_test interpretation:
 
@@ -240,18 +229,22 @@ is allowed without #36 project-owned relevance evidence.
 
 The current V3 fingerprint records:
 
-- mono 22.05 kHz preprocessing and strict sample-rate enforcement;
+- dedicated decode path: SoundFile/libsndfile to float32;
+- explicit channel downmix by arithmetic mean;
+- explicit SciPy `resample_poly` to 22.05 kHz when needed;
+- SoundFile and libsndfile runtime versions;
+- mono 22.05 kHz analysis and strict extractor sample-rate enforcement;
 - FFT/hop and feature counts;
 - fixed RMS analysis-level policy;
 - minimum usable input RMS (`-80 dBFS`);
 - mean/std aggregation policy;
 - equal feature-family norm weighting before final L2 normalization;
-- Librosa version;
-- NumPy version;
-- SciPy version;
+- Librosa, NumPy and SciPy versions;
 - baseline algorithm revision.
 
-A changed extractor runtime or preprocessing contract therefore creates a different fingerprint and requires re-embedding rather than silently mixing vectors.
+The MFCC backend deliberately does **not** use the shared `librosa.load` / audioread / FFmpeg fallback path because that would let different decoder/resampler stacks produce vectors under one fingerprint. Files unsupported by the fingerprinted SoundFile/libsndfile path fail this optional benchmark independently rather than silently falling back to a different decoder.
+
+A changed decoder, resampler, extractor runtime or preprocessing contract therefore creates a different fingerprint and requires re-embedding rather than silently mixing vectors.
 
 ### C4 — Global-gain dependence is controlled
 
@@ -266,12 +259,13 @@ Resolution:
 
 This controls global-gain sensitivity for the benchmark. It does not prove retrieval value; #36 still owns relevance evidence.
 
-### C5 — Extractor-version and sample-rate drift are controlled
+### C5 — Runtime/preprocessing drift is controlled
 
 Resolution:
 
-- include Librosa/NumPy/SciPy runtime versions in `preprocessing_version`;
-- require the encoded `22_050 Hz` analysis rate at both public extraction and decoder boundaries;
+- include Librosa/NumPy/SciPy/SoundFile/libsndfile runtime versions in `preprocessing_version`;
+- fingerprint the dedicated `soundfile-libsndfile-float32-mono-mean-resample-poly` policy;
+- require the encoded `22_050 Hz` rate at the feature-extraction boundary;
 - because `preprocessing_version` contributes to `RetrievalBackendInfo.fingerprint`, incompatible runtimes/preprocessing policies no longer share the same embedding identity.
 
 ### C6 — Feature-family scale is explicit in V3
@@ -316,9 +310,9 @@ These are hypotheses, not acceptance thresholds.
 
 The handcrafted baseline may graduate from benchmark utility only when:
 
-1. source facts remain traceable to this registry;
-2. preprocessing, weighting and extractor runtime identity are versioned;
-3. gain, near-silence, sample-rate and family-weighting findings remain covered by tests;
+1. source facts remain traceable to revision-pinned sources where implementation details are derived;
+2. decode/resample, feature preprocessing, weighting and extractor runtime identity are versioned;
+3. gain, near-silence, sample-rate, decode/resample and family-weighting findings remain covered by tests;
 4. #36 measures real retrieval quality and perturbation robustness;
 5. any future #44/#137 temporal use receives independent DSP/audio-science validation;
 6. unsupported community claims remain hypotheses, not product truth.
