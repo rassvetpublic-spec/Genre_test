@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from math import gcd
 from pathlib import Path
 
 import librosa
 import numpy as np
 import scipy
-
-from genre_test.audio import load_audio
+import soundfile as sf
+from scipy.signal import resample_poly
 
 from .contracts import EmbeddingIdentity, EmbeddingVector, RetrievalBackendInfo
 
@@ -21,13 +22,15 @@ EMBEDDING_DIM = 78
 TARGET_RMS = 0.1
 MIN_RMS_DBFS = -80.0
 MIN_RMS = 10.0 ** (MIN_RMS_DBFS / 20.0)
+DECODER_POLICY = "soundfile-libsndfile-float32-mono-mean-resample-poly"
 EXTRACTOR_IMPLEMENTATION = (
-    f"librosa-{librosa.__version__}-numpy-{np.__version__}-scipy-{scipy.__version__}"
+    f"librosa-{librosa.__version__}-numpy-{np.__version__}-scipy-{scipy.__version__}-"
+    f"soundfile-{sf.__version__}-libsndfile-{sf.__libsndfile_version__}"
 )
 PREPROCESSING_VERSION = (
     "mfcc20-chroma12-contrast7-meanstd-sr22050-mono-nfft2048-hop512-"
     f"rms{TARGET_RMS:g}-minrms{MIN_RMS_DBFS:g}dbfs-familyl2equal-"
-    f"{EXTRACTOR_IMPLEMENTATION}-v3"
+    f"{DECODER_POLICY}-{EXTRACTOR_IMPLEMENTATION}-v3"
 )
 
 
@@ -51,14 +54,44 @@ def mfcc_baseline_info() -> RetrievalBackendInfo:
     )
 
 
+def _load_audio_for_acoustic_baseline(path: Path) -> tuple[np.ndarray, int]:
+    """Decode, downmix, and resample through one fingerprinted preprocessing path."""
+
+    try:
+        decoded, source_rate = sf.read(path, dtype="float32", always_2d=True)
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise ValueError(
+            f"acoustic baseline could not decode {path} with SoundFile/libsndfile: {exc}"
+        ) from exc
+
+    if decoded.size == 0:
+        raise ValueError(f"empty audio: {path}")
+    if source_rate <= 0:
+        raise ValueError(f"invalid source sample rate: {source_rate}")
+    if not np.all(np.isfinite(decoded)):
+        raise ValueError("decoded audio must contain only finite samples")
+
+    mono = decoded.mean(axis=1, dtype=np.float64).astype(np.float32)
+    if source_rate == SAMPLE_RATE:
+        return mono, SAMPLE_RATE
+
+    divisor = gcd(source_rate, SAMPLE_RATE)
+    up = SAMPLE_RATE // divisor
+    down = source_rate // divisor
+    resampled = resample_poly(mono, up=up, down=down).astype(np.float32, copy=False)
+    if resampled.size == 0:
+        raise ValueError(f"resampling produced empty audio: {path}")
+    if not np.all(np.isfinite(resampled)):
+        raise ValueError("resampled audio must contain only finite samples")
+    return resampled, SAMPLE_RATE
+
+
 def _normalize_analysis_level(samples: np.ndarray) -> np.ndarray:
     """Normalize usable audio to a fixed RMS analysis level."""
 
     rms = float(np.sqrt(np.mean(np.square(samples.astype(np.float64, copy=False)))))
     if not np.isfinite(rms) or rms < MIN_RMS:
-        raise ValueError(
-            f"audio must exceed minimum analysis RMS ({MIN_RMS_DBFS:g} dBFS)"
-        )
+        raise ValueError(f"audio must exceed minimum analysis RMS ({MIN_RMS_DBFS:g} dBFS)")
     scale = TARGET_RMS / rms
     return (samples * scale).astype(np.float32, copy=False)
 
@@ -89,9 +122,7 @@ def extract_mfcc78(audio: np.ndarray, *, sample_rate: int = SAMPLE_RATE) -> np.n
     if samples.ndim != 1:
         raise ValueError("MFCC baseline requires mono audio")
     if sample_rate != SAMPLE_RATE:
-        raise ValueError(
-            f"MFCC baseline requires sample_rate={SAMPLE_RATE}, got {sample_rate}"
-        )
+        raise ValueError(f"MFCC baseline requires sample_rate={SAMPLE_RATE}, got {sample_rate}")
     if samples.size < N_FFT:
         raise ValueError(f"audio is too short for MFCC baseline: need >= {N_FFT} samples")
     if not np.all(np.isfinite(samples)):
@@ -200,11 +231,7 @@ class MFCCBaselineExtractor:
         if not track_id.strip():
             raise ValueError("track_id must not be empty")
 
-        audio, sample_rate = load_audio(path, sample_rate=SAMPLE_RATE)
-        if sample_rate != SAMPLE_RATE:
-            raise ValueError(
-                f"load_audio returned sample_rate={sample_rate}; expected {SAMPLE_RATE}"
-            )
+        audio, sample_rate = _load_audio_for_acoustic_baseline(path)
         selected, scope = _slice_interval(
             audio,
             sample_rate=sample_rate,
