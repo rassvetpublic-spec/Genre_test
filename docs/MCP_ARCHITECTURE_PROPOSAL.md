@@ -19,9 +19,9 @@ It explains:
 - the proposed adapter boundary;
 - the read-only MVP idea;
 - security limits;
-- the unresolved roadmap decision.
+- the selected Track Q / Track P roadmap split.
 
-The detailed implementation assignment lives in [`MCP_IMPLEMENTATION_TASK.md`](MCP_IMPLEMENTATION_TASK.md).
+The detailed Product MCP implementation assignment lives in [`MCP_IMPLEMENTATION_TASK.md`](MCP_IMPLEMENTATION_TASK.md).
 
 ---
 
@@ -31,7 +31,7 @@ The detailed implementation assignment lives in [`MCP_IMPLEMENTATION_TASK.md`](M
 
 A useful analogy is USB-C for AI integrations: instead of every AI client learning every program's private commands, a program can expose a standardized MCP interface.
 
-For Genre_test, the target idea is:
+For Genre_test, the product-side target idea is:
 
 ```text
 AI / Agent
@@ -100,6 +100,7 @@ For the checked revision `2026-07-28`:
 - protocol version and client capabilities travel with every modern request;
 - modern MCP does not depend on the old protocol-level session/`initialize` handshake model;
 - servers must implement `server/discover` for supported versions/capabilities/identity discovery;
+- clients are not required to call discovery as a mandatory first action;
 - legacy initialization-based behavior remains compatibility context for older revisions.
 
 Therefore a new Genre_test implementation must not copy an old tutorial and accidentally build its architecture around a persistent MCP session or mandatory legacy `initialize` lifecycle.
@@ -125,7 +126,7 @@ HOST (AI application / agent runtime)
   +--> MCP Client C <--> MCP Server C
 ```
 
-For Genre_test:
+For the future Genre_test product façade:
 
 ```text
 AI Host
@@ -144,6 +145,54 @@ Important security property from the MCP architecture: the Host is the coordinat
 
 ---
 
+## 5A. Two separate Genre_test MCP tracks
+
+The project distinguishes two MCP use cases that have different timelines and dependency directions.
+
+### Track Q — QA evidence consumption
+
+```text
+QA Orchestrator / Host
+        |
+        +--> Evidence Source
+        |      +--> GitHub
+        |      +--> local deterministic checks
+        |      +--> future GitHub MCP
+        |      +--> future Rules Hub MCP
+        |
+        v
+immutable ReviewEvidencePack
+        |
+        v
+reviewers
+```
+
+Track Q is consumer-side engineering infrastructure.
+
+It does not expose Genre_test product capabilities through an MCP server.
+
+The evidence contract must be independent of MCP transport so direct/local evidence sources may exist before MCP adapters are ready. The first Track Q implementation therefore does not require MCP runtime or SDK dependencies merely to define or test `ReviewEvidencePackV1`.
+
+Track Q is read-only from repository/governance perspective unless a later separate write-capability task is explicitly approved. Models do not receive repository merge, release, direct-main, force-push or arbitrary execution authority.
+
+### Track P — Product MCP façade
+
+```text
+AI / MCP Host
+        |
+        v
+Genre_test MCP Server
+        |
+        v
+stable Genre_test services
+```
+
+Track P remains a **v0.9** product/runtime direction, after stable local service/API boundaries exist.
+
+The two tracks must not share authority merely because both use MCP terminology. Starting Track Q does not authorize `src/genre_test/mcp/**`, Product MCP tools, or product-scope acceleration.
+
+---
+
 ## 6. MCP is not an API replacement
 
 Genre_test already has or will have concrete implementation interfaces:
@@ -157,7 +206,7 @@ REAPER invocation
 Ozone XML/preset contracts
 ```
 
-MCP should sit **above** those stable service boundaries:
+Product MCP should sit **above** those stable service boundaries:
 
 ```text
 Agent
@@ -228,9 +277,9 @@ The canonical project knowledge still belongs in GitHub files, Issues, versioned
 
 ---
 
-## 9. Mental experiment: what changes after MCP?
+## 9. Mental experiment: what changes after Product MCP?
 
-### Before MCP
+### Before Product MCP
 
 An AI worker may need to know:
 
@@ -255,7 +304,7 @@ AUDIO      --> its own analysis/runtime invocation
 RELEASE    --> its own repository integration
 ```
 
-### After a well-designed MCP layer
+### After a well-designed Product MCP layer
 
 Agents can depend on stable capabilities:
 
@@ -322,7 +371,7 @@ run comparison
 later: bounded render / work-session operations
 ```
 
-Conceptually:
+Conceptually for Track P:
 
 ```text
                  RESEARCHER
@@ -345,13 +394,13 @@ The role/policy layer determines which capabilities a given agent is allowed to 
 
 ---
 
-## 11. Proposed Genre_test MCP boundary
+## 11. Proposed Genre_test Product MCP boundary
 
 Target principle:
 
 > Keep the MCP server thin. Domain/business logic belongs in reusable Genre_test services, not in MCP handlers.
 
-Conceptual project layout:
+Conceptual project layout for Track P:
 
 ```text
 Genre_test/
@@ -366,7 +415,7 @@ Genre_test/
       policy.py
 ```
 
-Exact paths are not approved until Phase 0 inventory confirms the real service boundaries.
+Exact paths are not approved until the Product MCP implementation gate confirms the real service boundaries.
 
 The adapter must not create a second implementation of:
 
@@ -377,9 +426,11 @@ The adapter must not create a second implementation of:
 - Ozone parameter semantics;
 - GitHub governance.
 
+Track Q does not use this `src/genre_test/mcp/**` boundary.
+
 ---
 
-## 12. Proposed read-only-first MVP
+## 12. Proposed Product MCP read-only-first MVP
 
 ### Resources
 
@@ -420,13 +471,13 @@ run_tests(suite)
 
 ### Prompts
 
-Prompts are not required for the first Genre_test MCP MVP.
+Prompts are not required for the first Genre_test Product MCP MVP.
 
 If added later, they should represent useful explicit user-controlled workflows, not hidden policy or automatic agent behavior.
 
 ---
 
-## 13. Why read-only first
+## 13. Why Product MCP is read-only first
 
 Read-only-first provides evidence that:
 
@@ -439,6 +490,8 @@ Read-only-first provides evidence that:
 - the MCP layer does not silently change audio/retrieval semantics.
 
 Only after that evidence should repository writes, render requests or release operations be considered.
+
+Track Q is independently read-only and does not depend on this Product MCP milestone.
 
 ---
 
@@ -456,7 +509,7 @@ write_any_file(path: string)
 git_force_push(...)
 ```
 
-Preferred design:
+Preferred bounded Product MCP design:
 
 ```text
 runtime_doctor()
@@ -480,14 +533,15 @@ Genre_test-specific hard rules:
 8. Keep measured/model/user-entered/derived evidence distinct.
 9. Treat tool metadata/description as untrusted when it does not come from a trusted server.
 10. Remote/protected MCP requires a separate authorization/security review.
+11. Track Q models receive frozen evidence, not repository mutation authority.
 
 MCP cannot override `AGENTS.md` or the GitHub Ruleset.
 
 ---
 
-## 15. Local-first transport direction
+## 15. Local-first Product MCP transport direction
 
-Because Genre_test is Windows-local and Python-first, **stdio is the leading MVP transport candidate**:
+Because Genre_test is Windows-local and Python-first, **stdio is the leading Track P MVP transport candidate**:
 
 ```text
 AI Host
@@ -507,9 +561,11 @@ Reasons:
 - natural fit for a local Python process;
 - simpler security boundary than introducing a remote server immediately.
 
-This is a proposal, not a locked implementation decision. Phase 0 must confirm official Python SDK compatibility and the chosen client's requirements.
+This is a proposal, not a locked implementation decision. Product MCP Phase 0 must confirm official Python SDK compatibility and the chosen client's requirements.
 
 For stdio, logs must go to stderr rather than corrupting protocol stdout.
+
+Track Q evidence collection remains transport-independent and is not required to use this stdio design.
 
 ---
 
@@ -554,7 +610,7 @@ MCP does not change:
 - the seven-agent role model;
 - GitHub as the engineering source of truth.
 
-It should be an interface over those contracts, not a replacement.
+Track Q and Track P are interfaces/infrastructure over those contracts, not replacements.
 
 ---
 
@@ -569,14 +625,15 @@ If implemented correctly, MCP should provide:
 5. **Easier backend evolution** — internals can change behind a stable interface.
 6. **Client portability** — another MCP-aware host can use the same Genre_test interface.
 7. **Cleaner agent prompts** — role prompts contain policy/decision logic rather than duplicated command recipes.
+8. **Reproducible QA evidence** — Track Q can bind reviewers to one frozen exact-head evidence set independently of Product MCP readiness.
 
 ---
 
 ## 19. Costs and responsibilities
 
-MCP also creates a new public-ish internal contract that must be maintained.
+MCP also creates public-ish internal contracts that must be maintained.
 
-Avoid tool proliferation such as:
+Avoid Product MCP tool proliferation such as:
 
 ```text
 analyze_v1
@@ -598,37 +655,59 @@ A stable tool needs:
 
 The adapter is only valuable if it is more stable and safer than direct ad-hoc command execution.
 
+For Track Q, the durable contract is the review-evidence schema and source provenance, not a requirement that every source use MCP.
+
 ---
 
-## 20. Roadmap status
+## 20. Roadmap decision — Option C
 
-Current `ROADMAP.md` places:
+The previous A/B roadmap question is resolved by separating the use cases.
 
-> optional MCP façade only after stable APIs exist
-
-under **v0.9 — ComfyUI, runtime and automation**.
-
-This document does **not** move MCP earlier.
-
-The unresolved user decision is:
+### Selected direction
 
 ```text
-A. Keep production MCP implementation in v0.9 after stable local APIs exist.
+Track Q:
+read-only QA evidence consumption may begin earlier.
 
-or
-
-B. Promote a small read-only MCP infrastructure track earlier,
-   without accelerating future repair/mastering product scope.
+Track P:
+Genre_test product MCP façade remains in v0.9.
 ```
 
-Until the user explicitly chooses, current roadmap placement remains authoritative.
+This is not an acceleration of the Genre_test product MCP server.
+
+Track Q must first establish a transport-independent evidence contract and Evidence Source abstraction. MCP is one possible evidence transport, not a prerequisite for the first EvidencePack implementation.
+
+Track Q must not introduce:
+
+- `src/genre_test/mcp/**` product-server implementation;
+- Analyze/Retrieval/QC/Repair/Mastering MCP product tools;
+- repository write authority;
+- merge/release authority;
+- arbitrary shell/filesystem capabilities.
+
+The first implementation step after this architecture decision is the canonical exact-head `ReviewEvidencePackV1` contract tracked by Q1.
 
 ---
 
-## 21. Architecture acceptance gate before implementation
+## 21. Architecture acceptance gates
 
-Production MCP code should not start until an implementation task confirms:
+### Track Q next gate
 
+Before QA evidence implementation expands beyond Q1, its task contract must define:
+
+- canonical `ReviewEvidencePackV1` content and versioning;
+- exact-head binding;
+- deterministic serialization/content identity;
+- separation of content identity from run metadata such as `collected_at` and `run_id`;
+- source provenance and missing/unknown evidence semantics;
+- no mandatory MCP runtime or provider dependency for Q1;
+- no GitHub write capability.
+
+### Track P implementation gate
+
+Production Product MCP code should not start until an implementation task confirms:
+
+- v0.9/stable-service timing remains appropriate;
 - inventory of reusable Genre_test services vs CLI-only boundaries;
 - chosen protocol revision and official SDK version;
 - local transport choice;
@@ -638,6 +717,6 @@ Production MCP code should not start until an implementation task confirms:
 - permission groups;
 - smoke/contract/security test strategy;
 - no generic arbitrary execution capability;
-- explicit roadmap placement authorization.
+- no overlapping implementation Issue/branch/PR.
 
-See [`MCP_IMPLEMENTATION_TASK.md`](MCP_IMPLEMENTATION_TASK.md) for the proposed execution contract.
+See [`MCP_IMPLEMENTATION_TASK.md`](MCP_IMPLEMENTATION_TASK.md) for the proposed Track P execution contract.
