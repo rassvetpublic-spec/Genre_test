@@ -16,39 +16,34 @@ It combines:
 - chroma statistics: pitch-class/harmonic evidence;
 - spectral-contrast statistics: spectral-distribution evidence.
 
-It is not:
-
-- a replacement for CLaMP/MERT;
-- a replacement for MAEST or AST;
-- a pure timbral axis;
-- a genre classifier;
-- a calibrated relevance probability;
-- evidence of AI/generated origin;
-- permission to mix handcrafted and learned scores with arbitrary weights.
+It is not a replacement for CLaMP/MERT, MAEST or AST; not a pure timbral axis; not a genre classifier; not a calibrated relevance probability; not evidence of AI/generated origin; and not permission to mix handcrafted and learned scores with arbitrary weights.
 
 ## Source-of-knowledge registry
 
-External evidence and limits are tracked in [`MFCC_SOURCE_REGISTRY.md`](MFCC_SOURCE_REGISTRY.md).
+External evidence and limits are tracked in [`MFCC_SOURCE_REGISTRY.md`](MFCC_SOURCE_REGISTRY.md). Implementation-derived upstream evidence is revision-pinned. The initial 20/12/7 + mean/std shape was verified against `horacio/simil` commit `cb6da9ccd5ea6c675b66ad8d3b378f0a6ca322de`, file `simil/embedders/mfcc.py`.
 
-The registry separates:
-
-```text
-PRIMARY DOC / PRIMARY RESEARCH
-UPSTREAM CODE
-COMMUNITY OBSERVATION
-PROJECT DECISION
-```
-
-Reddit/community material is hypothesis-generating only. It cannot supply production thresholds, fusion weights, or scientific truth without project-owned validation.
+Reddit/community material remains hypothesis-generating only. It cannot supply production thresholds, fusion weights, or scientific truth without project-owned validation.
 
 ## Baseline V3
 
-`mfcc-acoustic78` uses dependencies already present in Genre_test.
+`mfcc-acoustic78` uses a dedicated, fingerprinted preprocessing path rather than the shared variable decoder fallback:
 
 ```text
-input: mono 22.05 kHz exactly
-minimum usable RMS: -80 dBFS
-analysis level after gate: RMS normalized to 0.1
+input file
+ -> SoundFile / libsndfile decode to float32
+ -> explicit channel mean to mono
+ -> SciPy resample_poly to 22.05 kHz when needed
+ -> usable-signal gate: -80 dBFS RMS
+ -> analysis RMS normalization to 0.1
+ -> MFCC / chroma / spectral contrast
+```
+
+Files unsupported by the installed fingerprinted SoundFile/libsndfile stack fail this optional benchmark independently; the backend does not silently switch to audioread/FFmpeg and reuse the same vector identity.
+
+Feature construction:
+
+```text
+analysis rate: 22.05 kHz exactly
 FFT: 2048
 hop: 512
 Mel bands: 128
@@ -68,38 +63,42 @@ A fixed RMS analysis level prevents pure global gain from masquerading as acoust
 
 The usable-signal gate is applied **before** RMS amplification. Inputs below `-80 dBFS RMS` are rejected so ordinary dither/codec/quantization residue is not amplified into a confident unit vector. This threshold is benchmark policy and is part of the fingerprint; #36 may later justify a revision.
 
-The analysis sample rate is strict. Public extraction and decoded input must both be `22_050 Hz`, matching the rate encoded in backend identity.
+The feature-extraction sample rate is strict and always `22_050 Hz`, matching backend identity. Source-rate conversion is performed only through the fingerprinted SciPy `resample_poly` path.
 
 MFCC, chroma and spectral contrast have different numerical scales. V3 L2-normalizes each family block before concatenation, giving all three families equal vector-norm weight. This makes the weighting policy explicit; it does **not** claim equal weighting is optimal.
 
 Because chroma is present, transposition/key/harmony can affect the score independently of timbre. #36 must interpret this backend as a handcrafted acoustic comparator rather than `Timbral similarity` ground truth.
 
-Backend identity:
+Backend identity includes:
 
 ```text
 backend_name: mfcc-acoustic78
 backend_version: 3
-preprocessing_version:
-  mfcc20-chroma12-contrast7-meanstd-sr22050-mono-nfft2048-hop512-
-  rms0.1-minrms-80dbfs-familyl2equal-
-  librosa-<version>-numpy-<version>-scipy-<version>-v3
+sample/decode policy:
+  soundfile-libsndfile-float32-mono-mean-resample-poly
+feature policy:
+  mfcc20-chroma12-contrast7-meanstd-sr22050-mono-nfft2048-hop512
+  rms0.1-minrms-80dbfs-familyl2equal
+runtime identity:
+  librosa-<version>-numpy-<version>-scipy-<version>
+  soundfile-<version>-libsndfile-<version>
 embedding_dim: 78
 normalization: family-l2-equal+global-l2
 ```
 
-Librosa/NumPy/SciPy versions are part of `preprocessing_version` and therefore the backend fingerprint. Incompatible extractor runtimes or preprocessing policies do not silently share one cache/index identity; a changed identity requires re-embedding.
+These fields feed `preprocessing_version` and therefore `RetrievalBackendInfo.fingerprint`. A decoder, resampler, extractor runtime or preprocessing-policy change creates a distinct vector identity and requires re-embedding.
 
 Full-track and explicit segment embeddings use the existing `EmbeddingIdentity` contract. A segment requires both `start_s` and `end_s`; bounds outside the decoded source are rejected rather than silently clipped.
 
 ## Why this baseline exists
 
-A useful upstream implementation pattern is [`horacio/simil`](https://github.com/horacio/simil), which exposes a lightweight local music-similarity path using MFCC + chroma + spectral contrast alongside learned alternatives. Genre_test borrows only the idea of a cheap independent handcrafted comparator, not its complete policy or implicit weighting.
+The pinned upstream `horacio/simil` implementation demonstrates a lightweight local music-similarity path using 20 MFCC + 12 chroma + 7 spectral-contrast features with mean/std aggregation. Genre_test borrows only the idea of a cheap independent handcrafted comparator, not its clip-selection, decode policy or implicit raw-feature weighting.
 
-Librosa supplies the required feature extractors:
+Librosa supplies the feature extractors:
 
-- [`librosa.feature.mfcc`](https://librosa.org/doc/latest/generated/librosa.feature.mfcc.html)
-- [`librosa.feature.chroma_stft`](https://librosa.org/doc/latest/generated/librosa.feature.chroma_stft.html)
-- [`librosa.feature.spectral_contrast`](https://librosa.org/doc/latest/generated/librosa.feature.spectral_contrast.html)
+- `librosa.feature.mfcc`
+- `librosa.feature.chroma_stft`
+- `librosa.feature.spectral_contrast`
 
 ## Benchmark contract with #36
 
@@ -110,33 +109,11 @@ A. CLaMP/MERT semantic retrieval
 B. ACOUSTIC78 handcrafted retrieval
 ```
 
-Evaluate both on reviewed categories from #36, especially:
+Evaluate both on reviewed categories from #36, especially exact/near duplicates, remix/original, subgenre/family relations, mood/energy contrasts, vocal/instrumentation similarity, same/different key or harmony for chroma ablation, and unrelated negatives.
 
-- exact / near duplicate;
-- remix / original;
-- same subgenre;
-- same broad family but different style;
-- similar mood/energy but different genre;
-- vocal similarity;
-- instrumentation similarity;
-- same/different key or harmony where useful for chroma ablation;
-- deliberately unrelated negatives.
+Use Precision@K, Recall@K, MRR, nDCG@K, repeatability, latency and throughput.
 
-Use existing retrieval metrics:
-
-- Precision@K;
-- Recall@K;
-- MRR;
-- nDCG@K;
-- repeatability;
-- latency and throughput.
-
-Robustness fixtures should include:
-
-- global gain variants;
-- near-silence/low-level controls;
-- codec/mastering variants where relevant;
-- transposed or harmony-controlled variants if #36 wants to quantify chroma influence.
+Robustness fixtures should include global gain variants, near-silence controls, decode/sample-rate controls, codec/mastering variants where supported, and transposed/harmony-controlled variants if #36 wants to quantify chroma influence.
 
 Do not introduce:
 
@@ -146,37 +123,24 @@ combined_score = a * clamp + b * acoustic78
 
 until project-owned benchmark evidence justifies both the fusion rule and its weights.
 
-## Relationship to #33
+## Relationship to #33 / #44 / #137
 
-Representative-segment selection in #33 remains based on the versioned retrieval embedding policy. ACOUSTIC78 may later be reported as independent evidence for a segment, but this issue does not silently replace the current centroid/cosine representative policy.
-
-## Relationship to #44
-
-MFCC is potentially useful for structural novelty and acoustic change-point evidence, but that is separate from this V3 full/segment fingerprint. #44 remains responsible for conservative tempo/structure change semantics.
-
-The source registry records Librosa examples for beat-synchronous MFCC aggregation and MFCC-based local path similarity as future research evidence only; they do not graduate automatically into #44 production logic.
-
-## Relationship to #137
-
-MFCC temporal derivatives and trajectory statistics belong to #137, including experiments such as:
-
-- MFCC delta variance;
-- MFCC delta-2 variance;
-- trajectory path length;
-- trajectory acceleration statistics.
-
-Those signals must not be interpreted as AI-origin truth. #139 implements only the static handcrafted acoustic retrieval baseline.
+- #33 representative-segment policy is not replaced; ACOUSTIC78 may only add independent evidence later.
+- #44 remains responsible for conservative tempo/structure change semantics; beat-synchronous MFCC ideas are research evidence only.
+- #137 owns MFCC temporal derivatives/trajectory statistics. They must not be interpreted as AI-origin truth.
 
 ## Review findings and V3 resolution
 
-The baseline now explicitly resolves the material review findings accumulated through #140/#143/#172:
+The baseline resolves the material findings accumulated through #140/#143/#172:
 
 1. **Global gain dependence** — fixed RMS analysis normalization plus gain-variant tests.
 2. **Extractor-version drift** — Librosa/NumPy/SciPy versions in the fingerprint.
-3. **Implicit family weighting** — each feature-family mean/std block receives L2 normalization before concatenation, followed by global L2.
-4. **Timbre-only overclaim** — backend/documentation renamed to handcrafted acoustic because chroma carries pitch-class/harmonic information.
-5. **Near-silence amplification** — inputs below `-80 dBFS RMS` are rejected before normalization and covered by tests.
-6. **Sample-rate identity mismatch** — extraction and decoder boundaries require exactly `22_050 Hz`, matching the fingerprint.
+3. **Implicit family weighting** — family-level L2 before concatenation plus global L2.
+4. **Timbre-only overclaim** — renamed to handcrafted acoustic because chroma carries harmonic information.
+5. **Near-silence amplification** — `-80 dBFS RMS` gate before normalization.
+6. **Sample-rate identity mismatch** — feature extraction fixed at `22_050 Hz`.
+7. **Variable decoder/resampler identity** — dedicated SoundFile/libsndfile + explicit mono mean + SciPy `resample_poly`; runtime versions/policy are fingerprinted and no silent FFmpeg fallback is allowed.
+8. **Mutable upstream evidence** — the upstream implementation supporting the initial 78D shape is pinned to an inspected commit and file path in the source registry.
 
 These fixes remove implementation/methodology ambiguity; they do **not** prove that ACOUSTIC78 improves retrieval relevance. That remains a #36 benchmark question.
 
@@ -192,11 +156,6 @@ This is small enough for exact cosine ranking and does not justify an ANN/vector
 
 ## Graduation rule
 
-The baseline may graduate from benchmark utility only if #36 demonstrates incremental value. Valid outcomes include:
-
-- useful independent handcrafted acoustic evidence;
-- useful reranking input after calibration;
-- benchmark-only diagnostic value;
-- rejection/removal if it adds no measurable value.
+The baseline may graduate from benchmark utility only if #36 demonstrates incremental value. Valid outcomes include useful independent handcrafted acoustic evidence, calibrated reranking input, benchmark-only diagnostic value, or rejection/removal if it adds no measurable value.
 
 `BYPASS`/no-use is a valid result.
