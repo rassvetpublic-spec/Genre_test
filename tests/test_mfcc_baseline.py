@@ -1,13 +1,16 @@
 from pathlib import Path
 
+import librosa
 import numpy as np
 import pytest
+import scipy
 
 from genre_test.retrieval import mfcc_baseline
 from genre_test.retrieval.mfcc_baseline import (
     EMBEDDING_DIM,
     MFCCBaselineExtractor,
     SAMPLE_RATE,
+    TARGET_RMS,
     extract_mfcc78,
     mfcc_baseline_info,
 )
@@ -38,14 +41,29 @@ def test_extract_mfcc78_is_float32_normalized_and_deterministic() -> None:
     np.testing.assert_array_equal(first, second)
 
 
+def test_extract_mfcc78_is_stable_under_global_gain_changes() -> None:
+    audio = _synthetic_audio()
+
+    reference = extract_mfcc78(audio)
+    quieter = extract_mfcc78(audio * 0.25)
+    louder = extract_mfcc78(audio * 2.0)
+
+    np.testing.assert_allclose(reference, quieter, rtol=2e-5, atol=2e-6)
+    np.testing.assert_allclose(reference, louder, rtol=2e-5, atol=2e-6)
+
+
 def test_backend_identity_is_versioned_and_audio_only() -> None:
     info = mfcc_baseline_info()
 
     assert info.backend_name == "mfcc-timbre78"
-    assert info.backend_version == "1"
+    assert info.backend_version == "2"
     assert info.embedding_dim == EMBEDDING_DIM
     assert info.normalization == "l2"
     assert "mfcc20" in info.preprocessing_version
+    assert f"rms{TARGET_RMS:g}" in info.preprocessing_version
+    assert f"librosa-{librosa.__version__}" in info.preprocessing_version
+    assert f"numpy-{np.__version__}" in info.preprocessing_version
+    assert f"scipy-{scipy.__version__}" in info.preprocessing_version
     assert info.clamp_code_revision is None
     assert info.mert_model_id is None
     assert info.text_model_id is None
@@ -137,3 +155,6 @@ def test_extract_mfcc78_rejects_invalid_audio() -> None:
     invalid[100] = np.nan
     with pytest.raises(ValueError, match="finite samples"):
         extract_mfcc78(invalid)
+
+    with pytest.raises(ValueError, match="non-silent energy"):
+        extract_mfcc78(np.zeros(4096, dtype=np.float32))
