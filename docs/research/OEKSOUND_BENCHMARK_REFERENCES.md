@@ -1,7 +1,7 @@
 # oeksound DSP benchmark references
 
-Status: research reference / optional external DSP benchmark candidates  
-Issue: #129  
+Status: research reference / optional external DSP benchmark candidates
+Issue: #129
 Recorded: 2026-08-29
 
 ## Boundary
