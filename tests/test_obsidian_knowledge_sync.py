@@ -1,18 +1,12 @@
 from __future__ import annotations
 
-import importlib.util
 import json
 from copy import deepcopy
 from pathlib import Path
 
 import pytest
 
-
-MODULE_PATH = Path(__file__).resolve().parents[1] / "tools" / "obsidian_knowledge_sync.py"
-SPEC = importlib.util.spec_from_file_location("obsidian_knowledge_sync", MODULE_PATH)
-assert SPEC is not None and SPEC.loader is not None
-sync = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(sync)
+from tools import obsidian_knowledge_sync as sync
 
 
 def _write(path: Path, text: str = "# fixture\n") -> None:
@@ -149,7 +143,7 @@ def test_missing_relation_target_is_rejected(tmp_path: Path) -> None:
     registry_path, _ = _prepare(tmp_path, _registry([entry]))
     (tmp_path / "docs/missing-target.md").unlink()
 
-    with pytest.raises(sync.RegistryError, match="relation target does not exist"):
+    with pytest.raises(sync.RegistryError, match="referenced file does not exist"):
         sync.validate_registry(sync.load_registry(registry_path), tmp_path)
 
 
