@@ -32,6 +32,35 @@ models/
 *.db-wal
 *.db-shm
 
+# Secrets / local credentials
+.env
+.env.*
+!.env.example
+!.env.template
+.envrc
+.direnv/
+.netrc
+.npmrc
+.pypirc
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+credentials.json
+credentials.*.json
+!credentials.example.json
+secrets.json
+secrets.*.json
+!secrets.example.json
+service-account.json
+service-account.*.json
+
 # IDE / OS
 .vscode/
 .idea/
