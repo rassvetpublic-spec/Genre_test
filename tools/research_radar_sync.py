@@ -349,7 +349,9 @@ def projection_plan(root: Path = ROOT) -> tuple[dict[Path, str], dict[Path, Path
         path = obs / "SOURCES" / _source_filename(source["id"])
         old_path = obs / "SOURCES" / f"{source['id']}.md"
         migrations[old_path] = path
-        rel = Path(os.path.relpath(root / source["canonical_path"], start=path.parent)).as_posix()
+        rel = Path(
+            os.path.relpath(root / source["canonical_path"], start=path.parent)
+        ).as_posix()
         body = [
             _fm(
                 id=f"source__{source['id']}",
@@ -440,7 +442,8 @@ def projection_plan(root: Path = ROOT) -> tuple[dict[Path, str], dict[Path, Path
     for t in topics:
         item = state["topic_state"][t["id"]]
         lines.append(
-            f"- `{t['id']}`: `{item['status']}`; last checked `{item['last_checked']}`"
+            f"- `{t['id']}`: `{item['status']}`; "
+            f"last checked `{item['last_checked']}`"
         )
     lines += ["", "Canonical state: `../../research/data/RESEARCH_STATE.json`."]
     out[legacy / "RESEARCH_STATE.md"] = "\n".join(lines) + "\n"
@@ -458,19 +461,23 @@ def expected_projection(root: Path = ROOT) -> dict[Path, str]:
 
 
 def _stale_generated_files(expected: set[Path], root: Path) -> list[Path]:
-    obs = root / "docs" / "research" / "obsidian"
+    bases = (
+        root / "docs" / "research" / "obsidian",
+        root / "docs" / "development" / "research_radar",
+    )
     stale: list[Path] = []
-    if not obs.exists():
-        return stale
-    for path in obs.rglob("*.md"):
-        if path in expected:
+    for base in bases:
+        if not base.exists():
             continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except OSError as exc:
-            raise RadarError(f"cannot read generated projection {path}: {exc}") from exc
-        if MARKER in text:
-            stale.append(path)
+        for path in base.rglob("*.md"):
+            if path in expected:
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except OSError as exc:
+                raise RadarError(f"cannot read generated projection {path}: {exc}") from exc
+            if MARKER in text:
+                stale.append(path)
     return sorted(stale)
 
 
