@@ -1,71 +1,127 @@
-# Shimmer external reference for Genre_test
+# Shimmer donor and migration source for Genre_test
 
-Status: **external R&D reference / test candidate; not production truth**  
-Snapshot date: **2026-08-30**  
-Relevant areas: AI-audio artifact cleanup, pre-master repair, delta/removed audition, loudness-matched A/B, transient preservation, Mid/Side high-band cleanup
+Status: **AUTHORIZED DONOR / UI PROTOTYPE / EXPERIMENT SOURCE**
+Tracking: **#160**
+Snapshot date: **2026-08-30**
+Canonical UI architecture: `docs/SUPERCOMBINE_UI_ARCHITECTURE.md`
 
-## Purpose
+> Filename is retained for stable links. The previous `external-only / do-not-copy` classification is superseded by the owner authorization recorded on 2026-08-30.
 
-Shimmer is recorded here as an external open-source reference implementation and experiment source for cleanup of artifacts associated with AI-generated music, especially Suno/Udio material.
+## Decision
 
-It may be used to:
+The project owner explicitly authorized reuse and rework of Shimmer for `Genre_test` and defined the supplied Shimmer work as:
 
-- generate hypotheses for `Genre_test` repair research;
-- benchmark cleanup behavior on controlled fixtures;
-- compare before/after/delta listening workflows;
-- inspect artifact-detection and safety-gate ideas;
-- provide an external reference when designing project-owned DSP experiments.
+1. a source of SUPERCOMBINE to-do items;
+2. a prototype for the future integrated workstation interface.
 
-It must **not** become authoritative evidence that a specific artifact exists, and its processing decisions must not silently become `Genre_test` production defaults.
+Shimmer may therefore contribute **code, UI structure and workflow implementations**, subject to adaptation to Genre_test contracts and review gates.
+
+It is not imported as a second product or a second source of runtime truth.
 
 Recommended role:
 
 ```text
-EXTERNAL_REFERENCE / TEST_CANDIDATE / DSP_HYPOTHESIS_SOURCE
+AUTHORIZED_DONOR
++ UI_PROTOTYPE
++ EXPERIMENT_SOURCE
 ```
 
 Not:
 
 ```text
-PRODUCTION_TRUTH / REQUIRED_DEPENDENCY / AUTOMATIC_REPAIR_DEFAULT
+NESTED_PRODUCT
+SECOND_RUNTIME_TRUTH
+UNVALIDATED_PRODUCTION_DEFAULTS
 ```
 
-## Primary source
+## Donor identity and recoverability
 
-Repository:  
-https://github.com/henricksmedia/shimmer
+Public repository:
 
-Verified on 2026-08-30.
+`https://github.com/henricksmedia/shimmer`
 
-The project describes itself as a local/offline suite for cleaning artifacts from AI-generated music before mastering. Its public documentation states that cleanup precedes mastering, and that the cleanup path uses deterministic classic DSP rather than machine learning.
+Pinned public baseline used for direct code migration:
 
-## High-value ideas for Genre_test
+`ff8344ae1a77bd7eb5be46b55c83813e923d3d2c`
 
-### 1. Cleanup before mastering
+The public baseline contains a Python backend under `shimmer/` and a web workstation-style UI under `static/`, including Single/Batch workflows, processing-chain controls, visualizers, presets, project/recent state, stems and mastering-related surfaces.
 
-Shimmer explicitly separates artifact removal from mastering and performs cleanup first.
+The owner-supplied 2026-08-30 changelog describes additional local work beyond that public baseline, including RU/EN i18n, Blackwell/Demucs work, resource-monitor UI concepts, live loop/A-B preview and stem workflows.
 
-This is a useful hypothesis for `Genre_test` because compression, excitation, tone shaping and limiting can make high-frequency fizz, metallic ringing or unstable cymbal/vocal texture more obvious after mastering.
+**Important provenance boundary:** the changelog is requirements/backlog evidence, not a recoverable code revision. Until an exact local source archive or commit is supplied and hash-pinned, code that exists only in that changelog must not be represented as directly portable donor code. Those features may be reimplemented from the documented requirements or replaced by equivalent Genre_test-owned implementations.
 
-Candidate project architecture:
+Therefore:
+
+```text
+pinned public commit -> eligible code donor
+owner changelog only -> requirements / UX target / TODO
+future supplied local source -> donor only after exact hash/revision is recorded
+```
+
+## Authorization and redistribution rights
+
+The public donor repository currently advertises AGPL-3.0. The project owner has explicitly stated in the project conversation that Shimmer is their project, that licensing is not a blocker, and that its repository may be taken and reworked for the new Genre_test project.
+
+For this owner-controlled migration, that statement is recorded as authorization to copy, modify, integrate and redistribute selected Shimmer source as part of Genre_test, including adaptation into the Genre_test repository and release line. The migration must still preserve source/provenance attribution so copied or substantially adapted components remain auditable.
+
+If a later public release needs a formal copyright/license notice beyond this repository decision record, release packaging may add it without reopening the engineering permission to migrate the owner-controlled donor code.
+
+This authorization applies only to code/assets for which the owner holds the required rights; third-party dependencies embedded in or used by Shimmer retain their own terms and must pass the normal Genre_test provenance gate.
+
+## Architecture boundary
+
+Existing `Genre_test` contracts take precedence over donor implementation choices.
+
+```text
+Shimmer donor UI / implementation ideas
+              |
+              v
+Genre_test workstation UI
+              |
+              v
+Genre_test local API / job facade
+              |
+      +-------+-------+
+      |               |
+      v               v
+Genre_test core   backend adapters
+analysis/QC/      repair/stems/
+retrieval         mastering
+```
+
+Do not keep a parallel Shimmer production server, database truth, analyzer truth, resource monitor or mastering truth after migration.
+
+## High-value donor areas
+
+### 1. Workstation web UI
+
+Direct donor candidates from the pinned public revision include:
+
+- `static/index.html`;
+- `static/css/**`;
+- public `static/js/**` workstation modules such as visualizer, Single/Batch, controls, presets, recents and settings where present at the pinned revision.
+
+The product identity becomes `Genre_test`; migrated calls terminate in Genre_test services/contracts.
+
+### 2. RU/EN i18n
+
+The owner changelog describes a broad `static/js/i18n.js` implementation, but that local implementation is not part of the pinned public revision. Treat it as a UX requirement until its exact source is supplied. P1 may implement an equivalent Genre_test-owned RU/EN layer without waiting for that source.
+
+### 3. Cleanup before mastering
+
+Keep the workflow principle:
 
 ```text
 artifact analysis
-  -> bypass | repair candidate
-  -> repair QC
-  -> normal mastering chain
-  -> final limiter / codec audit
+ -> BYPASS | repair candidate
+ -> repair QC
+ -> mastering
+ -> final codec / delivery audit
 ```
 
-`bypass` must remain a valid winner.
+Repair and mastering remain separate decisions. A mastering stage must not hide an unresolved repair failure.
 
-### 2. Removed / Delta audition
-
-Shimmer exposes the removed signal as a separate audition path. Its documentation recommends lowering processing strength when vocals, snare hits, melody or other wanted material becomes audible in the removed signal.
-
-This is directly applicable as a conservative QC gate.
-
-Recommended fixture outputs:
+### 4. Removed / Delta audition
 
 ```text
 original.wav
@@ -73,154 +129,99 @@ processed.wav
 removed_delta.wav
 ```
 
-Recommended review questions:
+Wanted musical content in Delta is a damage signal, not a success signal.
 
-- Does the delta contain primarily unwanted noise/artifact energy?
-- Are vocal formants, melody, cymbal body or drum attacks clearly present?
-- Is transient material being removed disproportionately?
-- Does the processed version still win after loudness matching?
+### 5. Loudness-matched A/B and live loop preview
 
-If wanted musical content is clearly present in the delta, the repair candidate should be penalized or rejected.
+The donor interaction patterns and owner changelog are UX inputs for #54. Genre_test converges them into one common comparison contract: synchronized playhead/loop, optional loudness matching, instant switching, representative loops, blind mode, notes/ratings and a persistent winner.
 
-### 3. Loudness-matched A/B
+Timing claims from the changelog are not production guarantees until measured in Genre_test.
 
-Shimmer enables loudness-matched comparison between versions to reduce preference bias toward the louder render.
+### 6. Stem workflow UX
 
-`Genre_test` should use the same principle for any repair experiment:
+Useful concepts include vocals/drums/bass/other cards, stem solo/monitoring, per-stem source/processed switching and recombination. Backend implementation must pass #52 runtime, provenance, phase/latency and recombination-integrity gates.
 
-```text
-original vs repair candidate
-  -> loudness match
-  -> blind or minimally biased listening comparison
-  -> objective QC metrics
-```
+### 7. Resource HUD presentation
 
-Do not accept a repair candidate solely because it is louder, brighter or more limited.
+Reuse presentation ideas only. Genre_test already owns Resource Monitor/runtime truth; do not duplicate the polling backend.
 
-### 4. High-band-only processing
+### 8. High-band / M-S / transient-protection repair ideas
 
-Shimmer documents a crossover around 4.5 kHz so low-frequency and much of the vocal/body region bypass the artifact-cleanup engine.
+Useful hypotheses remain high-band-only repair, protected Mid/stronger Side processing, transient safety gates, artifact-family taxonomy and Delta inspection. No donor preset constant becomes a Genre_test default merely because it exists in donor code or changelog.
 
-This should be treated as a testable design hypothesis, not a universal cutoff.
+Required promotion evidence includes BYPASS, clean controls, loudness-matched listening, Delta contamination, transient retention, stereo/mono preservation, codec robustness where relevant, repeatability and failure behavior.
 
-Candidate experiment:
+## Donor classification
 
-- test several crossover regions;
-- compare full-band cleanup vs high-band-only cleanup;
-- measure low/mid-band collateral change;
-- inspect delta spectrogram and transient retention;
-- evaluate genre-dependent behavior.
+The detailed inventory lives in `docs/SUPERCOMBINE_UI_ARCHITECTURE.md`.
 
-### 5. Mid/Side asymmetry
+- pinned public UI/CSS/visualizer code: `PORT` or `ADAPT`;
+- public Single/Batch/project/job UX: `ADAPT` / `REIMPLEMENT` against Genre_test services;
+- changelog-only local implementations: `REIMPLEMENT` unless their exact source is later supplied and pinned;
+- stems/preview implementations: `ADAPT` behind experimental gates when source is pinned;
+- mastering implementation: `REIMPLEMENT` behind Genre_test `MasteringBackend` contracts;
+- resource-monitor backend: `REJECT DUPLICATE`;
+- unvalidated DSP/preset heuristics: `EXPERIMENT`;
+- detector-evasion objectives: `REJECT`.
 
-Above the crossover, Shimmer processes Mid and Side differently, with stronger protection of the center and more aggressive cleanup in the sides.
+## Explicit detector-evasion exclusion
 
-This is relevant for generated material where wide synthetic ambience, cymbal wash or stereo high-frequency texture may contain stronger artifacts than the center channel.
+The supplied 2026-08-30 local changelog contains an `Anti-AI Vocoder Stealth Engine` whose stated goal includes lowering AI-detector scores and bypassing detector classifications.
 
-Candidate test matrix:
+That objective is outside Genre_test and must **not** be migrated into production scope.
 
-```text
-A: stereo-linked cleanup
-B: high-band M/S cleanup, equal strength
-C: protected Mid + stronger Side
-D: bypass
-```
+Do not port or optimize detector-risk minimization, detector-specific success metrics, watermark/provenance stripping, origin concealment, or claims that processed audio is “human” because a detector score fell.
 
-Evaluate:
+Generic DSP primitives found in those experiments may only be reconsidered as independently specified **audible defect** repair candidates under #50/#51/#52. Their success criterion is audible defect reduction with controlled musical damage, not detector evasion.
 
-- vocal/snare integrity;
-- stereo width;
-- mono compatibility;
-- HF artifact reduction;
-- removed-signal contamination.
+## Ozone relationship
 
-### 6. Transient safety gate
+Shimmer mastering code is not a replacement for the migrated Ozone knowledge/runtime boundary.
 
-Shimmer documents a transient-protection gate that backs off cleanup for roughly 70 ms around detected transients.
+The owner-supplied `OZONE12_MASTERING_LAB_UNIVERSAL_CORE_v1_4_1` archive hashes to:
 
-This maps well to `Genre_test` transient/sustain QC.
+`9f165e9194797e1e6ba51d1d248dfb6d2a7f734df33c1265c70ddf0826117cc7`
 
-Project-owned tests should vary:
+That is the same canonical snapshot already preserved in Genre_test. No second import is needed.
 
-- transient detector sensitivity;
-- release/protection time;
-- attenuation depth during the gate;
-- genre and drum-density conditions.
-
-The exact Shimmer value is a reference point only, not a required project constant.
-
-### 7. Artifact-specific preset analysis
-
-Shimmer exposes multiple artifact presets and an analyzer that selects among them.
-
-The useful research idea is not the preset list itself, but the separation of artifact families such as:
-
-- broadband fizz/hash;
-- cymbal sheen/chatter;
-- ringing/whistle-like tones;
-- vocal glaze/sibilance instability;
-- harshness/fatigue;
-- muddy/boxy rescue cases.
-
-`Genre_test` can use these as candidate labels for listening fixtures and detector research, while keeping project-owned definitions and validation.
-
-## Recommended test protocol
-
-For each selected AI-generated test track:
+Active Ozone work stays under:
 
 ```text
-1. Preserve untouched source.
-2. Select artifact-heavy and artifact-light excerpts.
-3. Produce bypass and one or more repair candidates.
-4. Loudness-match candidates for review.
-5. Export removed/delta signal for every candidate.
-6. Run transient-retention and spectral-difference metrics.
-7. Run mono and codec audit where relevant.
-8. Perform human review.
-9. Accept repair only if it beats bypass without unacceptable collateral damage.
+docs/mastering/ozone12/
+config/mastering/ozone12/
+tools/mastering/ozone12/
+src/genre_test/mastering/ozone12/
 ```
 
-Suggested objective evidence:
+The future workstation exposes Ozone only through the Genre_test mastering backend/orchestration layer.
 
-- integrated and short-term loudness before/after matching;
-- true peak;
-- spectral delta by frequency band;
-- Mid/Side spectral delta;
-- transient peak/crest retention;
-- correlation / mono compatibility;
-- codec re-encode audit;
-- artifact-region vs clean-region differential behavior.
+## Migration protocol
 
-## Explicit non-goals
+For each donor component:
 
-- Do not copy Shimmer DSP code directly into `Genre_test`.
-- Do not make Shimmer a required runtime dependency.
-- Do not assume all Suno/Udio tracks need repair.
-- Do not apply a universal high-frequency cut.
-- Do not treat 4.5 kHz or 70 ms as validated `Genre_test` constants.
-- Do not accept automated artifact detection as ground truth without listening and project-owned evidence.
-- Do not let repair overwrite the untouched source.
-- Do not make a processed candidate win by default; bypass remains eligible.
+```text
+1. Pin recoverable donor/source identity.
+2. Confirm owner/third-party provenance for that component.
+3. Classify PORT / ADAPT / REIMPLEMENT / REJECT.
+4. Map donor concepts to Genre_test contracts.
+5. Port only the minimum bounded component.
+6. Add focused tests.
+7. Preserve existing desktop GUI/CLI behavior during rollout.
+8. Run QA; run Audio Science when audio/DSP semantics change.
+9. Promote only after exact-head CI/review gates.
+```
 
-## Source and implementation boundary
+## Current priority
 
-Shimmer is released under AGPL-3.0. For `Genre_test`, the preferred use is as an external source of information, a comparison tool and a generator of independently testable DSP hypotheses.
-
-If an idea is adopted, it should be re-derived and implemented from project-owned requirements and tests rather than copied from Shimmer source code.
-
-## Recommended priority
-
-1. Removed/Delta audition as mandatory repair QC.
-2. Loudness-matched A/B for repair evaluation.
-3. Cleanup-before-mastering experiment.
-4. High-band-only repair experiment.
-5. Protected-Mid / stronger-Side experiment.
-6. Transient safety gate experiment.
-7. Artifact-family detector taxonomy research.
-8. Full Shimmer-vs-Genre_test benchmark on reviewed fixtures.
+1. Freeze workstation architecture and donor provenance (#160).
+2. Build Genre_test-owned web shell + RU/EN language layer.
+3. Wire existing Analyze/Catalog/Search services.
+4. Integrate canonical Resource Monitor.
+5. Build common preview/A-B-X transport aligned with #54.
+6. Add repair/stem surfaces behind #50/#51/#52.
+7. Add mastering through Genre_test `MasteringBackend` and existing Ozone boundary.
+8. Finish project/vault/delivery surfaces toward v1.0.
 
 ## Engineering conclusion
 
-Shimmer is high-value for `Genre_test` as an **external repair reference and controlled test candidate**. The strongest transferable value is its evaluation methodology: cleanup before mastering, explicit removed-signal audition, loudness-matched comparison, spatially selective high-band processing and transient protection.
-
-These ideas should enter `Genre_test` as hypotheses to validate experimentally, while the project remains source-independent and keeps bypass/original audio as a valid outcome.
+Shimmer is a **code donor and product-interface prototype**, not a parallel application. Direct code migration is limited to recoverable, pinned source; changelog-only local work remains a requirements source until its code is supplied. Genre_test keeps one runtime/domain truth and validates audio behavior independently.
