@@ -8,9 +8,10 @@ import scipy
 from genre_test.retrieval import mfcc_baseline
 from genre_test.retrieval.mfcc_baseline import (
     EMBEDDING_DIM,
+    MFCCBaselineExtractor,
+    MIN_RMS_DBFS,
     SAMPLE_RATE,
     TARGET_RMS,
-    MFCCBaselineExtractor,
     extract_mfcc78,
     mfcc_baseline_info,
 )
@@ -41,6 +42,15 @@ def test_extract_mfcc78_is_float32_normalized_and_deterministic() -> None:
     np.testing.assert_array_equal(first, second)
 
 
+def test_feature_families_have_equal_norm_weight() -> None:
+    vector = extract_mfcc78(_synthetic_audio())
+    expected_family_norm = 1.0 / np.sqrt(3.0)
+
+    assert np.linalg.norm(vector[:40]) == pytest.approx(expected_family_norm, abs=1e-6)
+    assert np.linalg.norm(vector[40:64]) == pytest.approx(expected_family_norm, abs=1e-6)
+    assert np.linalg.norm(vector[64:]) == pytest.approx(expected_family_norm, abs=1e-6)
+
+
 def test_extract_mfcc78_is_stable_under_global_gain_changes() -> None:
     audio = _synthetic_audio()
 
@@ -55,12 +65,14 @@ def test_extract_mfcc78_is_stable_under_global_gain_changes() -> None:
 def test_backend_identity_is_versioned_and_audio_only() -> None:
     info = mfcc_baseline_info()
 
-    assert info.backend_name == "mfcc-timbre78"
-    assert info.backend_version == "2"
+    assert info.backend_name == "mfcc-acoustic78"
+    assert info.backend_version == "3"
     assert info.embedding_dim == EMBEDDING_DIM
-    assert info.normalization == "l2"
+    assert info.normalization == "family-l2-equal+global-l2"
     assert "mfcc20" in info.preprocessing_version
     assert f"rms{TARGET_RMS:g}" in info.preprocessing_version
+    assert f"minrms{MIN_RMS_DBFS:g}dbfs" in info.preprocessing_version
+    assert "familyl2equal" in info.preprocessing_version
     assert f"librosa-{librosa.__version__}" in info.preprocessing_version
     assert f"numpy-{np.__version__}" in info.preprocessing_version
     assert f"scipy-{scipy.__version__}" in info.preprocessing_version
@@ -144,9 +156,12 @@ def test_embed_audio_rejects_invalid_segment_bounds(
         )
 
 
-def test_extract_mfcc78_rejects_invalid_audio() -> None:
+def test_extract_mfcc78_rejects_invalid_audio_and_sample_rate() -> None:
     with pytest.raises(ValueError, match="mono audio"):
         extract_mfcc78(np.zeros((2, 4096), dtype=np.float32))
+
+    with pytest.raises(ValueError, match="sample_rate=22050"):
+        extract_mfcc78(_synthetic_audio(), sample_rate=48_000)
 
     with pytest.raises(ValueError, match="too short"):
         extract_mfcc78(np.zeros(1024, dtype=np.float32))
@@ -156,5 +171,23 @@ def test_extract_mfcc78_rejects_invalid_audio() -> None:
     with pytest.raises(ValueError, match="finite samples"):
         extract_mfcc78(invalid)
 
-    with pytest.raises(ValueError, match="non-silent energy"):
+    with pytest.raises(ValueError, match="minimum analysis RMS"):
         extract_mfcc78(np.zeros(4096, dtype=np.float32))
+
+    near_silence = np.full(4096, 10.0 ** (-100.0 / 20.0), dtype=np.float32)
+    with pytest.raises(ValueError, match="minimum analysis RMS"):
+        extract_mfcc78(near_silence)
+
+
+def test_embed_audio_rejects_unexpected_decoder_sample_rate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    audio = _synthetic_audio()
+    monkeypatch.setattr(
+        mfcc_baseline,
+        "load_audio",
+        lambda _path, _sample_rate: (audio, 48_000),
+    )
+
+    with pytest.raises(ValueError, match="load_audio returned sample_rate=48000"):
+        MFCCBaselineExtractor().embed_audio(Path("track.wav"), track_id="track-4")
