@@ -1,0 +1,30 @@
+name: Research Radar contract
+
+on:
+  pull_request:
+    paths:
+      - 'docs/research/data/**'
+      - 'docs/research/obsidian/**'
+      - 'docs/development/research_radar/**'
+      - 'docs/research/RESEARCH_RADAR.md'
+      - 'tools/research_radar_sync.py'
+      - 'tests/test_research_radar_contract.py'
+      - '.github/workflows/research-radar.yml'
+
+concurrency:
+  group: research-radar-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: research-radar-contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate JSON and generated Markdown projection
+        run: python tools/research_radar_sync.py --check
+      - name: Compile generator
+        run: python -m py_compile tools/research_radar_sync.py

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "updated": "2026-08-30",
+  "authority": "canonical_machine_state",
+  "topics": [
+    {"id":"retrieval-evaluation","title":"Retrieval Evaluation","status":"ACTIVE","keywords":["music retrieval","audio retrieval","Recall@K","MRR","nDCG","hard negatives","segment retrieval"],"exclusions":["generic recommendation systems without audio relevance"]},
+    {"id":"audio-text-embeddings","title":"Audio-Text Embeddings","status":"ACTIVE","keywords":["CLaMP3","MERT","audio-text embedding","cross-modal retrieval","music embedding"],"exclusions":["text-only embedding models without an audio bridge"]},
+    {"id":"ai-audio-detection","title":"AI Audio Detection","status":"ACTIVE","keywords":["AI music detector","audio deepfake detection","anti-spoofing","provenance","watermark detection"],"exclusions":["detector-evasion optimization as a production goal"]},
+    {"id":"generative-audio-repair","title":"Generative Audio Repair","status":"ACTIVE","keywords":["artifact repair","audio restoration","vocoder artifacts","super resolution","transient retention"],"exclusions":["unconditional resynthesis without content-retention evidence"]},
+    {"id":"mastering-qc","title":"Mastering QC","status":"ACTIVE","keywords":["loudness matched A/B","true peak","codec preview","stereo mono compatibility","transient safety"],"exclusions":["subjective preference presented as measured fact"]},
+    {"id":"agent-orchestration","title":"Agent Orchestration","status":"ACTIVE","keywords":["agent orchestration","independent reviewer","context handoff","worktree isolation","LLM review telemetry"],"exclusions":["unverified performance multipliers from secondary sources"]}
+  ]
+}
