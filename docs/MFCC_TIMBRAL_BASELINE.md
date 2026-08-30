@@ -32,12 +32,13 @@ PROJECT DECISION
 
 Reddit/community material is hypothesis-generating only. It cannot supply production thresholds, fusion weights, or scientific truth without project-owned validation.
 
-## Baseline V1
+## Baseline V2
 
 `mfcc-timbre78` uses only dependencies already present in Genre_test.
 
 ```text
 input: mono 22.05 kHz
+analysis level: RMS normalized to 0.1
 FFT: 2048
 hop: 512
 Mel bands: 128
@@ -51,16 +52,21 @@ Mel bands: 128
 float32 -> L2 normalization
 ```
 
+The fixed RMS analysis level prevents a pure global gain change from masquerading as timbral distance through MFCC coefficient 0. Zero/s effectively silent inputs are rejected instead of creating a misleading normalized vector.
+
 Backend identity:
 
 ```text
 backend_name: mfcc-timbre78
-backend_version: 1
+backend_version: 2
 preprocessing_version:
-  mfcc20-chroma12-contrast7-meanstd-sr22050-mono-nfft2048-hop512-v1
+  mfcc20-chroma12-contrast7-meanstd-sr22050-mono-nfft2048-hop512-
+  rms0.1-librosa-<version>-numpy-<version>-scipy-<version>-v2
 embedding_dim: 78
 normalization: l2
 ```
+
+The runtime Librosa/NumPy/SciPy versions are part of `preprocessing_version` and therefore the backend fingerprint. Environments that may produce incompatible vectors do not silently share one cache/index identity; a changed extractor runtime requires a different fingerprint and re-embedding.
 
 Full-track and explicit segment embeddings use the existing `EmbeddingIdentity` contract. A segment requires both `start_s` and `end_s`; bounds outside the decoded source are rejected rather than silently clipped.
 
@@ -105,6 +111,8 @@ Use the existing retrieval metrics:
 - repeatability;
 - latency and throughput.
 
+Robustness fixtures should explicitly include global gain variants so the V2 level policy stays covered by project-owned evidence.
+
 Do not introduce:
 
 ```text
@@ -119,7 +127,7 @@ Representative-segment selection in #33 remains based on the versioned retrieval
 
 ## Relationship to #44
 
-MFCC is potentially useful for structural novelty and timbral change-point evidence, but that is separate from this V1 full/segment fingerprint. #44 remains responsible for conservative tempo/structure change semantics.
+MFCC is potentially useful for structural novelty and timbral change-point evidence, but that is separate from this V2 full/segment fingerprint. #44 remains responsible for conservative tempo/structure change semantics.
 
 The source registry records Librosa examples for beat-synchronous MFCC aggregation and MFCC-based local path similarity as future research evidence only; they do not graduate automatically into #44 production logic.
 
@@ -134,14 +142,14 @@ MFCC temporal derivatives and trajectory statistics belong to #137, including ex
 
 Those signals must not be interpreted as AI-origin truth. #139 intentionally implements only the static timbral retrieval baseline.
 
-## Known review concerns before graduation
+## PR #140 review findings and resolution
 
-PR #140 review identified two required follow-ups:
+Two review blockers were identified and are resolved in V2:
 
-1. **Gain dependence / MFCC coefficient 0** — otherwise identical audio at different levels may shift the vector direction. A level policy or coefficient-0 policy plus gain-variant tests is required before production use.
-2. **Extractor implementation identity** — Librosa/NumPy/SciPy version drift must not produce vectors that share a fingerprint unless compatibility is guaranteed. Pin implementation behavior/version or include the relevant identity in the backend fingerprint.
+1. **Gain dependence / MFCC coefficient 0** — input is normalized to a fixed RMS analysis level before MFCC/chroma/contrast extraction, and unit tests compare the same synthetic material at multiple global gains.
+2. **Extractor implementation identity** — Librosa/NumPy/SciPy runtime versions are incorporated into `preprocessing_version`, which feeds the existing backend fingerprint and prevents silent cache/index mixing across different extractor runtimes.
 
-These findings are recorded in `MFCC_SOURCE_REGISTRY.md` as part of the project knowledge trail.
+These fixes remove the implementation blockers; they do **not** prove that MFCC78 adds useful retrieval relevance. That remains a #36 benchmark question.
 
 ## Expected storage cost
 
