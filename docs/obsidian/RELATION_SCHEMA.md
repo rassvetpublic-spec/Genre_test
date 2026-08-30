@@ -1,30 +1,30 @@
 # Typed relation schema — Phase 0
 
-Статус: **pre-migration / P0**  
-Issue: **#169**  
-Зависимость: **#142 / PR #167 Research Radar v2**
+Статус: **pre-migration / P0**
+Issue: **#169**
+Baseline: **Research Radar v2 #142 / PR #167 merged**
 
 ## Цель
 
-Определить небольшой набор типизированных связей между human-maintained документами и derived indexes, не создавая второй источник отношений или состояния поверх subsystem-owned JSON.
+Определить небольшой набор типизированных связей между human-maintained документами и derived indexes без создания второго источника отношений или состояния поверх subsystem-owned JSON.
 
 ## Главный принцип
 
 > **ONE FACT -> ONE CANONICAL OWNER -> MANY VIEWS**
 
-Связь записывается только у того canonical owner, которому принадлежит соответствующий факт. Generated projection, Graph, Breadcrumbs, Bases и будущий `KNOWLEDGE_INDEX` могут показывать или вычислять эту связь, но не становятся новым владельцем только потому, что содержат её копию.
+Связь записывается у canonical owner соответствующего факта. Generated projection, Graph, Breadcrumbs, Bases и будущий `KNOWLEDGE_INDEX` могут показывать или вычислять эту связь, но не становятся новым владельцем только потому, что отображают её.
 
 ## Research Radar boundary
 
 P0 не назначает YAML relations владельцем Research Radar topic/source relationships.
 
-Если связь `topic -> source` или иное Research Radar состояние уже канонически хранится в:
+Если отношение уже принадлежит:
 
 ```text
 docs/research/data/*.json
 ```
 
-то generated `docs/research/obsidian/**` может визуализировать её через frontmatter/`[[wikilinks]]`, но не должна независимо редактировать ту же связь.
+то generated `docs/research/obsidian/**` может сериализовать его через frontmatter/`[[wikilinks]]`, но не должна независимо редактировать ту же связь.
 
 Направление:
 
@@ -32,7 +32,7 @@ docs/research/data/*.json
 canonical Radar JSON -> generated Markdown links/frontmatter -> Graph/Bases
 ```
 
-а не:
+Недопустимо:
 
 ```text
 Radar JSON <-> manually maintained Markdown relation
@@ -46,7 +46,7 @@ Radar JSON <-> manually maintained Markdown relation
 
 ### `depends_on`
 
-Документированный контракт или процедура требует другого контракта/понятия для корректного применения. Это не просто тематическая близость.
+Контракт или процедура требует другого контракта/понятия для корректного применения. Это не просто тематическая близость.
 
 ### `implementation_of`
 
@@ -54,11 +54,11 @@ Radar JSON <-> manually maintained Markdown relation
 
 ### `supersedes`
 
-Текущий документ явно заменяет более старый документ или решение. Использовать только при подтверждённой замене.
+Текущий документ явно заменяет более старый документ или решение.
 
 ### `superseded_by`
 
-Обратная сторона `supersedes`. Обычно нужна в архивном/старом документе после контролируемой миграции.
+Обратная сторона `supersedes`, обычно применимая к старому/архивному документу.
 
 ### `evidence_for`
 
@@ -66,15 +66,13 @@ Radar JSON <-> manually maintained Markdown relation
 
 ### `research_for`
 
-Human-maintained исследовательский документ обслуживает конкретную область/решение/эксперимент. Это поле не заменяет canonical Research Radar topic/source mapping.
+Human-maintained research document обслуживает конкретную область/решение/эксперимент. Это поле не заменяет canonical Research Radar topic/source mapping.
 
 ### `related`
 
 Нейтральная связь, когда более точный тип не подходит. Не использовать как универсальную корзину.
 
-## Отсутствие пустых relations
-
-Пустые массивы запрещены:
+## Пустые relations не добавляются
 
 ```yaml
 # ПЛОХО
@@ -99,11 +97,11 @@ A implementation_of B
 B implementation_of A
 ```
 
-Будущий `KNOWLEDGE_INDEX` может вычислять обратные edges как derived data. Такие вычисленные edges не нужно вручную дублировать в каждом source document.
+Будущий `KNOWLEDGE_INDEX` может вычислять reverse edges как derived data. Их не нужно вручную дублировать в исходных документах.
 
-## Представление значения в P0
+## Представление значения
 
-Для human-maintained detached pilots P0 **не фиксирует Obsidian Wikilink как канонический формат frontmatter**.
+Для human-maintained detached pilots P0 **не фиксирует Wikilink как canonical формат frontmatter**.
 
 Пилоты используют repository-relative path без `.md`:
 
@@ -113,59 +111,61 @@ depends_on:
   - docs/THIRD_PARTY_MODELS
 ```
 
-Это правило относится к будущей global human-maintained schema и **не требует переписывать** уже принятый generated Research Radar projection, где generator может использовать `[[wikilinks]]` как UI serialization.
+Generated subsystem projection может использовать generator-owned UI syntax, включая `[[wikilinks]]`.
 
 Разделение:
 
 ```text
 canonical human relation contract -> repository-relative target
-subsystem generated projection     -> generator-owned UI syntax allowed
+subsystem generated projection     -> generator-owned UI serialization
 ```
 
-## Integrity rules
+## Integrity rules будущего validator
 
-Перед production adoption relations должны проверяться валидатором:
+Перед production adoption должны проверяться:
 
 - target существует;
-- target не указывает на сам документ без специально разрешённого случая;
+- self-reference запрещён без специального случая;
 - `supersedes`/`superseded_by` не создают противоречивый цикл;
-- relation key входит в утверждённый словарь;
-- archived/reference документ не становится current authority через relation;
+- relation key входит в утверждённый vocabulary;
+- archived/reference документ не становится current authority только из-за relation;
 - generated projection не становится source of truth из-за backlinks;
-- relation из derived index не может переопределить canonical owner;
-- Research Radar relation, принадлежащая JSON, не должна иметь вторую independently maintained YAML-копию.
+- relation из derived index не переопределяет canonical owner;
+- Research Radar relation, принадлежащая JSON, не получает вторую independently maintained YAML-копию.
 
 ## Manual notes в generated projections
 
-Manual notes, сохранённые generator-ом между защищёнными markers, могут содержать обычные ссылки/наблюдения.
+Manual notes между защищёнными markers могут содержать ссылки и наблюдения, но остаются annotation, а не canonical relation store.
 
-Они являются annotation, а не canonical relation store. Если annotation должна стать фактом Research Radar state, изменение должно пройти через соответствующий canonical JSON owner.
+Если annotation должна стать Research Radar fact/state, изменение проходит через соответствующий canonical JSON owner.
 
 ## Breadcrumbs / Graph / Bases
 
-Breadcrumbs — UI для typed relationships. Graph/Backlinks — визуализация ссылок. Bases — derived/tabular view.
+- Breadcrumbs — optional UI для typed relationships;
+- Graph/Backlinks — визуализация ссылок;
+- Bases — derived/tabular view.
 
-Ни один из них не владеет relation schema или subsystem state.
+Ни один из этих интерфейсов не владеет relation schema или subsystem state.
 
-Если Obsidian и все plugins удалены:
+Если Obsidian и plugins удалены:
 
 - canonical relations остаются в Git-native owners;
-- generated projection может быть пересоздана;
-- Python tooling может построить тот же derived graph;
+- generated projections пересоздаются;
+- repository tooling может построить derived graph;
 - Researcher не теряет canonical state.
 
-## P0 pilot questions
+## Pilot result
 
-Три detached pilot-файла должны ответить:
+Три detached pilot показали:
 
-1. хватает ли relation set для retrieval architecture;
-2. нужны ли mastering protocol специальные связи;
-3. нужны ли relations вообще для `ACTIVE_CURRENT`;
-4. какие relations искусственны;
-5. может ли global schema сосуществовать с Research Radar v2 generated relations без дублирования owners.
+1. relation set достаточен для retrieval architecture;
+2. mastering protocol не требует отдельной ontology;
+3. `ACTIVE_CURRENT` не требует искусственных relations;
+4. пустые arrays не нужны;
+5. global schema может сосуществовать с Research Radar generated relations без дублирования owners.
 
-## Изменение relation schema
+## Phase 0 boundary
 
 Новый relation key после P0 считается schema change.
 
-Массовое добавление/переписывание relations проводится только отдельным migration scope с Git diff и validation. P0 не изменяет `docs/research/**` или `docs/development/research_radar/**`.
+Массовое добавление/переписывание relations требует отдельного migration scope с Git diff и validation. P0 не изменяет `docs/research/**`, `docs/development/research_radar/**` или живые project documents.

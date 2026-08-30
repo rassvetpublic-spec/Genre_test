@@ -1,8 +1,8 @@
 # Taxonomy тегов — Phase 0
 
-Статус: **pre-migration / P0**  
-Issue: **#169**  
-Зависимость: **#142 / PR #167 Research Radar v2**
+Статус: **pre-migration / P0**
+Issue: **#169**
+Baseline: **Research Radar v2 #142 / PR #167 merged**
 
 ## Цель
 
@@ -10,7 +10,7 @@ Issue: **#169**
 
 ## Главный принцип
 
-> Tags классифицируют документы. Terms сохраняют точную терминологию. Keywords помогают поиску. Research Radar topic state принадлежит своему canonical JSON.
+> Tags классифицируют документы. Terms сохраняют точную терминологию. Keywords помогают поиску. Research Radar topic state принадлежит canonical JSON.
 
 Эти слои не смешиваются.
 
@@ -24,14 +24,18 @@ Issue: **#169**
 docs/research/data/RADAR_TOPICS.json
 ```
 
-Generated compatibility `docs/development/research_radar/KEYWORD_MAP.md` после #142 является только projection/view этих данных.
+Generated compatibility:
 
-Будущий глобальный `KEYWORD_MAP` допустим только в одном из двух режимов:
+```text
+docs/development/research_radar/KEYWORD_MAP.md
+```
 
-1. **generated research view** — детерминированно выводится из canonical Research Radar JSON и не редактируется независимо;
-2. **non-research index** — содержит только области, которыми Research Radar не владеет, и явно не дублирует research topic semantics.
+является только view этих данных.
 
-Правило:
+Будущий общепроектный keyword layer допустим только в одном из режимов:
+
+1. **generated research view** — выводится из canonical Radar JSON и не редактируется независимо;
+2. **non-research index** — содержит только семантику, которой Research Radar не владеет.
 
 > Для одной research-семантики не существует двух независимо редактируемых `KEYWORD_MAP`.
 
@@ -68,7 +72,7 @@ P0 использует nested tags с русским названием изм�
 тип/machine-prompt
 ```
 
-### Статус
+### Статус документа
 
 ```text
 статус/canonical
@@ -82,16 +86,16 @@ P0 использует nested tags с русским названием изм�
 ## Нормализация
 
 - один смысл — один tag;
-- новые spelling variants не создаются;
-- технические leaf slugs используются в lowercase;
-- пробелы в tag не использовать; при необходимости — `-`;
-- nested path используется для taxonomy, а не для имитации файловой структуры;
-- один human-maintained документ обычно получает 2–5 tags;
-- generated subsystem projection может иметь собственную domain metadata и не обязана искусственно копировать глобальные tags.
+- spelling variants не создаются;
+- technical leaf slugs — lowercase;
+- пробелы в tag не использовать; при необходимости использовать `-`;
+- nested path — taxonomy, а не имитация файловой структуры;
+- human-maintained документ обычно получает 2–5 tags;
+- generated subsystem projection может иметь свою domain metadata и не обязана копировать global tags.
 
-## Что не является tag
+## Что не является taxonomy tag автоматически
 
-Не добавлять как taxonomy tag автоматически:
+Не превращать автоматически в tags:
 
 - `CLaMP 3`;
 - `MERT`;
@@ -125,9 +129,9 @@ terms:
 
 `TERM_REGISTRY` не хранит Research Radar run state, topic status или source status и не переопределяет `RADAR_TOPICS.json`/`SOURCE_REGISTRY.json`.
 
-## Keywords human-maintained documents
+## Document-local keywords
 
-Пример document-local metadata:
+Пример:
 
 ```yaml
 keywords_ru:
@@ -140,9 +144,9 @@ keywords_en:
   - cross-modal music embedding
 ```
 
-Это поисковые hints конкретного документа, а не второй Research Radar registry.
+Это hints конкретного документа, а не второй Research Radar registry.
 
-Если смысл уже канонически принадлежит Research Radar topic, глобальная индексация должна получать его из `RADAR_TOPICS.json`, а не вручную синхронизировать копию.
+Если смысл принадлежит Research Radar topic, project-wide research indexing получает его из `RADAR_TOPICS.json`, а не из вручную синхронизируемой копии.
 
 ## `KNOWLEDGE_INDEX`
 
@@ -158,27 +162,23 @@ keywords_en:
 - pointers на canonical JSON owners;
 - generated projection identity.
 
-Он **не становится более высоким authority** и должен быть полностью пересоздаваемым из canonical repository inputs.
+Он должен быть полностью пересоздаваемым. При расхождении с canonical owner индекс считается stale/invalid.
 
-Если `KNOWLEDGE_INDEX` расходится с canonical JSON/Markdown owner, индекс считается stale/invalid.
+## Облака и visualizations
 
-## Облако тегов и терминов
+- taxonomy cloud строится из утверждённых `tags`;
+- term cloud — из `terms` и будущего TERM_REGISTRY;
+- Research Radar keyword visualization — из `RADAR_TOPICS.json` либо его deterministic projection.
 
-Облако taxonomy строится из утверждённых `tags`.
-
-Отдельное облако терминов может строиться из `terms` и `TERM_REGISTRY`.
-
-Research Radar keyword visualization должна использовать canonical `RADAR_TOPICS.json` либо его deterministic generated projection.
-
-Visualization никогда не становится источником состояния.
+Visualization никогда не становится state owner.
 
 ## Изменение taxonomy
 
-Добавление нового root/canonical tag — управляемое schema change.
+Добавление нового root/canonical tag — schema change.
 
-Массовый rename/merge tags проходит Git branch -> diff -> validation -> PR. UI-плагин не является authority.
+Mass rename/merge tags проходит отдельный Git branch -> diff -> validation -> PR. UI plugin не является authority.
 
-## P0 ограничения
+## Phase 0 boundary
 
 P0 не:
 
@@ -187,8 +187,8 @@ P0 не:
 - создаёт `TERM_REGISTRY`;
 - создаёт `KNOWLEDGE_INDEX`;
 - создаёт второй research `KEYWORD_MAP`;
-- меняет `docs/research/**` или `docs/development/research_radar/**`;
 - генерирует облако тегов;
-- вводит CI gate.
+- меняет `docs/research/**` или `docs/development/research_radar/**`;
+- выполняет массовую migration.
 
-Эти действия рассматриваются только после принятия #142/PR #167 и завершения metadata pilots.
+Detached pilots подтверждают taxonomy concept, но production adoption относится к следующей фазе.
