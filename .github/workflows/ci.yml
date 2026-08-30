@@ -45,7 +45,7 @@ jobs:
             for path in "$path1" "$path2"; do
               [[ -z "$path" ]] && continue
               case "$path" in
-                docs/*|*.md|*.txt)
+                docs/*|README.md|README_RU.txt|PORTABLE_README.txt)
                   ;;
                 *)
                   full_suite=true
@@ -116,7 +116,7 @@ jobs:
           grep -Fq '__version__ = "0.5.0.dev0"' src/genre_test/__init__.py
           test "$(genre-test --version)" = "Genre_test 0.5.0.dev0"
           grep -Fq 'requires-python = ">=3.12,<3.14"' pyproject.toml
-          grep -Fq 'target-version = "py313"' pyproject.toml
+          grep -Fq 'target-version = "py312"' pyproject.toml
           grep -Fq 'MIN_PYTHON_VERSION = (3, 12)' src/genre_test/runtime_health.py
           python -c "import sys; assert sys.version_info[:2] == (3, 13)"
 
@@ -290,6 +290,6 @@ jobs:
 
           data = tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))
           assert data['project']['requires-python'] == '>=3.12,<3.14'
-          assert data['tool']['ruff']['target-version'] == 'py313'
+          assert data['tool']['ruff']['target-version'] == 'py312'
           PY
           grep -Fq 'Python 3.13 x64 (primary); Python 3.12 x64 (fallback)' Genre_test_START.cmd
