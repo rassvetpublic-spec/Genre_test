@@ -7,7 +7,7 @@ name = "genre-test"
 version = "0.5.0.dev0"
 description = "Local ensemble music analyzer with MAEST genre classification, AudioSet semantic profiling, history and validation lab."
 readme = "README.md"
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.12,<3.14"
 license = {text = "MIT"}
 authors = [{name = "rassvetpublic"}]
 dependencies = [
@@ -52,7 +52,7 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py313"
 
 [tool.ruff.lint.per-file-ignores]
 "src/genre_test/cli.py" = ["B008"]
