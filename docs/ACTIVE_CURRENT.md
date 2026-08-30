@@ -3,12 +3,12 @@
 Published stable version: **none**
 Active development version: **0.5.0.dev0**
 Active development scope: **v0.5 CLaMP 3 semantic retrieval**
-Epic: **#26**
-Current first implementation issue: **#27**
+Active v0.5 epic: **#26**
 
 Long-term product epic: **#49 SUPERCOMBINE**
 Long-term execution TODO: `docs/SUPERCOMBINE_TODO.md`
 Geekatplay reuse audit: `docs/GEEKATPLAY_ORG_AUDIT.md`
+MCP adapter architecture proposal: **#146** (`REQUEST`; architecture/roadmap placement pending; no MCP implementation authorized by this status entry)
 
 ## Product north star
 
@@ -221,7 +221,7 @@ P2:
 
 ## Current large-catalog evidence
 
-The first real retrieval corpus is available from the completed v0.4 collection run:
+The first real retrieval corpus is available from the completed historical v0.4 collection run:
 
 ```text
 10,439 discovered files
@@ -252,7 +252,9 @@ Especially useful directions:
 - Asset Vault integrity/provenance/lineage and safe-operation patterns;
 - Whisper-related transcription architectures as research references only.
 
-## Stable v0.4 product behavior
+## Retained analysis regression baseline (from retired v0.4 line)
+
+These behaviors remain useful regression expectations even though the v0.4 release/tag/package line is retired:
 
 - default output view: `all`
 - optional full source path
@@ -296,19 +298,35 @@ Validation keeps explicit `DRIFT: STABLE/MINOR/SIGNIFICANT/CRITICAL` terminology
 
 ## Release packaging
 
-Stable package:
+Published stable release: **none**.
 
-```text
-releases\Genre_test_0.4.0_portable.zip
-releases\SHA256SUMS.txt
-```
+The former `v0.4.0` GitHub Release/tag and its active portable-package artifacts are retired. Historical v0.4 analysis behavior remains regression evidence only; it is not a current release channel.
 
-v0.5 retrieval runtime/model weights are **not** yet part of the stable package.
+`v0.5` retrieval runtime/model weights are **not** currently distributed as a stable package. Future packaging must pass its dedicated release gate.
+
+## Repository governance
+
+Canonical repository: `rassvetpublic-spec/Genre_test`.
+
+Current governance baseline:
+
+- repository visibility: **public**;
+- default branch: `main`;
+- GitHub Ruleset: `Protect main`, enforcement `active`, applies to the default branch;
+- direct updates require a Pull Request;
+- merge method allowed by the Ruleset: squash only;
+- required status checks: `test (3.11)`, `test (3.12)`, `test (3.13)`;
+- strict required-status-check policy is enabled;
+- deletion and non-fast-forward updates are blocked;
+- no Ruleset bypass actors are configured;
+- the repository also retains `.githooks/pre-push` as a local defense-in-depth guard.
+
+Repository-owned governance configuration/check tooling lives under `config/github/`, `scripts/github-*.ps1`, and `CHECK_GOVERNANCE.cmd`.
 
 ## Current development rule
 
 `Genre_test_START.cmd` is the single supported user entry point for dependency installation, environment checks, optional retrieval runtime management and application startup. Files under `scripts/` are internal implementation details invoked by the launcher.
 
-No v0.5 feature PR is merged to `main` until explicit MTD. Runtime/model choices must be backed by measured compatibility, reproducibility, search-quality and licensing evidence.
+`AGENTS.md` and `docs/AGENT_WORKFLOW.md` are canonical for merge authority. The user has granted **standing automatic MTD** for already approved Genre_test work: once a PR reaches exact-head `READY-MTD <40-char-head-sha>` and all required QA/Audio Science/CI/mergeability/evidence gates are satisfied, `RELEASE_MANAGER` may execute merge → post-merge verification → merged-head deletion without requesting a fresh `mtd` token.
 
-The same merge rule applies to SUPERCOMBINE work: no future repair/master/tag/runtime feature is merged without explicit MTD.
+Standing automatic MTD does **not** authorize unrelated scope, a new/material architecture or contract decision, red/inconclusive evidence, missing required review, or bypassing repository protection. Stop and return to the user on CI failure, conflict/non-mergeability, unexpected scope, missing/inconclusive evidence, or a new material decision.
