@@ -330,6 +330,37 @@ def test_config_accepts_openai_gemini_topology(tmp_path, monkeypatch):
     assert settings.secondary_provider == "gemini"
 
 
+def test_unused_ollama_host_cannot_break_openai_gemini_topology(tmp_path, monkeypatch):
+    for name in (
+        "AI_REVIEW_PRIMARY_PROVIDER",
+        "AI_REVIEW_PRIMARY_MODEL",
+        "AI_REVIEW_SECONDARY_PROVIDER",
+        "AI_REVIEW_SECONDARY_MODEL",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    monkeypatch.setenv("AI_REVIEW_OLLAMA_HOST", "not-a-url")
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        json.dumps(
+            {
+                "primary_provider": "openai",
+                "primary_model": "openai-test-model",
+                "secondary_provider": "gemini",
+                "secondary_model": "gemini-test-model",
+                "ollama_host": "${MISSING_OLLAMA_HOST}",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    settings = load_settings(config_path)
+
+    assert settings.primary_provider == "openai"
+    assert settings.secondary_provider == "gemini"
+    assert settings.ollama_host == "http://127.0.0.1:11434"
+
+
 def test_config_rejects_identical_primary_and_secondary(tmp_path):
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
