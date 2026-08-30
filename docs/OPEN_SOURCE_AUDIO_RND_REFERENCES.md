@@ -1,6 +1,6 @@
 # Open-source audio R&D references for Genre_test
 
-Status: **external R&D references / controlled test candidates; not production truth**  
+Status: **external R&D references / controlled test candidates; not production truth**
 Snapshot date: **2026-08-30**
 
 ## Purpose
