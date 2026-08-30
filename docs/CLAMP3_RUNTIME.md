@@ -1,11 +1,11 @@
 # CLaMP 3 Runtime Spike
 
-Issue: **#27**  
-Status: **hardware validation in progress on PR #72**
+Issue: **#27 — COMPLETED**  
+Status: **runtime decision completed and merged via PR #72 on 2026-08-27**
 
 ## Objective
 
-Determine the safest reproducible way to run CLaMP 3 beside the released Genre_test Windows runtime without destabilizing the v0.4 MAEST/AST analysis path.
+Record the evidence and selected reproducible way to run CLaMP 3 beside the Genre_test Windows runtime without destabilizing the MAEST/AST analysis path.
 
 ## Core baseline
 
@@ -18,11 +18,11 @@ RTX 5070 Ti / sm_120 verified
 CPU-only core route supported
 ```
 
-The v0.4 analysis environment remains independent from the optional CLaMP runtime.
+The core analysis environment remains independent from the optional CLaMP runtime.
 
-## Selected experimental architecture
+## Selected architecture
 
-The current v0.5 candidate is an **isolated persistent subprocess sidecar**:
+The selected v0.5 architecture is an **isolated persistent subprocess sidecar**:
 
 ```text
 Genre_test core .venv
@@ -36,7 +36,7 @@ Genre_test core .venv
        +-- XLM-R
 ```
 
-Why this route is preferred for P0:
+Why this route was selected:
 
 - no dependency mutation of the stable core `.venv`;
 - independent Torch/model pins;
@@ -45,7 +45,7 @@ Why this route is preferred for P0:
 - protocol can be tested in lightweight CI;
 - failures remain isolated from normal Analyze.
 
-Core-native installation is not selected for v0.5 P0 because it provides no advantage that justifies risking the released MAEST/AST environment. The isolated route is the production candidate unless later benchmark data gives a concrete reason to revisit this decision.
+Core-native installation was not selected for v0.5 P0 because it provided no advantage that justified risking the MAEST/AST environment. The isolated route remains the selected production retrieval runtime unless later benchmark evidence supports an explicit architecture amendment.
 
 ## Canonical state layout
 
@@ -143,15 +143,16 @@ embedding dimension          768
 final retrieval vector       L2 normalized
 ```
 
-Identity:
+Final identity selected by the merged P0 gate:
 
 ```text
-clamp3-mert-24k-mono-scipy-polyphase-5s-mean-v2
+preprocessing: clamp3-mert-24k-mono-scipy-polyphase-5s-mean-v3
+MERT compat:   mert-weight-norm-key-remap-v1
 ```
 
-## Hardware evidence obtained
+## Intermediate hardware evidence — historical
 
-On the target Windows workstation, an initial run with `C:\GIT\TEST.wav` proved:
+An intermediate run with `C:\GIT\TEST.wav` proved:
 
 - core MAEST on CUDA;
 - AudioSet AST on CUDA;
@@ -162,13 +163,13 @@ On the target Windows workstation, an initial run with `C:\GIT\TEST.wav` proved:
 - clean sidecar shutdown;
 - sidecar per-process VRAM returned to `0 MiB` after shutdown.
 
-Review of that evidence exposed one missing gate condition: the direct and sidecar **audio** vectors matched, but the same Russian **text** query produced different vectors between the two paths.
+Review of that intermediate evidence exposed one missing gate condition: the direct and sidecar **audio** vectors matched, but the same Russian **text** query produced different vectors between the two paths.
 
-The old run is therefore not accepted as final P0 closure.
+That intermediate run was not final P0 closure. The discrepancy was subsequently corrected and the hardened P0 passed; final evidence is canonical in `docs/CLAMP3_RUNTIME_P0.md`, Issue #27 and merged PR #72.
 
 ## UTF-8 correction
 
-The persistent sidecar child now starts with Python UTF-8 mode:
+The persistent sidecar child starts with Python UTF-8 mode:
 
 ```text
 -X utf8 -u
@@ -220,11 +221,12 @@ The sequence validates:
 - [x] persistent sidecar audio smoke proven;
 - [x] within-path repeatability measured;
 - [x] shutdown/VRAM release measured;
-- [x] flat state-layout migration implemented;
+- [x] flat state-layout migration implemented and accepted;
 - [x] common log-folder policy implemented;
 - [x] UTF-8 sidecar transport fix implemented;
-- [ ] final flat-layout local migration run;
-- [ ] final RU text cross-path equality PASS;
-- [ ] final strengthened P0 gate PASS;
-- [ ] #27/#29 closure recorded after evidence;
-- [ ] PR merge only after explicit MTD.
+- [x] final RU text cross-path equality PASS;
+- [x] final strengthened P0 gate PASS;
+- [x] #27/#29 acceptance completion recorded;
+- [x] PR #72 merged under the explicit MTD that authorized that historical merge.
+
+Current future PR release governance is defined by `AGENTS.md` / `docs/AGENT_WORKFLOW.md`: exact-head gates remain mandatory and approved-scope READY-MTD PRs may use the standing automatic MTD authorization.

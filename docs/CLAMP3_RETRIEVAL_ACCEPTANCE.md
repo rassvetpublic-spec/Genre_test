@@ -262,7 +262,9 @@ Restoration must happen with all Genre_test/retrieval processes stopped.
 
 ## 9. Exit gate for this integration block
 
-The code block can be merged only after CI is green and explicit MTD. Real-machine acceptance remains separate evidence:
+The code block can be merged only after green CI, required exact-head review evidence, and `READY-MTD <exact-head-sha>` from `RELEASE_MANAGER`. The project's standing automatic MTD authorization may then execute the squash merge after immediate current-head revalidation; an explicit user `mtd` remains a scoped override, not a mandatory extra gate.
+
+Real-machine acceptance remains separate evidence:
 
 - full-track catalog second-pass zero recomputation;
 - >=99% readable full-track coverage or explained failures;

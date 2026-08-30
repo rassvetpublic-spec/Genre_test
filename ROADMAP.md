@@ -67,7 +67,7 @@ Product target:
 Core capabilities planned for v0.5:
 
 - versioned retrieval/model-output architecture;
-- isolated optional CLaMP 3 runtime until compatibility is proven;
+- selected isolated persistent Python 3.12 CLaMP 3 sidecar runtime (#27 complete);
 - MERT-compatible audio preprocessing;
 - track-level audio embeddings;
 - Russian/multilingual text embeddings;
@@ -123,7 +123,7 @@ P2 graduation/release:
 
 CLaMP 3 does **not** replace MAEST, AST, BPM/key DSP, AudioProfile, history, or Validation. Retrieval is optional and must fail independently.
 
-The official CLaMP 3 research environment differs materially from the released Genre_test core runtime. Initial work therefore assumes an isolated subprocess sidecar until #27 proves whether safer consolidation is possible.
+The official CLaMP 3 research environment differs materially from the released Genre_test core runtime. **#27 is complete:** the selected v0.5 architecture is an isolated persistent Python 3.12 subprocess sidecar; core-native CLaMP inference was intentionally not selected.
 
 Target-machine inventory on 2026-08-26 confirms:
 
@@ -136,7 +136,7 @@ CUDA 13.0
 native sm_120 compiled
 ```
 
-Therefore the first real sidecar experiment uses a **modern Blackwell-capable Python 3.12 route**. The old upstream Python 3.10/CUDA 11.8 recipe remains reference evidence, not the desired production GPU path.
+The selected sidecar uses the **modern Blackwell-capable Python 3.12 route**. The old upstream Python 3.10/CUDA 11.8 recipe remains reference evidence, not the production GPU path.
 
 ### Critical license rule
 
