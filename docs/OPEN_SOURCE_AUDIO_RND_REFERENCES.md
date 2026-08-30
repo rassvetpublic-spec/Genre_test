@@ -5,84 +5,118 @@ Snapshot date: **2026-08-30**
 
 ## Purpose
 
-This document records external open-source projects that may be useful for controlled experiments around AI-audio artifacts, vocoder signatures, provenance/watermark robustness, audio-quality forensics, adversarial detector robustness, and restoration/super-resolution.
+This document records external projects and services useful for controlled experiments around AI-audio artifacts, vocoder signatures, provenance/watermark robustness, audio-quality forensics, detector robustness, adversarial evaluation and restoration/super-resolution.
 
 These projects are references and test candidates only. Their claims must not become `Genre_test` assumptions without independent reproduction on project-owned fixtures. Original/bypass output remains a valid winner in any repair experiment.
 
+## Coverage rule — do not silently drop discovered candidates
+
+Every detector, provenance checker, forensic analyzer, watermark implementation, adversarial-evaluation implementation or relevant signal-transform source discovered during Genre_test research must enter the research ledger, even when it is not immediately runnable.
+
+Each discovered item must have one of these explicit states:
+
+`DISCOVERED -> VERIFIED_SOURCE -> READY_TO_TEST -> TESTED -> RETESTED_AFTER_DEFENSE`
+
+or an explicit blocking state such as:
+
+`NOT_RUN_ACCESS`, `NOT_RUN_DEPENDENCY`, `NOT_RUN_DATASET`, `NOT_RUN_AUTHORIZATION_OR_TERMS`, `REJECTED_NOT_RELEVANT`, `SUPERSEDED`.
+
+A candidate may not disappear from later summaries merely because another repository bundles a similar model. Detector architectures and attack implementations are tracked separately when they can provide distinct evidence.
+
 ## Research objective: detector robustness and defense adaptation
 
-`Genre_test` treats detector bypass techniques as an **adversarial research instrument for protection/process adaptation**, not as a standalone production evasion feature.
+`Genre_test` treats detector-bypass techniques as an **adversarial research instrument for protection/process adaptation**, not as a standalone production-evasion feature.
 
-The research objective is to:
+The research objective is to measure detector/provenance robustness, identify brittle decision boundaries, reproduce controlled failures, and feed those failures into hardening, calibration and validation changes.
 
-- measure how reliably detectors, provenance systems and QC classifiers survive realistic transformations and adversarial perturbations;
-- identify failure modes, blind spots and brittle decision boundaries;
-- study attack/defense adaptation cycles on controlled fixtures;
-- use successful bypass cases as evidence that a detector or protection mechanism needs hardening;
-- derive more robust detection, calibration, provenance and validation procedures from those failures.
+Preferred loop:
 
-Accordingly, a successful detector bypass in a controlled experiment is a **robustness finding**, not an end-state deliverable. The project should preserve the perturbation, detector response, audibility/content-change measurements and proposed defensive countermeasure as part of the experiment record.
+`baseline detector -> controlled adversarial/transform test -> characterize failure -> adapt defense/calibration -> retest clean + challenged fixtures`
 
-## Repository overview
+Required experiment evidence includes detector version/identity, immutable source hash, transform identity, clean and challenged scores, false-positive/false-negative movement, audibility/content-change measurements, and the defensive change proposed in response.
 
-| Repository / project | Canonical repository | Verified role / technology | Genre_test use |
+## Open-source repository ledger
+
+| Repository / project | Canonical repository | Verified role / technology | Genre_test status / use |
 |---|---|---|---|
-| `geeknik/mmm` (formerly associated with `ai-audio-fingerprint-remover`) | https://github.com/geeknik/mmm | Python CLI for metadata stripping, watermark-pattern disruption, spectral perturbation, forensic analysis and lossy sanitization of MP3/WAV/FLAC. README explicitly describes AI-watermark detection classes and spectral/statistical sanitization. | **Research-only adversarial/provenance robustness fixture.** Use to test whether detectors or QC metrics are fragile under benign-looking spectral/metadata transforms. A successful disruption is evidence for hardening the protection/detection process. |
-| `Angel2mp3/AudioAuditor` | https://github.com/Angel2mp3/AudioAuditor | Open-source Windows/.NET audio-analysis application. README advertises fake-lossless detection, clipping/cutoff analysis, spectrogram tools and AI-generated-audio detection. | Candidate source for forensic heuristics and cross-check fixtures. Validate each heuristic independently before use. |
-| `charactr-platform/vocos` → current upstream `gemelo-ai/vocos` | https://github.com/gemelo-ai/vocos | Fourier-based neural vocoder. Current configs use an `ISTFTHead`; pretrained mel and EnCodec models are available. | Reference vocoder for controlled resynthesis experiments and for studying whether Fourier-domain synthesis produces different artifact families from transposed-convolution vocoders. Do not assume that iSTFT synthesis is artifact-free. |
-| `NVIDIA/BigVGAN` | https://github.com/NVIDIA/BigVGAN | PyTorch neural vocoder using Snake/SnakeBeta periodic activations and alias-free activation modules; repository references anti-aliasing filters and provides 22/24/44 kHz checkpoints. | Reference vocoder for artifact-family comparisons, aliasing tests and synthetic-control generation. Useful as a contrast to Vocos-style iSTFT reconstruction. |
-| `piotrkawa/audio-deepfake-adversarial-attacks` | https://github.com/piotrkawa/audio-deepfake-adversarial-attacks | Research code for adversarial robustness of audio-deepfake detectors. README lists FGSM, FAB, PGD, PGDL2, OnePixel and CW attacks and models including RawNet3-related configurations. | Primary reference for controlled attack/defense adaptation studies: quantify detector sensitivity, reproduce failure modes, then evaluate defensive hardening and recalibration. |
-| `facebookresearch/audioseal` | https://github.com/facebookresearch/audioseal | Meta AudioSeal: localized audio watermark generator/detector with sample-level detection and streaming support. | Positive-control watermark system for provenance experiments, localization metrics, codec/edit robustness and detector calibration. Particularly useful because the watermark generator and detector are both available. |
-| `haoheliu/versatile_audio_super_resolution` (AudioSR) | https://github.com/haoheliu/versatile_audio_super_resolution | Diffusion-based versatile audio super-resolution to 48 kHz. Repository documents reconstruction limitations and sensitivity to unfamiliar cutoff patterns. | Candidate restoration/resynthesis baseline for testing whether generative super-resolution improves perceived HF quality or instead hallucinates/changes musical content. Must be judged with delta listening, loudness-matched A/B and content-retention QC. |
+| `geeknik/mmm` | https://github.com/geeknik/mmm | Python CLI for metadata stripping, watermark-pattern disruption, spectral perturbation, forensic analysis and lossy sanitization. | `VERIFIED_SOURCE`; controlled provenance/watermark robustness fixture. |
+| `Angel2mp3/AudioAuditor` | https://github.com/Angel2mp3/AudioAuditor | Windows/.NET audio-analysis app; fake-lossless, clipping/cutoff, spectrogram and AI-generated-audio analysis are advertised upstream. | `VERIFIED_SOURCE`; forensic-heuristic cross-check. |
+| `gemelo-ai/vocos` (`charactr-platform/vocos` upstream moved) | https://github.com/gemelo-ai/vocos | Fourier/iSTFT neural vocoder. | `VERIFIED_SOURCE`; matched resynthesis and artifact-family control. |
+| `NVIDIA/BigVGAN` | https://github.com/NVIDIA/BigVGAN | PyTorch vocoder with Snake/SnakeBeta and alias-free activation modules. | `VERIFIED_SOURCE`; vocoder/aliasing comparison control. |
+| `piotrkawa/audio-deepfake-adversarial-attacks` | https://github.com/piotrkawa/audio-deepfake-adversarial-attacks | Defense/adversarial-evaluation research code; upstream README exposes LCNN, SpecRNet and RawNet3 configs plus FGSM, FAB, PGD, PGDL2, OnePixel and CW handling. | `VERIFIED_SOURCE`; primary controlled attack-defense benchmark source. |
+| `piotrkawa/attack-agnostic-dataset` | https://github.com/piotrkawa/attack-agnostic-dataset | Upstream dependency/baseline used by the adversarial-defense repository. | `DISCOVERED`; inspect as benchmark/data/evaluation dependency rather than silently inheriting it through the parent repo. |
+| `Jungjee/RawNet` / RawNet3 | https://github.com/Jungjee/RawNet | Raw-waveform speaker/audio representation implementation referenced directly by the adversarial-defense repository. | `VERIFIED_SOURCE`; detector/model-family baseline to track independently. |
+| `clovaai/aasist` | https://github.com/clovaai/aasist | Official public AASIST repository for audio anti-spoofing. | `VERIFIED_SOURCE`; independent detector baseline; must be tested separately from RawNet3/SpecRNet. |
+| `facebookresearch/audioseal` | https://github.com/facebookresearch/audioseal | Localized audio watermark generator/detector with sample-level detection. | `VERIFIED_SOURCE`; positive-control provenance/watermark robustness benchmark. |
+| `haoheliu/versatile_audio_super_resolution` (AudioSR) | https://github.com/haoheliu/versatile_audio_super_resolution | Diffusion-based audio super-resolution to 48 kHz. | `VERIFIED_SOURCE`; restoration/resynthesis transform candidate with content-retention QC. |
+| `henricksmedia/shimmer` | https://github.com/henricksmedia/shimmer | AI-audio cleanup/mastering reference with Removed/Delta audition, loudness-matched A/B and selective HF cleanup concepts. | `VERIFIED_SOURCE`; artifact-cleanup transform/control; already has dedicated `docs/SHIMMER_EXTERNAL_REFERENCE.md`. |
 
-## Claims that require independent verification before project use
+### Detector families explicitly not to collapse into one row
 
-The following ideas are useful hypotheses but are **not recorded as verified Genre_test facts** merely because they appeared in external summaries:
+The adversarial-defense code exposes `lcnn`, `specrnet` and `rawnet3` configurations. These count as distinct detector families for the benchmark even when exercised through one repository. AASIST is also a distinct detector baseline and must not be considered covered merely because another anti-spoofing model was tested.
 
-- exact `mmm` implementation details such as a specifically named **Phase Jitter** stage, PSD-normalization formulae, or mandatory PyTorch/CuPy GPU paths;
-- exact `AudioAuditor` use of **2D FFT spectral-comb detection** as a Suno/Udio-specific classifier;
-- the statement that Vocos *principally excludes* all deconvolution-comb artifacts — Vocos avoids a HiFi-GAN-style waveform generator path, but this does not prove absence of periodic or spectral artifacts in generated output;
-- the statement that BigVGAN simply “filters all mirrored frequencies above Nyquist” — its alias-free design is relevant, but artifact behavior must be measured rather than inferred from architecture;
-- the claim that AudioSR necessarily “restores natural phase microstructure”; diffusion-based reconstruction may synthesize plausible detail, but fidelity to the original musical microstructure is an empirical question.
+Minimum local detector matrix currently recorded:
 
-## Proposed controlled test families
+- LCNN/LFCC path from `piotrkawa/audio-deepfake-adversarial-attacks`;
+- SpecRNet path from that repository;
+- RawNet3 path plus `Jungjee/RawNet` upstream identity;
+- AASIST from `clovaai/aasist`;
+- AudioAuditor AI-generated-audio heuristics;
+- AudioSeal detector for watermark/provenance rather than generic human-vs-AI classification.
 
-### 1. Vocoder artifact family benchmark
+## External AI-music detector services already discovered elsewhere in Genre_test
 
-Generate or resynthesize matched fixtures through Vocos and BigVGAN, then compare spectral periodicity / comb metrics, HF energy distribution and alias-like components, transient preservation, phase/coherence statistics, codec survival, and subjective loudness-matched A/B.
+A prior research branch/PR already recorded external detector services in `docs/research/EXTERNAL_AI_MUSIC_DETECTORS.md`. They were missing from the first version of this ledger and are now explicitly cross-recorded so they cannot be lost from the test backlog.
 
-The goal is not to label one architecture “clean”; it is to identify which metrics distinguish artifact families without overfitting to a single generator.
+| Service | Public entry point | Ledger state |
+|---|---|---|
+| authio / Forward Digital AI Music Checker | https://authio.io/ai-music-checker | `DISCOVERED`; external comparison candidate. |
+| ACRCloud AI Music Detector | https://acrcloud.com/ai-music-detector/ | `DISCOVERED`; external comparison/API candidate. |
+| IRCAM Amplify AIMD | https://www.ircamamplify.com/ | `DISCOVERED`; access-dependent external validation candidate. |
+| Pex / Vobile AI Song Detector | https://pex.com/ai-song-detector/ | `DISCOVERED`; enterprise/demo/API external validation candidate. |
+| Detector24 AI Music Detection | https://detector24.ai/products/ai-music-detection | `DISCOVERED`; account/API external score comparison. |
+| PesneGen | https://pesnegen.ru/analiz-treka-online | `DISCOVERED`; public-upload external analysis candidate. |
 
-### 2. Provenance and watermark robustness benchmark
+External-service runs remain subject to the disclosure/authorization/terms gate recorded in the dedicated detector reference. If a fixture cannot legally or appropriately be uploaded, record `NOT_RUN_AUTHORIZATION_OR_TERMS` rather than omitting the service.
 
-Use AudioSeal as a known positive-control watermark system. Apply ordinary delivery transforms such as resampling, common codecs and gain changes, and measure detector localization/robustness.
+## Claims requiring independent verification
 
-`mmm` may be included as a **research adversarial transform source** to test whether provenance metrics fail under spectral/metadata perturbations. Successful disruption should feed directly into defense adaptation: document the failure mode, characterize perceptual/content impact, then evaluate hardening or alternate provenance checks.
+The following remain hypotheses until reproduced from upstream code/tests or Genre_test fixtures:
 
-### 3. Detector robustness / attack-defense adaptation benchmark
+- exact `mmm` implementation details such as a specifically named Phase Jitter stage, PSD-normalization formulae, or mandatory PyTorch/CuPy GPU paths;
+- exact AudioAuditor use of 2D-FFT spectral-comb detection as a Suno/Udio-specific classifier;
+- any claim that Vocos is artifact-free because it uses iSTFT;
+- any claim that BigVGAN's alias-free architecture guarantees absence of mirrored/periodic artifacts;
+- any claim that AudioSR faithfully restores original phase/HF microstructure rather than synthesizing plausible detail.
 
-Use ideas from `audio-deepfake-adversarial-attacks` to test whether any future Genre_test AI-audio classifier is overly sensitive to small perturbations. Keep the experiment local, fixture-based and metric-driven. Required outputs should include clean accuracy, perturbed accuracy, confidence drift, false-positive/false-negative movement, perturbation audibility/content change, and the defensive change proposed in response.
+## Mandatory benchmark families
 
-The preferred loop is:
+### Detector baseline benchmark
 
-`baseline detector → controlled bypass attempt → characterize failure → adapt defense/calibration → retest clean + attacked fixtures`
+Run each locally available detector family independently on the same immutable clean control set. Record ROC/AUC where meaningful, thresholded confusion matrix, calibration/confidence distributions, generator/source-family breakdown and codec/mastering robustness.
 
-A bypass result is considered valuable when it exposes a reproducible weakness and enables a stronger protection/detection process.
+### Controlled attack-defense benchmark
 
-### 4. Forensic heuristic cross-check
+For locally controlled models, use the adversarial-defense research implementation to evaluate supported challenge methods and transferability under bounded experimental conditions. Results are durability findings: successful challenge cases must trigger a hardening/recalibration hypothesis and clean+challenged retest.
 
-Treat AudioAuditor as an external heuristic reference. Reproduce only individual measurable ideas such as effective cutoff, suspicious spectral periodicity or upsampling indicators and compare them against known-source fixtures.
+### Provenance/watermark benchmark
 
-No heuristic may be promoted to “Suno/Udio detector” status without a documented dataset, confusion matrix and cross-generator validation.
+Use AudioSeal as a known positive control. Exercise normal delivery transforms and controlled robustness challenges, measuring localization, detection confidence, false positives and survival.
 
-### 5. Generative restoration / AudioSR benchmark
+### Forensic-heuristic benchmark
 
-Compare original vs AudioSR-restored audio on deliberately bandwidth-limited or degraded fixtures. Include loudness-matched A/B, delta inspection where meaningful, spectral-distance metrics with energy normalization, transient retention, tonal/harmonic stability, mono/stereo consistency, listener preference and content-change flags.
+Exercise AudioAuditor-derived measurable features separately from learned classifiers. Do not label a heuristic a Suno/Udio detector without controlled dataset evidence and cross-generator validation.
 
-A perceptually brighter or more detailed output is not automatically a more faithful output.
+### Vocoder/artifact benchmark
+
+Compare matched Vocos/BigVGAN fixtures and native generator fixtures using spectral periodicity, HF energy, alias-like components, phase/coherence, transient retention, codec survival and loudness-matched listening.
+
+### Cleanup/restoration transform benchmark
+
+Include Shimmer-style cleanup and AudioSR as transformation candidates. Judge them by content retention, delta/Removed audition where applicable, transient safety, loudness-matched A/B and whether detector/provenance evidence changes as a side effect.
 
 ## Integration rule
 
-External repositories in this document are **sources of hypotheses, fixtures and benchmark methods**. They are not normative dependencies. Any implementation entering `Genre_test` must be independently justified by project measurements, reproducible tests and bypass/original comparison.
+External repositories and services are **sources of hypotheses, fixtures, baselines and benchmark methods**, not normative truth. Any implementation entering Genre_test must be justified by reproducible project measurements.
 
-For detector/provenance research, the project explicitly supports **controlled bypass research as part of an attack-defense adaptation cycle**. The durable project artifact is not the bypass alone, but the measured weakness plus the resulting improvement in protection, detection, calibration or validation.
+The research ledger is append-only in spirit: new candidates may be rejected, blocked or superseded, but they should not be silently forgotten. A research summary claiming broad detector/robustness coverage must reconcile itself against this ledger first.
