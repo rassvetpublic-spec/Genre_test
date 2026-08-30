@@ -17,6 +17,21 @@ It is not:
 - evidence of AI/generated origin;
 - permission to mix MFCC and CLaMP scores with arbitrary weights.
 
+## Source-of-knowledge registry
+
+The external evidence and its limits are tracked in [`MFCC_SOURCE_REGISTRY.md`](MFCC_SOURCE_REGISTRY.md).
+
+That registry separates:
+
+```text
+PRIMARY DOC / PRIMARY RESEARCH
+UPSTREAM CODE
+COMMUNITY OBSERVATION
+PROJECT DECISION
+```
+
+Reddit/community material is hypothesis-generating only. It cannot supply production thresholds, fusion weights, or scientific truth without project-owned validation.
+
 ## Baseline V1
 
 `mfcc-timbre78` uses only dependencies already present in Genre_test.
@@ -106,6 +121,8 @@ Representative-segment selection in #33 remains based on the versioned retrieval
 
 MFCC is potentially useful for structural novelty and timbral change-point evidence, but that is separate from this V1 full/segment fingerprint. #44 remains responsible for conservative tempo/structure change semantics.
 
+The source registry records Librosa examples for beat-synchronous MFCC aggregation and MFCC-based local path similarity as future research evidence only; they do not graduate automatically into #44 production logic.
+
 ## Relationship to #137
 
 MFCC temporal derivatives and trajectory statistics belong to #137, including experiments such as:
@@ -116,6 +133,15 @@ MFCC temporal derivatives and trajectory statistics belong to #137, including ex
 - trajectory acceleration statistics.
 
 Those signals must not be interpreted as AI-origin truth. #139 intentionally implements only the static timbral retrieval baseline.
+
+## Known review concerns before graduation
+
+PR #140 review identified two required follow-ups:
+
+1. **Gain dependence / MFCC coefficient 0** — otherwise identical audio at different levels may shift the vector direction. A level policy or coefficient-0 policy plus gain-variant tests is required before production use.
+2. **Extractor implementation identity** — Librosa/NumPy/SciPy version drift must not produce vectors that share a fingerprint unless compatibility is guaranteed. Pin implementation behavior/version or include the relevant identity in the backend fingerprint.
+
+These findings are recorded in `MFCC_SOURCE_REGISTRY.md` as part of the project knowledge trail.
 
 ## Expected storage cost
 
