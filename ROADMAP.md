@@ -34,7 +34,7 @@ Geekatplay org audit: [`docs/GEEKATPLAY_ORG_AUDIT.md`](docs/GEEKATPLAY_ORG_AUDIT
 
 Genre_test currently provides the core local music profiling and regression system:
 
-`\text
+`	ext
 Audio
   -> MAEST Discogs519 fine-style evidence
   -> AudioSet AST semantic evidence
