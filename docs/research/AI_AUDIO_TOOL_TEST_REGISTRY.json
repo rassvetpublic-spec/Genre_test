@@ -1,0 +1,237 @@
+{
+  "schema_version": 1,
+  "updated": "2026-08-30",
+  "purpose": "Machine-readable coverage ledger for AI-audio detection, provenance/watermark robustness, forensic analysis, controlled adversarial robustness evaluation, vocoder artifact benchmarking, restoration and cleanup references.",
+  "lifecycle": [
+    "DISCOVERED",
+    "SOURCE_VERIFIED",
+    "READY_TO_TEST",
+    "BLOCKED",
+    "TESTED",
+    "RETEST_REQUIRED",
+    "RETESTED_AFTER_DEFENSE",
+    "REJECTED"
+  ],
+  "required_result_fields": [
+    "fixture_id",
+    "source_sha256",
+    "tool_revision",
+    "test_mode",
+    "baseline_result",
+    "challenged_result",
+    "audibility_or_content_change",
+    "defense_or_followup",
+    "evidence_path"
+  ],
+  "entries": [
+    {
+      "id": "mmm",
+      "name": "geeknik/mmm",
+      "kind": ["forensics", "watermark_provenance", "controlled_adversarial_transform"],
+      "source": "https://github.com/geeknik/mmm",
+      "status": "SOURCE_VERIFIED",
+      "test_required": true,
+      "test_mode": "local_controlled",
+      "blocker": null,
+      "notes": "Use only as a controlled robustness transform source. Preserve perceptual/content impact and follow with defense/provenance retest."
+    },
+    {
+      "id": "audioauditor",
+      "name": "Angel2mp3/AudioAuditor",
+      "kind": ["forensics", "ai_audio_detection"],
+      "source": "https://github.com/Angel2mp3/AudioAuditor",
+      "status": "SOURCE_VERIFIED",
+      "test_required": true,
+      "test_mode": "local_controlled",
+      "blocker": null,
+      "notes": "Validate fake-lossless, cutoff and AI-audio heuristics separately; do not treat unverified 2D-FFT/Suno-specific claims as ground truth."
+    },
+    {
+      "id": "vocos",
+      "name": "gemelo-ai/vocos",
+      "kind": ["vocoder", "artifact_reference"],
+      "source": "https://github.com/gemelo-ai/vocos",
+      "status": "SOURCE_VERIFIED",
+      "test_required": true,
+      "test_mode": "local_controlled",
+      "blocker": null,
+      "notes": "Matched resynthesis benchmark against other vocoder families; measure spectral periodicity, HF behavior, phase/coherence and transients."
+    },
+    {
+      "id": "bigvgan",
+      "name": "NVIDIA/BigVGAN",
+      "kind": ["vocoder", "artifact_reference"],
+      "source": "https://github.com/NVIDIA/BigVGAN",
+      "status": "SOURCE_VERIFIED",
+      "test_required": true,
+      "test_mode": "local_controlled",
+      "blocker": null,
+      "notes": "Matched comparison with Vocos; alias-free design is a hypothesis source, not proof of artifact absence."
+    },
+    {
+      "id": "audio_deepfake_adversarial_attacks",
+      "name": "piotrkawa/audio-deepfake-adversarial-attacks",
+      "kind": ["detector", "controlled_adversarial_evaluation", "defense"],
+      "source": "https://github.com/piotrkawa/audio-deepfake-adversarial-attacks",
+      "status": "SOURCE_VERIFIED",
+      "test_required": true,
+      "test_mode": "local_controlled",
+      "blocker": null,
+      "notes": "Primary attack-defense benchmark source. Track clean vs challenged accuracy, confidence drift, FPR/FNR movement, audibility and defensive retest."
+    },
+    {
+      "id": "attack_agnostic_dataset",
+      "name": "piotrkawa/attack-agnostic-dataset",
+      "kind": ["dataset_pipeline", "controlled_adversarial_evaluation"],
+      "source": "https://github.com/piotrkawa/attack-agnostic-dataset",
+      "status": "SOURCE_VERIFIED",
+      "test_required": true,
+      "test_mode": "local_controlled",
+      "blocker": null,
+      "notes": "Use as supporting reproducibility/reference pipeline for adversarial detector evaluation."
+    },
+    {
+      "id": "rawnet3",
+      "name": "RawNet3 / Jungjee/RawNet family",
+      "kind": ["detector", "speaker_audio_model", "controlled_adversarial_evaluation"],
+      "source": "https://github.com/Jungjee/RawNet",
+      "status": "SOURCE_VERIFIED",
+      "test_required": true,
+      "test_mode": "local_controlled",
+      "blocker": null,
+      "notes": "Track separately from the containing adversarial-evaluation repository because detector-family behavior is an independent result."
+    },
+    {
+      "id": "aasist",
+      "name": "clovaai/aasist",
+      "kind": ["detector", "anti_spoofing", "controlled_adversarial_evaluation"],
+      "source": "https://github.com/clovaai/aasist",
+      "status": "SOURCE_VERIFIED",
+      "test_required": true,
+      "test_mode": "local_controlled",
+      "blocker": null,
+      "notes": "Independent detector-family benchmark; preserve exact checkpoint/config and dataset identity."
+    },
+    {
+      "id": "lcnn",
+      "name": "LCNN detector configuration",
+      "kind": ["detector", "controlled_adversarial_evaluation"],
+      "source": "https://github.com/piotrkawa/audio-deepfake-adversarial-attacks",
+      "status": "SOURCE_VERIFIED",
+      "test_required": true,
+      "test_mode": "local_controlled",
+      "blocker": null,
+      "notes": "Separate result row despite being exposed through the same repository."
+    },
+    {
+      "id": "specrnet",
+      "name": "SpecRNet detector configuration",
+      "kind": ["detector", "controlled_adversarial_evaluation"],
+      "source": "https://github.com/piotrkawa/audio-deepfake-adversarial-attacks",
+      "status": "SOURCE_VERIFIED",
+      "test_required": true,
+      "test_mode": "local_controlled",
+      "blocker": null,
+      "notes": "Separate result row despite being exposed through the same repository."
+    },
+    {
+      "id": "audioseal",
+      "name": "facebookresearch/audioseal",
+      "kind": ["watermark_provenance", "detector", "generator"],
+      "source": "https://github.com/facebookresearch/audioseal",
+      "status": "SOURCE_VERIFIED",
+      "test_required": true,
+      "test_mode": "local_controlled",
+      "blocker": null,
+      "notes": "Positive-control watermark system for localization, codec/edit robustness and calibration."
+    },
+    {
+      "id": "audiosr",
+      "name": "haoheliu/versatile_audio_super_resolution",
+      "kind": ["restoration", "super_resolution", "artifact_transform"],
+      "source": "https://github.com/haoheliu/versatile_audio_super_resolution",
+      "status": "SOURCE_VERIFIED",
+      "test_required": true,
+      "test_mode": "local_controlled",
+      "blocker": null,
+      "notes": "Judge with loudness-matched A/B, content-retention and delta-oriented QC; generated HF detail is not assumed faithful."
+    },
+    {
+      "id": "shimmer",
+      "name": "henricksmedia/shimmer",
+      "kind": ["cleanup", "artifact_analysis", "mastering_reference"],
+      "source": "https://github.com/henricksmedia/shimmer",
+      "status": "SOURCE_VERIFIED",
+      "test_required": true,
+      "test_mode": "local_controlled",
+      "blocker": null,
+      "notes": "Cross-reference docs/SHIMMER_EXTERNAL_REFERENCE.md. Test cleanup-before-mastering, Removed/Delta audition, loudness-matched A/B, HF Mid/Side cleanup and transient safety."
+    },
+    {
+      "id": "authio",
+      "name": "authio / Forward Digital AI Music Checker",
+      "kind": ["external_detector_service"],
+      "source": "https://authio.io/ai-music-checker",
+      "status": "BLOCKED",
+      "test_required": true,
+      "test_mode": "external_authorized_only",
+      "blocker": "Requires current terms/privacy review and an audio fixture explicitly authorized for third-party disclosure.",
+      "notes": "Record service/model revision or UNKNOWN and preserve returned score semantics."
+    },
+    {
+      "id": "acrcloud_ai_music_detector",
+      "name": "ACRCloud AI Music Detector",
+      "kind": ["external_detector_service"],
+      "source": "https://acrcloud.com/ai-music-detector/",
+      "status": "BLOCKED",
+      "test_required": true,
+      "test_mode": "external_authorized_only",
+      "blocker": "Requires access plus current terms/privacy review and an authorized disclosure fixture.",
+      "notes": "Do not treat vendor output as ground truth."
+    },
+    {
+      "id": "ircam_amplify_aimd",
+      "name": "IRCAM Amplify AIMD",
+      "kind": ["external_detector_service"],
+      "source": "https://www.ircamamplify.com/",
+      "status": "BLOCKED",
+      "test_required": true,
+      "test_mode": "external_authorized_only",
+      "blocker": "Requires service access plus current terms/privacy review and an authorized disclosure fixture.",
+      "notes": "Preserve product/revision identity when exposed."
+    },
+    {
+      "id": "pex_vobile_ai_song_detector",
+      "name": "Pex / Vobile AI Song Detector",
+      "kind": ["external_detector_service"],
+      "source": "https://pex.com/ai-song-detector/",
+      "status": "BLOCKED",
+      "test_required": true,
+      "test_mode": "external_authorized_only",
+      "blocker": "Requires enterprise/demo/API access plus current terms/privacy review and an authorized disclosure fixture.",
+      "notes": "External disagreement is benchmark evidence, not majority-vote truth."
+    },
+    {
+      "id": "detector24",
+      "name": "Detector24 AI Music Detection",
+      "kind": ["external_detector_service"],
+      "source": "https://detector24.ai/products/ai-music-detection",
+      "status": "BLOCKED",
+      "test_required": true,
+      "test_mode": "external_authorized_only",
+      "blocker": "Requires current access/terms/privacy review and an authorized disclosure fixture.",
+      "notes": "Preserve exact access date and returned verdict semantics."
+    },
+    {
+      "id": "pesnegen",
+      "name": "PesneGen online track analysis",
+      "kind": ["external_detector_service", "external_forensics"],
+      "source": "https://pesnegen.ru/analiz-treka-online",
+      "status": "BLOCKED",
+      "test_required": true,
+      "test_mode": "external_authorized_only",
+      "blocker": "Requires current terms/privacy review and an authorized disclosure fixture.",
+      "notes": "Accessible external comparison candidate; raw/structured output should be retained only when terms permit."
+    }
+  ]
+}
