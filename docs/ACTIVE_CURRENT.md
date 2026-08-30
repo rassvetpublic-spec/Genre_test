@@ -78,7 +78,9 @@ Retrieval, repair and mastering work may not silently change these outputs witho
 
 Stable core runtime:
 
-- Python 3.11 / 3.12 / 3.13 x64;
+- **Python 3.13 x64 primary**;
+- Python 3.12 x64 supported fallback;
+- Python 3.11 unsupported;
 - PyTorch 2.12.1;
 - NVIDIA CUDA 13.0 / cu130;
 - RTX 5070 Ti / `sm_120` proven on the target workstation;
@@ -249,11 +251,19 @@ Current governance baseline:
 - GitHub Ruleset: `Protect main`, enforcement `active`, applies to the default branch;
 - direct updates require a Pull Request;
 - merge method allowed by the Ruleset: squash only;
-- required status checks: `test (3.11)`, `test (3.12)`, `test (3.13)`;
+- live required status contexts remain `test (3.11)`, `test (3.12)`, `test (3.13)` during the ruleset migration;
+- `test (3.11)` is now a lightweight **retirement sentinel** that verifies Python 3.11 is rejected; it does not install or execute Python 3.11;
+- `test (3.12)` runs compatibility pytest only;
+- `test (3.13)` is the primary full quality/runtime-contract + pytest gate;
+- docs-only PRs keep the required contexts but skip Python setup, Ruff and pytest after a lightweight diff/whitespace preflight;
+- superseded PR CI is cancelled through workflow concurrency;
+- merge-to-main no longer repeats the full matrix; it runs only a lightweight Python 3.13 merged-tree smoke;
 - strict required-status-check policy is enabled;
 - deletion and non-fast-forward updates are blocked;
 - no Ruleset bypass actors are configured;
 - the repository also retains `.githooks/pre-push` as a local defense-in-depth guard.
+
+The legacy `test (3.11)` context name cannot be removed from the live GitHub ruleset through the currently available repository connector because that connector exposes ruleset reads but not administration writes. Removing that label is a governance migration only; it is no longer part of the supported runtime matrix.
 
 Repository-owned governance configuration/check tooling lives under `config/github/`, `scripts/github-*.ps1`, and `CHECK_GOVERNANCE.cmd`.
 
