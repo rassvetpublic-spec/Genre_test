@@ -1,7 +1,7 @@
 # MFCC Timbral Retrieval Baseline
 
-Status: **benchmark-only / v0.5 P1**  
-Issue: **#139**  
+Status: **benchmark-only / v0.5 P1**
+Issue: **#139**
 Related: **#33, #36, #44, #137**
 
 ## Purpose
