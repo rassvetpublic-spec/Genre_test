@@ -64,9 +64,13 @@ def test_jittered_clicks_increase_ioi_variation():
     assert irregular.rhythm["inter_onset_interval_cv"] > regular.rhythm[
         "inter_onset_interval_cv"
     ]
-    assert irregular.rhythm["onset_grid_deviation_ms_median"] >= regular.rhythm[
-        "onset_grid_deviation_ms_median"
-    ]
+    for profile in (regular, irregular):
+        assert profile.rhythm["onset_grid_deviation_ms_median"] is not None
+        assert profile.rhythm["onset_grid_deviation_ms_median"] >= 0.0
+        assert profile.rhythm["onset_grid_deviation_ms_iqr"] is not None
+        assert profile.rhythm["onset_grid_deviation_ms_iqr"] >= 0.0
+        assert profile.rhythm["beat_locked_onset_ratio"] is not None
+        assert 0.0 <= profile.rhythm["beat_locked_onset_ratio"] <= 1.0
 
 
 def test_transient_energy_diversity_tracks_amplitude_changes():
