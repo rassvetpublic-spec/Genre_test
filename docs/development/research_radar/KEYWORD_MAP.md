@@ -2,6 +2,8 @@
 
 # Keyword Map (generated view)
 
+Canonical research keyword/topic semantics live in `../../research/data/RADAR_TOPICS.json`.
+
 | Topic | Status | Keywords | Exclusions |
 |---|---|---|---|
 | `retrieval-evaluation` | `ACTIVE` | music retrieval, audio retrieval, Recall@K, MRR, nDCG, hard negatives, segment retrieval | generic recommendation systems without audio relevance |
