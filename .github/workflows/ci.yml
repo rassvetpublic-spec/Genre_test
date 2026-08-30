@@ -288,8 +288,8 @@ jobs:
         if: needs.preflight.outputs.full_suite != 'true' && matrix.python-version == '3.13'
         run: >-
           pytest -q
+          tests/test_*contract.py
           tests/test_repository_context.py
-          tests/test_github_governance_contract.py
           tests/test_release_bootstrap.py
           tests/mastering/test_ozone12_migration_contract.py
 
