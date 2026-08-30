@@ -1,0 +1,54 @@
+# Detached Phase 0 metadata pilot.
+# Source document is READ-ONLY in #169:
+# docs/mastering/ozone12/core/03_TRANSIENT_SUSTAIN_PROTOCOL.md
+#
+# This file is not live frontmatter and does not redefine mastering semantics.
+
+source_path: docs/mastering/ozone12/core/03_TRANSIENT_SUSTAIN_PROTOCOL.md
+knowledge_role: canonical_document
+
+proposed_frontmatter:
+  title: "Протокол Transient/Sustain для Ozone 12"
+  doc_type: protocol
+  area: mastering
+  status: canonical
+  summary: "Подтверждённая карта Transient/Sustain для Ozone 12 build 1331 и правила drum-forward, mono и codec safety."
+  tags:
+    - область/mastering
+    - тип/protocol
+    - статус/canonical
+  aliases:
+    - "Transient/Sustain Protocol"
+    - "T/S Protocol"
+  terms:
+    - Transient
+    - Sustain
+    - Ozone 12
+    - Dynamic EQ
+    - Stereo Imager
+    - mono compatibility
+    - codec audit
+  keywords_ru:
+    - транзиенты и сустейн
+    - атака и хвосты
+    - моно совместимость
+    - защита ударных в мастеринге
+  keywords_en:
+    - transient sustain processing
+    - drum-forward mastering
+    - mono compatibility
+    - codec audit
+  reader_level: expert
+  parent:
+    - docs/mastering/ozone12/README
+  depends_on:
+    - docs/mastering/ozone12/core/13_CONFIRMED_XML_SCHEMA_BUILD_1331
+
+pilot_observations:
+  doc_id_required: false
+  explicit_language_ru_required: false
+  empty_relations_needed: false
+  domain_specific_relation_required: false
+  notes:
+    - "Current generic relation set is sufficient for this mastering protocol pilot."
+    - "No audio/DSP semantics are changed by this detached metadata example."

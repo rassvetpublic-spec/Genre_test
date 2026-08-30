@@ -1,0 +1,49 @@
+# Detached Phase 0 metadata pilot.
+# Source document is READ-ONLY in #169:
+# docs/CLAMP3_ARCHITECTURE.md
+#
+# This file is not live frontmatter and is not a second source of product truth.
+
+source_path: docs/CLAMP3_ARCHITECTURE.md
+knowledge_role: canonical_document
+
+proposed_frontmatter:
+  title: "Архитектура семантического поиска CLaMP 3"
+  doc_type: architecture
+  area: retrieval
+  status: canonical
+  summary: "Архитектура CLaMP 3 retrieval: изолированный sidecar, model/output identity, embeddings и граница с Core Analyze."
+  tags:
+    - область/retrieval
+    - тип/architecture
+    - статус/canonical
+  aliases:
+    - "CLaMP 3 Retrieval Architecture"
+  terms:
+    - CLaMP 3
+    - MERT
+    - XLM-R
+    - embedding
+    - cosine similarity
+    - sidecar
+  keywords_ru:
+    - семантический поиск музыки
+    - аудио-текстовый поиск
+    - поиск похожих треков
+  keywords_en:
+    - audio-text retrieval
+    - music retrieval
+    - cross-modal music embedding
+  reader_level: expert
+  depends_on:
+    - docs/CLAMP3_RUNTIME
+    - docs/THIRD_PARTY_MODELS
+
+pilot_observations:
+  doc_id_required: false
+  explicit_language_ru_required: false
+  empty_relations_needed: false
+  radar_keyword_authority_created: false
+  notes:
+    - "Document-local keywords improve discovery but do not replace Research Radar RADAR_TOPICS.json."
+    - "Repository-relative relations are sufficient for the detached pilot."

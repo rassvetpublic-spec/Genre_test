@@ -1,0 +1,47 @@
+# Detached Phase 0 metadata pilot.
+# Source document is READ-ONLY in #169:
+# docs/ACTIVE_CURRENT.md
+#
+# This file is not live frontmatter and does not become current-state authority.
+
+source_path: docs/ACTIVE_CURRENT.md
+knowledge_role: canonical_document
+
+proposed_frontmatter:
+  title: "Текущее состояние Genre_test"
+  doc_type: status
+  area: project
+  status: canonical
+  summary: "Текущая версия, активный milestone, продуктовые границы и ссылки на live GitHub state."
+  tags:
+    - область/project
+    - тип/status
+    - статус/canonical
+  aliases:
+    - "ACTIVE / CURRENT"
+    - "Current Project State"
+  terms:
+    - CLaMP 3
+    - AudioProfile
+    - Ozone 12
+    - REAPER
+    - SUPERCOMBINE
+  keywords_ru:
+    - текущее состояние проекта
+    - активная версия
+    - активный milestone
+  keywords_en:
+    - current project state
+    - active milestone
+    - current architecture status
+  reader_level: intermediate
+  source_of_truth: true
+
+pilot_observations:
+  doc_id_required: false
+  explicit_language_ru_required: false
+  relations_required: false
+  empty_relations_needed: false
+  notes:
+    - "No typed relation is added merely to make the graph denser."
+    - "source_of_truth here describes this document's current-state authority; live GitHub Issues/PRs remain part of the authoritative current-state contract."
