@@ -107,6 +107,19 @@ def test_stale_generated_nodes_are_detected(tmp_path: Path) -> None:
     assert radar._stale_generated_files(set(), tmp_path) == [stale]
 
 
+def test_stale_compatibility_views_are_detected(tmp_path: Path) -> None:
+    stale = (
+        tmp_path
+        / "docs"
+        / "development"
+        / "research_radar"
+        / "OLD_GENERATED_VIEW.md"
+    )
+    stale.parent.mkdir(parents=True)
+    stale.write_text(f"{radar.MARKER}\n", encoding="utf-8")
+    assert radar._stale_generated_files(set(), tmp_path) == [stale]
+
+
 def test_manual_notes_reject_duplicate_marker_pairs() -> None:
     text = (
         f"{radar.MANUAL_START}\none\n{radar.MANUAL_END}\n"
