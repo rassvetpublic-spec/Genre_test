@@ -4,6 +4,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DONOR = ROOT / "docs" / "SHIMMER_EXTERNAL_REFERENCE.md"
 ARCHITECTURE = ROOT / "docs" / "SUPERCOMBINE_UI_ARCHITECTURE.md"
 TODO = ROOT / "docs" / "SUPERCOMBINE_SHIMMER_DONOR_TODO.md"
+COLD_START = ROOT / "docs" / "REPOSITORY_COLD_START.md"
 
 PUBLIC_DONOR_SHA = "ff8344ae1a77bd7eb5be46b55c83813e923d3d2c"
 OZONE_CORE_SHA256 = "9f165e9194797e1e6ba51d1d248dfb6d2a7f734df33c1265c70ddf0826117cc7"
@@ -71,3 +72,15 @@ def test_migration_backlog_covers_complete_workstation_path() -> None:
         "P8 — Project / Vault / Delivery",
     ):
         assert stage in todo
+
+
+def test_supercombine_workstation_is_discoverable_from_cold_start() -> None:
+    cold_start = _read(COLD_START)
+
+    assert "docs/SUPERCOMBINE_UI_ARCHITECTURE.md" in cold_start
+    assert "docs/SUPERCOMBINE_SHIMMER_DONOR_TODO.md" in cold_start
+    assert "P3 common #54-compatible A/B/X/Delta transport" in cold_start
+    assert cold_start.index("P3 common #54-compatible A/B/X/Delta transport") < cold_start.index(
+        "P5 Repair UI"
+    )
+    assert cold_start.index("P5 Repair UI") < cold_start.index("P7 Mastering UI")
