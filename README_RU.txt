@@ -16,7 +16,8 @@ Genre_test — упаковка portable
 -------------
 - Windows 10/11 x64
 - Windows PowerShell 5.1 для packaged bootstrap
-- Python 3.11 / 3.12 / 3.13 x64
+- Python 3.13 x64 — основной; Python 3.12 x64 — совместимый fallback
+- Python 3.11 не поддерживается
 - PyTorch 2.12.1
 - NVIDIA CUDA 13.0 / cu130 при использовании NVIDIA
 - CPU-only режим поддерживается

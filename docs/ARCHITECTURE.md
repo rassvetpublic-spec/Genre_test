@@ -297,7 +297,7 @@ Genre_test_START.cmd
 
 Current supported core runtime:
 
-- Python 3.11–3.13;
+- Python 3.12–3.13, with 3.13 as the primary/default runtime and 3.12 as the supported fallback;
 - PyTorch 2.12.1;
 - CUDA 13.0/cu130 on supported NVIDIA hardware;
 - CPU route supported;

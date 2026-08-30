@@ -51,7 +51,7 @@ Result schema: **4**.
 
 Supported Windows runtime:
 
-- Python 3.11 / 3.12 / 3.13 x64;
+- **Python 3.13 x64 primary**; Python 3.12 x64 supported fallback; Python 3.11 is not supported;
 - PyTorch 2.12.1;
 - NVIDIA: CUDA 13.0 / cu130;
 - Blackwell requires native active architecture; RTX 5070 Ti `sm_120` verified;
@@ -77,7 +77,7 @@ Clone/pull the repository and run:
 Genre_test_START.cmd
 ```
 
-The launcher prepares/updates the private project `.venv`, reuses compatible Python/PyTorch when possible and starts the GUI.
+The launcher prepares/updates the private project `.venv`, prefers Python 3.13 x64, accepts Python 3.12 x64 as a fallback, and starts the GUI. If neither supported Python is available, first-run setup installs Python 3.13 x64.
 
 `Genre_test_START.cmd` is the only supported user entry point for environment checks, dependency installation, optional retrieval runtime management and application startup. Scripts under `scripts/` are internal implementation details.
 
@@ -227,6 +227,11 @@ Omit `-CompareModes` for a faster Auto-only validation pass.
 
 The core analysis/runtime baseline remains covered by Windows ensemble,
 Validation, Safe Stop, CUDA/Blackwell, Ruff, pytest and PowerShell/runtime gates.
+GitHub CI uses Python 3.13 for the full quality/runtime-contract gate and Python
+3.12 for compatibility pytest. Documentation-only pull requests skip the heavy
+Python setup/Ruff/full-pytest path but still run lightweight repository contract
+tests on Python 3.13, and all required `test (...)` contexts fail closed if
+preflight fails. `main` receives only a lightweight post-merge 3.13 smoke.
 Those checks are development evidence and are not advertised as an active
 packaged release.
 

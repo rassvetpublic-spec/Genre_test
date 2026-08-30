@@ -28,10 +28,10 @@ function Get-CompatiblePython {
 
     $py = Get-Command py -ErrorAction SilentlyContinue
     if ($py) {
-        foreach ($selector in @('-3.13', '-3.12', '-3.11')) {
+        foreach ($selector in @('-3.13', '-3.12')) {
             try {
                 $v = (& $py.Source $selector -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}|{64 if sys.maxsize > 2**32 else 32}')" 2>$null | Select-Object -Last 1)
-                if ($LASTEXITCODE -eq 0 -and $v -match '^3\.(11|12|13)\|64$') {
+                if ($LASTEXITCODE -eq 0 -and $v -match '^3\.(12|13)\|64$') {
                     $version = ($v -split '\|')[0]
                     return [pscustomobject]@{ Exe=$py.Source; Prefix=@($selector); Version=$version; Display="py $selector" }
                 }
@@ -43,7 +43,7 @@ function Get-CompatiblePython {
     if ($python) {
         try {
             $v = (& $python.Source -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}|{64 if sys.maxsize > 2**32 else 32}')" 2>$null | Select-Object -Last 1)
-            if ($LASTEXITCODE -eq 0 -and $v -match '^3\.(11|12|13)\|64$') {
+            if ($LASTEXITCODE -eq 0 -and $v -match '^3\.(12|13)\|64$') {
                 $version = ($v -split '\|')[0]
                 return [pscustomobject]@{ Exe=$python.Source; Prefix=@(); Version=$version; Display=$python.Source }
             }
@@ -149,13 +149,13 @@ if (-not $runtime -and $InstallPython) {
         }
     }
     if (-not $wingetPath) { throw 'Python is missing and winget is unavailable.' }
-    Write-Host 'No compatible Python 3.11/3.12/3.13 x64 found. Installing Python 3.12 x64...'
-    & $wingetPath install --id Python.Python.3.12 --exact --architecture x64 --accept-package-agreements --accept-source-agreements
-    if ($LASTEXITCODE -ne 0) { throw 'Python 3.12 installation failed.' }
+    Write-Host 'No compatible Python 3.12/3.13 x64 found. Installing primary Python 3.13 x64...'
+    & $wingetPath install --id Python.Python.3.13 --exact --architecture x64 --accept-package-agreements --accept-source-agreements
+    if ($LASTEXITCODE -ne 0) { throw 'Python 3.13 installation failed.' }
     $runtime = Get-CompatiblePython
 }
 if (-not $runtime) {
-    throw 'Compatible Python 3.11/3.12/3.13 x64 not found. Run .\scripts\setup.ps1 -InstallPython.'
+    throw 'Compatible Python 3.12/3.13 x64 not found. Python 3.11 is unsupported. Run .\scripts\setup.ps1 -InstallPython.'
 }
 Write-Host "Using Python $($runtime.Version): $($runtime.Display)"
 
@@ -164,6 +164,18 @@ $venvPython = Join-Path $venvDir 'Scripts\python.exe'
 if ((Test-Path $venvDir) -and -not (Test-Path $venvPython)) {
     Write-Warning 'Broken .venv detected. Recreating it.'
     Remove-Item -Recurse -Force $venvDir
+}
+if (Test-Path $venvPython) {
+    try {
+        $venvVersion = (& $venvPython -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}|{64 if sys.maxsize > 2**32 else 32}')" 2>$null | Select-Object -Last 1)
+        if ($LASTEXITCODE -ne 0 -or $venvVersion -notmatch '^3\.(12|13)\|64$') {
+            Write-Warning "Existing .venv uses unsupported Python ($venvVersion). Recreating it with Python $($runtime.Version)."
+            Remove-Item -Recurse -Force $venvDir
+        }
+    } catch {
+        Write-Warning 'Existing .venv Python probe failed. Recreating it.'
+        Remove-Item -Recurse -Force $venvDir
+    }
 }
 if (-not (Test-Path $venvPython)) {
     Write-Host 'Creating virtual environment...'
@@ -237,5 +249,5 @@ Write-Host "`nRuntime check:"
 & $genreExe doctor
 if ($LASTEXITCODE -ne 0) { throw 'genre-test doctor failed.' }
 
-Write-Host "`nSetup complete: Python 3.11-3.13 x64 / PyTorch >=2.12.1 / CUDA 13.0 / native Blackwell when applicable."
+Write-Host "`nSetup complete: Python 3.13 x64 primary / Python 3.12 x64 fallback / PyTorch >=2.12.1 / CUDA 13.0 / native Blackwell when applicable."
 Write-Host "GUI: .\scripts\gui.ps1"

@@ -76,7 +76,8 @@ PyTorch + CUDA 11.8
 Genre_test core remains:
 
 ```text
-Python 3.11 / 3.12 / 3.13
+Python 3.13 primary/default
+Python 3.12 supported fallback
 PyTorch 2.12.1
 CUDA 13.0 / cu130
 Windows-first

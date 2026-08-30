@@ -6,7 +6,7 @@ Genre_test targets the following reproducible Windows GPU runtime:
 
 - PyTorch: **2.12.1** release baseline (`>=2.12.1` accepted by package metadata)
 - CUDA wheel runtime: **13.0** (`cu130`)
-- Windows/Python: Python 3.11 or 3.12 x64
+- Windows/Python: **Python 3.13 x64 primary**, Python 3.12 x64 supported fallback; Python 3.11 is not supported
 - NVIDIA architecture: Turing or newer for CUDA 13.0
 - Blackwell: native compiled architecture required when the active GPU reports Blackwell compute capability
 
@@ -43,6 +43,8 @@ If the active Blackwell GPU reports `sm_120` but the wheel does not contain `sm_
 
 ## Setup behavior
 
+`scripts/setup.ps1` probes Python 3.13 first and Python 3.12 second. If neither supported x64 runtime is present and installation is authorized, setup installs Python 3.13 x64. Python 3.11 is outside the active core support contract.
+
 `scripts/setup.ps1` probes the existing `.venv` before installing Torch.
 
 If all target conditions already pass, setup prints that the compatible runtime is present and skips the multi-gigabyte Torch reinstall.
@@ -57,11 +59,8 @@ CPU remains supported as a degraded mode. PyTorch >=2.12.1 CPU builds are accept
 
 ## CI
 
-Lightweight GitHub CI intentionally does not download the multi-gigabyte Torch CUDA wheel. CI gates:
+Lightweight GitHub CI intentionally does not download the multi-gigabyte Torch CUDA wheel. CI uses Python 3.13 as the primary quality/runtime-contract baseline and Python 3.12 only for compatibility pytest coverage. Static launcher/PowerShell/manifest/Ruff gates therefore run once instead of once per Python version.
 
-- package metadata requires `torch>=2.12.1`
-- PowerShell `setup.ps1` parses successfully
-- setup contains the `cu130` installation route
-- unit tests validate CUDA 13 rejection/acceptance and native Blackwell detection with mocked Torch runtime objects
+Documentation-only pull requests use the lightweight path: they skip heavy Python setup, Ruff and the full pytest suite, but run lightweight repository contract tests on Python 3.13. The required `test (...)` contexts propagate preflight failures instead of becoming non-blocking skips. After merge, `main` receives only a lightweight Python 3.13 merged-tree smoke instead of a second full compatibility suite.
 
 A real Windows Blackwell CUDA smoke remains required before publishing a packaged release.

@@ -49,7 +49,7 @@ The standalone checker is useful as historical evidence but is not a compatible 
 
 - the old `OZONE12_MASTERING_LAB` repository layout;
 - the frozen v1.3 distribution archive and its repository-specific SHA;
-- Python 3.12-only assumptions while Genre_test supports Python 3.11–3.13;
+- Python 3.12-only assumptions while Genre_test supports Python 3.12–3.13 (3.13 primary/default, 3.12 fallback);
 - old repository manifest/process-only scripts;
 - the retired `oz12_mastering_meter.py` implementation.
 

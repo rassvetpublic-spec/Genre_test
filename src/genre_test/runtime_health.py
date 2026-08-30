@@ -36,7 +36,7 @@ MIN_TORCH_VERSION = (2, 12, 1)
 TARGET_CUDA_PREFIX = "13.0"
 BLACKWELL_MAJOR_CAPABILITIES = {10, 11, 12}
 STATUS_ORDER = {"N/A": -1, "OK": 0, "WARN": 1, "FAIL": 2}
-MIN_PYTHON_VERSION = (3, 11)
+MIN_PYTHON_VERSION = (3, 12)
 MAX_PYTHON_VERSION_EXCLUSIVE = (3, 14)
 
 
@@ -113,7 +113,7 @@ def _python_component() -> RuntimeComponent:
         name="Python",
         status="OK" if supported else "FAIL",
         value=platform.python_version(),
-        details="Supported: >=3.11,<3.14",
+        details="Supported: >=3.12,<3.14",
         category="Core",
     )
 

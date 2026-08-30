@@ -89,7 +89,7 @@ function Test-PythonCandidate {
         if ($parts.Count -ne 2) { return $null }
         $version = [version]$parts[0]
         $bits = [int]$parts[1]
-        if ($version.Major -eq 3 -and $version.Minor -ge 11 -and $version.Minor -le 13 -and $bits -eq 64) {
+        if ($version.Major -eq 3 -and $version.Minor -ge 12 -and $version.Minor -le 13 -and $bits -eq 64) {
             return [pscustomobject]@{ Exe=[string]$Exe; PrefixArgs=@($PrefixArgs); Version=$version; Bits=$bits }
         }
     } catch {}
@@ -101,7 +101,7 @@ function Find-CompatiblePython {
     $py = Get-Command py.exe -ErrorAction SilentlyContinue
     if (-not $py) { $py = Get-Command py -ErrorAction SilentlyContinue }
     if ($py) {
-        foreach ($selector in @('-3.13', '-3.12', '-3.11')) {
+        foreach ($selector in @('-3.13', '-3.12')) {
             $found = Test-PythonCandidate -Exe $py.Source -PrefixArgs @($selector)
             if ($found) { return $found }
         }
@@ -116,15 +116,15 @@ function Find-CompatiblePython {
 }
 
 function Ensure-Python {
-    Write-Step 'Checking Python 3.11/3.12/3.13 x64'
+    Write-Step 'Checking Python 3.13 x64 primary / 3.12 x64 fallback'
     $runtime = Find-CompatiblePython
     if (-not $runtime) {
-        Write-Host 'Compatible Python was not found. Installing Python 3.12 x64...'
-        Invoke-WingetInstall -Id 'Python.Python.3.12' -UserScope
+        Write-Host 'Compatible Python was not found. Installing primary Python 3.13 x64...'
+        Invoke-WingetInstall -Id 'Python.Python.3.13' -UserScope
         Start-Sleep -Seconds 1
         $runtime = Find-CompatiblePython
     }
-    if (-not $runtime) { throw 'Compatible Python 3.11/3.12/3.13 x64 could not be prepared.' }
+    if (-not $runtime) { throw 'Compatible Python 3.12/3.13 x64 could not be prepared. Python 3.11 is unsupported.' }
     Write-Host "Python OK: $($runtime.Version) x64"
     Write-BootstrapLog "Python=$($runtime.Version) x64"
     return $runtime

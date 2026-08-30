@@ -66,7 +66,7 @@ Selected v0.5 design after #27 compatibility/isolation work:
 
 ```text
 Genre_test core process
-Python 3.11-3.13 / Torch 2.12.1 / cu130
+Python 3.12-3.13 / Torch 2.12.1 / cu130
         |
         | local machine-only subprocess protocol
         v
@@ -76,6 +76,8 @@ Python 3.12 / upstream-compatible dependency stack
         +--> MERT
         +--> CLaMP 3
 ```
+
+The core prefers/defaults to Python 3.13 and supports Python 3.12 as a fallback. Python 3.11 is not part of the active core support contract.
 
 Why the isolated persistent sidecar was selected:
 
