@@ -111,6 +111,47 @@ Obsidian-only human notes may be written only inside:
 
 The generator preserves that region.
 
+The Obsidian Vault root is the **repository root `Genre_test/`**, not
+`docs/obsidian/` and not `docs/research/obsidian/`.
+
+Directory ownership is federated inside that one Vault:
+
+```text
+docs/obsidian/
+    -> future project-wide Obsidian/knowledge control plane
+
+docs/research/obsidian/
+    -> generated Research Radar domain projection
+```
+
+The global Obsidian layer may link to Research Radar projection nodes but must
+not copy or independently edit Radar mutable state. Generated Research notes use
+globally unambiguous filenames:
+
+```text
+RESEARCH_HOME.md
+RESEARCH_STATE.md
+TOPICS/topic__<id>.md
+SOURCES/source__<id>.md
+```
+
+The Research-domain projection is therefore a view over canonical JSON, not an
+Obsidian-owned database:
+
+```text
+Git
+-> canonical process Markdown + canonical state JSON
+-> generator / validators
+-> generated Research Markdown
+-> Graph / Bases / CLI / Omnisearch
+```
+
+The direction is one-way for mutable Radar state: `JSON -> Markdown`.
+Bidirectional JSON/Markdown synchronization is not part of v2.
+
+Manual notes are annotations only. They may record hypotheses or human comments,
+but they do not override topic/source/run status stored in canonical JSON.
+
 Do not commit `.obsidian/` workspace settings as part of Radar state.
 
 ## 7. Compatibility facade
@@ -123,6 +164,10 @@ In particular, `RESEARCH_PROMPT.md` is no longer an independent giant prompt.
 It is a stable bootstrap entrypoint that instructs an external Researcher to
 load the canonical operating rules, Radar procedure and JSON state from current
 `main`.
+
+For research semantics, `KEYWORD_MAP.md` is a generated view of
+`docs/research/data/RADAR_TOPICS.json`; a second independently edited research
+keyword map is forbidden.
 
 ## 8. Completion rule
 
