@@ -1,0 +1,317 @@
+{
+  "schema": "genre-test-obsidian-knowledge-registry-v1",
+  "schema_version": 1,
+  "authority_scope": "knowledge_navigation_metadata_only",
+  "generation_direction": "JSON_TO_MARKDOWN",
+  "entries": [
+    {
+      "path": "README.md",
+      "title": "Genre_test — вход в проект",
+      "doc_type": "guide",
+      "area": "project",
+      "status": "active",
+      "summary": "Краткая точка входа в Genre_test: текущая версия, защищённый анализ, runtime, запуск и основные subsystem-направления.",
+      "tags": [
+        "область/project",
+        "тип/guide",
+        "статус/active"
+      ],
+      "aliases": [
+        "Genre_test"
+      ],
+      "terms": [
+        "AudioProfile",
+        "MAEST",
+        "AudioSet AST",
+        "CLaMP 3"
+      ],
+      "related": [
+        "docs/ACTIVE_CURRENT.md",
+        "docs/CLAMP3_ARCHITECTURE.md",
+        "docs/mastering/ozone12/README.md",
+        "docs/research/RESEARCH_RADAR.md"
+      ]
+    },
+    {
+      "path": "AGENTS.md",
+      "title": "Конституция агентов Genre_test",
+      "doc_type": "protocol",
+      "area": "agents",
+      "status": "canonical",
+      "summary": "Канонический governance-контракт ролей, authority, claim discipline, exact-head review и standing automatic MTD.",
+      "tags": [
+        "область/agents",
+        "тип/protocol",
+        "статус/canonical"
+      ],
+      "terms": [
+        "READY-MTD",
+        "QA_REVIEWER",
+        "AUDIO_SCIENCE",
+        "RELEASE_MANAGER"
+      ],
+      "source_of_truth": true,
+      "related": [
+        "docs/REPOSITORY_COLD_START.md",
+        "docs/ACTIVE_CURRENT.md"
+      ]
+    },
+    {
+      "path": "docs/ACTIVE_CURRENT.md",
+      "title": "Активное состояние Genre_test",
+      "doc_type": "status",
+      "area": "project",
+      "status": "active",
+      "summary": "Текущий development snapshot проекта, активный milestone, защищённые baseline и subsystem-состояние; live GitHub state остаётся обязательной проверкой.",
+      "tags": [
+        "область/project",
+        "тип/status",
+        "статус/active"
+      ],
+      "terms": [
+        "0.5.0.dev0",
+        "CLaMP 3",
+        "SUPERCOMBINE"
+      ],
+      "related": [
+        "README.md",
+        "docs/REPOSITORY_COLD_START.md"
+      ]
+    },
+    {
+      "path": "docs/REPOSITORY_COLD_START.md",
+      "title": "Cold-start восстановление контекста Genre_test",
+      "doc_type": "runbook",
+      "area": "agents",
+      "status": "canonical",
+      "summary": "Порядок восстановления project state из main и live GitHub без зависимости от истории чатов.",
+      "tags": [
+        "область/agents",
+        "тип/runbook",
+        "статус/canonical"
+      ],
+      "terms": [
+        "cold start",
+        "source of truth",
+        "task admission"
+      ],
+      "source_of_truth": true,
+      "depends_on": [
+        "AGENTS.md"
+      ],
+      "related": [
+        "docs/ACTIVE_CURRENT.md",
+        "docs/ARCHITECTURE.md"
+      ]
+    },
+    {
+      "path": "docs/CLAMP3_ARCHITECTURE.md",
+      "title": "Архитектура retrieval CLaMP 3",
+      "doc_type": "architecture",
+      "area": "retrieval",
+      "status": "canonical",
+      "summary": "Текущая v0.5 архитектура CLaMP 3 retrieval как optional persistent isolated sidecar без замены защищённого Core Analyze.",
+      "tags": [
+        "область/retrieval",
+        "тип/architecture",
+        "статус/canonical"
+      ],
+      "terms": [
+        "CLaMP 3",
+        "MERT",
+        "XLM-R",
+        "embedding",
+        "cosine similarity"
+      ],
+      "related": [
+        "docs/CLAMP3_RUNTIME.md",
+        "docs/THIRD_PARTY_MODELS.md"
+      ]
+    },
+    {
+      "path": "docs/research/RESEARCH_OPERATING_RULES.md",
+      "title": "Правила исследовательской работы Genre_test",
+      "doc_type": "protocol",
+      "area": "research",
+      "status": "canonical",
+      "summary": "Канонический operating contract для внешнего research: repository-first evidence, test-or-block и воспроизводимость.",
+      "tags": [
+        "область/research",
+        "тип/protocol",
+        "статус/canonical"
+      ],
+      "terms": [
+        "research evidence",
+        "test-or-block",
+        "robustness"
+      ],
+      "source_of_truth": true,
+      "related": [
+        "docs/research/RESEARCH_RADAR.md"
+      ]
+    },
+    {
+      "path": "docs/research/RESEARCH_RADAR.md",
+      "title": "Research Radar v2 Genre_test",
+      "doc_type": "runbook",
+      "area": "research",
+      "status": "canonical",
+      "summary": "Каноническая periodic research procedure, которая читает Radar JSON state и строит generated Markdown projection односторонне.",
+      "tags": [
+        "область/research",
+        "тип/runbook",
+        "статус/canonical"
+      ],
+      "terms": [
+        "Research Radar",
+        "JSON_TO_MARKDOWN",
+        "SOURCE_REGISTRY"
+      ],
+      "source_of_truth": true,
+      "depends_on": [
+        "AGENTS.md",
+        "docs/research/RESEARCH_OPERATING_RULES.md"
+      ]
+    },
+    {
+      "path": "docs/mastering/ozone12/README.md",
+      "title": "Подсистема мастеринга Ozone 12",
+      "doc_type": "architecture",
+      "area": "mastering",
+      "status": "canonical",
+      "summary": "Каноническая граница Ozone 12 внутри Genre_test: ownership shared QC против Ozone-specific XML/render logic и REAPER render host.",
+      "tags": [
+        "область/mastering",
+        "тип/architecture",
+        "статус/canonical"
+      ],
+      "terms": [
+        "Ozone 12 Advanced",
+        "REAPER",
+        "ElementChain",
+        "True Peak"
+      ],
+      "source_of_truth": true,
+      "related": [
+        "docs/mastering/ozone12/MIGRATION_FROM_OZONE12_MASTERING_LAB.md"
+      ]
+    },
+    {
+      "path": "docs/obsidian/PROPERTY_SCHEMA.md",
+      "title": "Схема Properties Genre_test",
+      "doc_type": "protocol",
+      "area": "project",
+      "status": "active",
+      "summary": "Phase 0 contract для human metadata, generated projections и ownership boundary Obsidian knowledge layer.",
+      "tags": [
+        "область/project",
+        "тип/protocol",
+        "статус/active"
+      ],
+      "terms": [
+        "Obsidian Properties",
+        "derived_index",
+        "canonical owner"
+      ],
+      "related": [
+        "docs/obsidian/TAG_TAXONOMY.md",
+        "docs/obsidian/RELATION_SCHEMA.md",
+        "docs/obsidian/PLUGIN_PROFILE.yaml"
+      ]
+    },
+    {
+      "path": "docs/obsidian/TAG_TAXONOMY.md",
+      "title": "Taxonomy тегов Genre_test",
+      "doc_type": "protocol",
+      "area": "project",
+      "status": "active",
+      "summary": "Controlled taxonomy, разделяющая document tags, technical terms, local keywords и Research Radar semantics.",
+      "tags": [
+        "область/project",
+        "тип/protocol",
+        "статус/active"
+      ],
+      "terms": [
+        "tags",
+        "terms",
+        "keywords",
+        "taxonomy"
+      ],
+      "depends_on": [
+        "docs/obsidian/PROPERTY_SCHEMA.md"
+      ]
+    },
+    {
+      "path": "docs/obsidian/RELATION_SCHEMA.md",
+      "title": "Typed relation schema Genre_test",
+      "doc_type": "protocol",
+      "area": "project",
+      "status": "active",
+      "summary": "Typed relation vocabulary для human-maintained knowledge без создания второго relation/state owner.",
+      "tags": [
+        "область/project",
+        "тип/protocol",
+        "статус/active"
+      ],
+      "terms": [
+        "parent",
+        "depends_on",
+        "implementation_of",
+        "supersedes",
+        "evidence_for"
+      ],
+      "depends_on": [
+        "docs/obsidian/PROPERTY_SCHEMA.md"
+      ]
+    },
+    {
+      "path": "docs/obsidian/PLUGIN_PROFILE.yaml",
+      "title": "Plugin-soft профиль Obsidian Genre_test",
+      "doc_type": "reference",
+      "area": "project",
+      "status": "active",
+      "summary": "Phase 0 профиль core/recommended/optional Obsidian capabilities и запретов на plugin-owned authority.",
+      "tags": [
+        "область/project",
+        "тип/reference",
+        "статус/active"
+      ],
+      "terms": [
+        "Bases",
+        "Omnisearch",
+        "Breadcrumbs",
+        "Notebook Navigator",
+        "Smart Connections"
+      ],
+      "related": [
+        "docs/obsidian/PROPERTY_SCHEMA.md",
+        "docs/obsidian/CLI_POLICY.md"
+      ]
+    },
+    {
+      "path": "docs/obsidian/CLI_POLICY.md",
+      "title": "Политика Obsidian CLI Genre_test",
+      "doc_type": "runbook",
+      "area": "project",
+      "status": "active",
+      "summary": "Правила безопасного optional local использования Obsidian CLI без превращения GUI/CLI в CI или state authority.",
+      "tags": [
+        "область/project",
+        "тип/runbook",
+        "статус/active"
+      ],
+      "terms": [
+        "Obsidian CLI",
+        "SAFE_WRITE",
+        "DANGEROUS",
+        "Git"
+      ],
+      "depends_on": [
+        "docs/obsidian/PROPERTY_SCHEMA.md"
+      ],
+      "related": [
+        "docs/obsidian/PLUGIN_PROFILE.yaml"
+      ]
+    }
+  ]
+}
