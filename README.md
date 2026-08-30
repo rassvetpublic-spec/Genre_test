@@ -229,7 +229,9 @@ The core analysis/runtime baseline remains covered by Windows ensemble,
 Validation, Safe Stop, CUDA/Blackwell, Ruff, pytest and PowerShell/runtime gates.
 GitHub CI uses Python 3.13 for the full quality/runtime-contract gate and Python
 3.12 for compatibility pytest. Documentation-only pull requests skip the heavy
-Python suite, and `main` receives only a lightweight post-merge 3.13 smoke.
+Python setup/Ruff/full-pytest path but still run lightweight repository contract
+tests on Python 3.13, and all required `test (...)` contexts fail closed if
+preflight fails. `main` receives only a lightweight post-merge 3.13 smoke.
 Those checks are development evidence and are not advertised as an active
 packaged release.
 
