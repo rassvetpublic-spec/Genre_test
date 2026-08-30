@@ -255,7 +255,7 @@ Current governance baseline:
 - `test (3.11)` is now a lightweight **retirement sentinel** that verifies Python 3.11 is rejected; it does not install or execute Python 3.11;
 - `test (3.12)` runs compatibility pytest only;
 - `test (3.13)` is the primary full quality/runtime-contract + pytest gate;
-- docs-only PRs keep the required contexts but skip Python setup, Ruff and pytest after a lightweight diff/whitespace preflight;
+- docs-only PRs keep the required contexts, skip heavy Python setup/Ruff/full pytest, run lightweight repository contract tests on Python 3.13, and fail the required contexts if preflight fails;
 - superseded PR CI is cancelled through workflow concurrency;
 - merge-to-main no longer repeats the full matrix; it runs only a lightweight Python 3.13 merged-tree smoke;
 - strict required-status-check policy is enabled;
