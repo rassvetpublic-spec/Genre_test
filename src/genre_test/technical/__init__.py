@@ -17,11 +17,21 @@ from .mastering_metrics import (
     measure_transient_retention,
     overall_mono_retention,
 )
+from .temporal_structure import (
+    ALGORITHM_ID as TEMPORAL_STRUCTURE_ALGORITHM_ID,
+    TemporalStructureConfig,
+    TemporalStructureProfileV1,
+    analyze_temporal_structure,
+)
 
 __all__ = [
     "ALGORITHM_ID",
     "CODEC_SPECS",
     "MONO_BANDS",
+    "TEMPORAL_STRUCTURE_ALGORITHM_ID",
+    "TemporalStructureConfig",
+    "TemporalStructureProfileV1",
+    "analyze_temporal_structure",
     "compare_mastering_arrays",
     "compare_mastering_files",
     "correlation_lr",
