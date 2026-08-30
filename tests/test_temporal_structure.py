@@ -17,7 +17,7 @@ def _click_track(*, sr=22050, duration=8.0, jitter=None, amplitudes=None):
         amplitudes = np.ones(times.size, dtype=np.float64)
     click = np.hanning(256).astype(np.float32)
     for t, amplitude in zip(times, amplitudes, strict=True):
-        start = int(round(float(t) * sr))
+        start = round(float(t) * sr)
         y[start : start + click.size] += float(amplitude) * click
     return y
 
