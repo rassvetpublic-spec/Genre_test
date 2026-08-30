@@ -17,8 +17,8 @@ from .mastering_metrics import (
     measure_transient_retention,
     overall_mono_retention,
 )
+from .temporal_structure import ALGORITHM_ID as TEMPORAL_STRUCTURE_ALGORITHM_ID
 from .temporal_structure import (
-    ALGORITHM_ID as TEMPORAL_STRUCTURE_ALGORITHM_ID,
     TemporalStructureConfig,
     TemporalStructureProfileV1,
     analyze_temporal_structure,
