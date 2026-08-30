@@ -11,12 +11,14 @@ Record the evidence and selected reproducible way to run CLaMP 3 beside the Genr
 
 ```text
 Windows 11 x64
-Python >=3.11,<3.14
+Python >=3.12,<3.14 (3.13 primary/default; 3.12 supported fallback)
 PyTorch 2.12.1
 CUDA 13.0 / cu130 for NVIDIA
 RTX 5070 Ti / sm_120 verified
 CPU-only core route supported
 ```
+
+Python 3.11 is not part of the active core support contract. The isolated CLaMP sidecar remains pinned to Python 3.12.
 
 The core analysis environment remains independent from the optional CLaMP runtime.
 
