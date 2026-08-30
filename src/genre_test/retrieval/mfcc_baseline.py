@@ -19,21 +19,24 @@ N_CHROMA = 12
 N_CONTRAST_BANDS = 6  # librosa returns n_bands + 1 = 7 values
 EMBEDDING_DIM = 78
 TARGET_RMS = 0.1
+MIN_RMS_DBFS = -80.0
+MIN_RMS = 10.0 ** (MIN_RMS_DBFS / 20.0)
 EXTRACTOR_IMPLEMENTATION = (
     f"librosa-{librosa.__version__}-numpy-{np.__version__}-scipy-{scipy.__version__}"
 )
 PREPROCESSING_VERSION = (
     "mfcc20-chroma12-contrast7-meanstd-sr22050-mono-nfft2048-hop512-"
-    f"rms{TARGET_RMS:g}-{EXTRACTOR_IMPLEMENTATION}-v2"
+    f"rms{TARGET_RMS:g}-minrms{MIN_RMS_DBFS:g}dbfs-familyl2equal-"
+    f"{EXTRACTOR_IMPLEMENTATION}-v3"
 )
 
 
 def mfcc_baseline_info() -> RetrievalBackendInfo:
-    """Return the immutable identity of the model-free timbral baseline."""
+    """Return the immutable identity of the model-free acoustic baseline."""
 
     return RetrievalBackendInfo(
-        backend_name="mfcc-timbre78",
-        backend_version="2",
+        backend_name="mfcc-acoustic78",
+        backend_version="3",
         clamp_code_revision=None,
         clamp_weight_name=None,
         clamp_weight_sha256=None,
@@ -44,34 +47,51 @@ def mfcc_baseline_info() -> RetrievalBackendInfo:
         text_tokenizer_revision=None,
         preprocessing_version=PREPROCESSING_VERSION,
         embedding_dim=EMBEDDING_DIM,
-        normalization="l2",
+        normalization="family-l2-equal+global-l2",
     )
 
 
 def _normalize_analysis_level(samples: np.ndarray) -> np.ndarray:
-    """Normalize RMS so global gain does not masquerade as timbral distance."""
+    """Normalize usable audio to a fixed RMS analysis level."""
 
     rms = float(np.sqrt(np.mean(np.square(samples.astype(np.float64, copy=False)))))
-    if not np.isfinite(rms) or rms <= 1e-12:
-        raise ValueError("audio must contain measurable non-silent energy")
+    if not np.isfinite(rms) or rms < MIN_RMS:
+        raise ValueError(
+            f"audio must exceed minimum analysis RMS ({MIN_RMS_DBFS:g} dBFS)"
+        )
     scale = TARGET_RMS / rms
     return (samples * scale).astype(np.float32, copy=False)
 
 
-def extract_mfcc78(audio: np.ndarray, *, sample_rate: int = SAMPLE_RATE) -> np.ndarray:
-    """Extract a deterministic 78D MFCC/chroma/spectral-contrast fingerprint.
+def _normalize_feature_family(values: np.ndarray, *, name: str) -> np.ndarray:
+    """Give each handcrafted feature family equal norm before concatenation."""
 
-    This is a model-free *timbral retrieval benchmark* representation, not a
-    genre classifier and not a replacement for CLaMP/MERT semantic embeddings.
-    Input RMS is normalized before extraction so a pure gain change does not
-    alter the intended timbral representation.
+    block = np.asarray(values, dtype=np.float32)
+    if not np.all(np.isfinite(block)):
+        raise ValueError(f"{name} feature family produced non-finite values")
+    norm = float(np.linalg.norm(block))
+    if norm <= 0.0:
+        raise ValueError(f"{name} feature family produced a zero-norm block")
+    return (block / norm).astype(np.float32, copy=False)
+
+
+def extract_mfcc78(audio: np.ndarray, *, sample_rate: int = SAMPLE_RATE) -> np.ndarray:
+    """Extract a deterministic 78D handcrafted acoustic fingerprint.
+
+    The representation combines MFCC statistics, chroma statistics, and
+    spectral-contrast statistics. Because chroma carries pitch-class/harmonic
+    information, this is an acoustic baseline rather than a timbre-only axis.
+    Each feature-family block is L2-normalized before concatenation so the
+    families receive equal norm weight, then the complete vector is L2-normalized.
     """
 
     samples = np.asarray(audio, dtype=np.float32)
     if samples.ndim != 1:
         raise ValueError("MFCC baseline requires mono audio")
-    if sample_rate <= 0:
-        raise ValueError("sample_rate must be positive")
+    if sample_rate != SAMPLE_RATE:
+        raise ValueError(
+            f"MFCC baseline requires sample_rate={SAMPLE_RATE}, got {sample_rate}"
+        )
     if samples.size < N_FFT:
         raise ValueError(f"audio is too short for MFCC baseline: need >= {N_FFT} samples")
     if not np.all(np.isfinite(samples)):
@@ -109,14 +129,15 @@ def extract_mfcc78(audio: np.ndarray, *, sample_rate: int = SAMPLE_RATE) -> np.n
         linear=False,
     )
 
+    mfcc_stats = np.concatenate((mfcc.mean(axis=1), mfcc.std(axis=1)))
+    chroma_stats = np.concatenate((chroma.mean(axis=1), chroma.std(axis=1)))
+    contrast_stats = np.concatenate((contrast.mean(axis=1), contrast.std(axis=1)))
+
     vector = np.concatenate(
         (
-            mfcc.mean(axis=1),
-            mfcc.std(axis=1),
-            chroma.mean(axis=1),
-            chroma.std(axis=1),
-            contrast.mean(axis=1),
-            contrast.std(axis=1),
+            _normalize_feature_family(mfcc_stats, name="mfcc"),
+            _normalize_feature_family(chroma_stats, name="chroma"),
+            _normalize_feature_family(contrast_stats, name="spectral_contrast"),
         )
     ).astype(np.float32, copy=False)
 
@@ -180,6 +201,10 @@ class MFCCBaselineExtractor:
             raise ValueError("track_id must not be empty")
 
         audio, sample_rate = load_audio(path, sample_rate=SAMPLE_RATE)
+        if sample_rate != SAMPLE_RATE:
+            raise ValueError(
+                f"load_audio returned sample_rate={sample_rate}; expected {SAMPLE_RATE}"
+            )
         selected, scope = _slice_interval(
             audio,
             sample_rate=sample_rate,
