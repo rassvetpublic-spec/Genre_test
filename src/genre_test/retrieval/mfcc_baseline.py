@@ -153,8 +153,8 @@ def _slice_interval(
             f"segment end exceeds audio duration: end_s={end_s:.6f}, duration={duration_s:.6f}"
         )
 
-    start = int(round(start_s * sample_rate))
-    end = int(round(end_s * sample_rate))
+    start = round(start_s * sample_rate)
+    end = round(end_s * sample_rate)
     segment = audio[start:end]
     if segment.size < N_FFT:
         raise ValueError(f"segment is too short for MFCC baseline: need >= {N_FFT} samples")
