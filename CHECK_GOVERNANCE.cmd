@@ -5,6 +5,9 @@ cd /d "%~dp0"
 pwsh -NoProfile -ExecutionPolicy Bypass -File ".\scripts\github-settings.ps1" -Mode Check
 if errorlevel 1 exit /b %ERRORLEVEL%
 
+pwsh -NoProfile -ExecutionPolicy Bypass -File ".\scripts\github-rulesets.ps1" -Mode Check
+if errorlevel 1 exit /b %ERRORLEVEL%
+
 set "HOOKSPATH="
 for /f "usebackq delims=" %%H in (`git config --local --get core.hooksPath 2^>nul`) do set "HOOKSPATH=%%H"
 if /I not "%HOOKSPATH%"==".githooks" (
