@@ -1,6 +1,6 @@
 # MFCC Source-of-Knowledge Registry
 
-Status: **research evidence / Issue #139**  
+Status: **research evidence / Issue #139**
 Related: **#33, #36, #44, #137**
 
 ## Purpose
@@ -30,7 +30,7 @@ A Reddit comment or third-party implementation is not scientific ground truth. C
 
 ## S1 — `horacio/simil`: model-free music-similarity baseline
 
-Type: **UPSTREAM CODE**  
+Type: **UPSTREAM CODE**
 Source: https://github.com/horacio/simil
 
 Relevant behavior:
@@ -51,7 +51,7 @@ Genre_test use:
 
 ## S2 — Librosa MFCC API
 
-Type: **PRIMARY DOC**  
+Type: **PRIMARY DOC**
 Source: https://librosa.org/doc/main/api/generated/librosa.feature.mfcc.html
 
 Relevant facts:
@@ -69,7 +69,7 @@ Genre_test use:
 
 ## S3 — Essentia MFCC reference
 
-Type: **PRIMARY DOC**  
+Type: **PRIMARY DOC**
 Source: https://essentia.upf.edu/reference/streaming_MFCC.html
 
 Relevant facts:
@@ -95,7 +95,7 @@ Genre_test use:
 
 ## S4 — Librosa tutorial: MFCC deltas and beat-synchronous aggregation
 
-Type: **PRIMARY DOC**  
+Type: **PRIMARY DOC**
 Source: https://librosa.org/doc/0.10.2/tutorial.html
 
 Relevant example:
@@ -121,7 +121,7 @@ Boundary:
 
 ## S5 — Librosa Laplacian segmentation example
 
-Type: **PRIMARY DOC**  
+Type: **PRIMARY DOC**
 Source: https://librosa.org/doc/main/auto_tutorials/03-advanced/plot_segmentation.html
 
 Relevant behavior:
@@ -138,7 +138,7 @@ Genre_test use:
 
 ## S6 — Reddit r/audioengineering: CLAP + MFCC fusion requires a defined target
 
-Type: **COMMUNITY OBSERVATION**  
+Type: **COMMUNITY OBSERVATION**
 Source: https://www.reddit.com/r/audioengineering/comments/1rkldh7/audio_similarity_grading_question/
 
 Useful observation:
@@ -159,7 +159,7 @@ Benchmark CLaMP/MERT and MFCC independently in #36 before any score fusion. No R
 
 ## S7 — Reddit r/DSP: MFCC matching robustness under noise/hum
 
-Type: **COMMUNITY OBSERVATION**  
+Type: **COMMUNITY OBSERVATION**
 Source: https://www.reddit.com/r/DSP/comments/1j52go2
 
 Useful observation:
@@ -177,7 +177,7 @@ Boundary: speech verification is not music retrieval; this source motivates test
 
 ## S8 — Reddit r/MachineLearning: learned embeddings versus handcrafted audio features
 
-Type: **COMMUNITY OBSERVATION**  
+Type: **COMMUNITY OBSERVATION**
 Source: https://www.reddit.com/r/MachineLearning/comments/1chmi0e
 
 Useful observation:
@@ -195,8 +195,8 @@ Boundary: anecdotal and not a music-retrieval benchmark.
 
 ## S9 — GTZAN fault analysis
 
-Type: **PRIMARY RESEARCH**  
-Source: Bob L. Sturm, *The GTZAN dataset: Its contents, its faults, their effects on evaluation, and its future use*  
+Type: **PRIMARY RESEARCH**
+Source: Bob L. Sturm, *The GTZAN dataset: Its contents, its faults, their effects on evaluation, and its future use*
 URL: https://arxiv.org/abs/1306.1461
 
 Relevant findings:
