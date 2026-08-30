@@ -28,19 +28,27 @@ jobs:
         run: |
           set -euo pipefail
           git diff --check "$BASE_SHA" "$HEAD_SHA"
-          git diff --name-only --diff-filter=ACMRD "$BASE_SHA" "$HEAD_SHA" > changed_files.txt
+          git diff --name-status --diff-filter=ACMRD "$BASE_SHA" "$HEAD_SHA" > changed_files.txt
           cat changed_files.txt
 
           full_suite=false
-          while IFS= read -r path; do
-            case "$path" in
-              docs/*|*.md|*.txt)
-                ;;
-              *)
-                full_suite=true
-                break
-                ;;
-            esac
+          while IFS=$'\t' read -r status path1 path2; do
+            if [[ "$status" == D* ]]; then
+              full_suite=true
+              break
+            fi
+
+            for path in "$path1" "$path2"; do
+              [[ -z "$path" ]] && continue
+              case "$path" in
+                docs/*|*.md|*.txt)
+                  ;;
+                *)
+                  full_suite=true
+                  break 2
+                  ;;
+              esac
+            done
           done < changed_files.txt
 
           echo "full_suite=$full_suite" >> "$GITHUB_OUTPUT"
