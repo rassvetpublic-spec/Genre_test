@@ -50,7 +50,6 @@
         "AUDIO_SCIENCE",
         "RELEASE_MANAGER"
       ],
-      "source_of_truth": true,
       "related": [
         "docs/REPOSITORY_COLD_START.md",
         "docs/ACTIVE_CURRENT.md"
@@ -95,7 +94,6 @@
         "source of truth",
         "task admission"
       ],
-      "source_of_truth": true,
       "depends_on": [
         "AGENTS.md"
       ],
@@ -145,7 +143,6 @@
         "test-or-block",
         "robustness"
       ],
-      "source_of_truth": true,
       "related": [
         "docs/research/RESEARCH_RADAR.md"
       ]
@@ -167,7 +164,6 @@
         "JSON_TO_MARKDOWN",
         "SOURCE_REGISTRY"
       ],
-      "source_of_truth": true,
       "depends_on": [
         "AGENTS.md",
         "docs/research/RESEARCH_OPERATING_RULES.md"
@@ -191,7 +187,6 @@
         "ElementChain",
         "True Peak"
       ],
-      "source_of_truth": true,
       "related": [
         "docs/mastering/ozone12/MIGRATION_FROM_OZONE12_MASTERING_LAB.md"
       ]

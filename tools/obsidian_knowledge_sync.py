@@ -52,12 +52,18 @@ ALLOWED_ENTRY_KEYS = (
     REQUIRED_ENTRY_KEYS
     | OPTIONAL_LIST_KEYS
     | RELATION_KEYS
-    | {"reader_level", "source_of_truth", "language"}
+    | {"reader_level", "language"}
 )
+ALLOWED_ROOT_KEYS = {
+    "schema",
+    "schema_version",
+    "authority_scope",
+    "generation_direction",
+    "entries",
+}
 
 DEFAULT_REGISTRY = Path("docs/obsidian/KNOWLEDGE_REGISTRY.json")
 DEFAULT_OUTPUT = Path("docs/obsidian/KNOWLEDGE_INDEX.md")
-
 REGISTRY_SELF_PATH = DEFAULT_REGISTRY.as_posix()
 GENERATED_INDEX_PATH = DEFAULT_OUTPUT.as_posix()
 FORBIDDEN_RADAR_PREFIXES = (
@@ -82,6 +88,24 @@ def _safe_repo_path(raw: Any, *, field: str) -> PurePosixPath:
     if any(part in {"", "."} for part in path.parts):
         raise RegistryError(f"{field}: non-normalized path is forbidden: {raw!r}")
     return path
+
+
+def _resolved_inside_repo(repo_root: Path, path: Path, *, field: str) -> Path:
+    resolved_root = repo_root.resolve()
+    resolved_path = path.resolve(strict=False)
+    try:
+        resolved_path.relative_to(resolved_root)
+    except ValueError as exc:
+        raise RegistryError(f"{field}: resolved path escapes repository root: {path}") from exc
+    return resolved_path
+
+
+def _existing_repo_file(repo_root: Path, rel_path: PurePosixPath, *, field: str) -> Path:
+    candidate = repo_root.joinpath(*rel_path.parts)
+    resolved = _resolved_inside_repo(repo_root, candidate, field=field)
+    if not resolved.is_file():
+        raise RegistryError(f"{field}: referenced file does not exist: {rel_path.as_posix()}")
+    return resolved
 
 
 def _require_string(entry: dict[str, Any], key: str, label: str) -> str:
@@ -118,7 +142,48 @@ def load_registry(path: Path) -> dict[str, Any]:
     return data
 
 
+def _validate_supersession_graph(entries: list[dict[str, Any]]) -> None:
+    graph: dict[str, set[str]] = defaultdict(set)
+
+    for entry in entries:
+        source = entry["path"]
+        for target in entry.get("supersedes", []):
+            graph[source].add(target)
+        for successor in entry.get("superseded_by", []):
+            graph[successor].add(source)
+
+    visiting: set[str] = set()
+    visited: set[str] = set()
+    stack: list[str] = []
+
+    def visit(node: str) -> None:
+        if node in visited:
+            return
+        if node in visiting:
+            cycle_start = stack.index(node)
+            cycle = stack[cycle_start:] + [node]
+            raise RegistryError(f"supersession cycle is forbidden: {' -> '.join(cycle)}")
+
+        visiting.add(node)
+        stack.append(node)
+        for target in sorted(graph.get(node, set())):
+            visit(target)
+        stack.pop()
+        visiting.remove(node)
+        visited.add(node)
+
+    for node in sorted(graph):
+        visit(node)
+
+
 def validate_registry(data: dict[str, Any], repo_root: Path) -> list[dict[str, Any]]:
+    unknown_root = sorted(set(data) - ALLOWED_ROOT_KEYS)
+    if unknown_root:
+        raise RegistryError(f"unapproved registry root keys: {', '.join(unknown_root)}")
+    missing_root = sorted(ALLOWED_ROOT_KEYS - set(data))
+    if missing_root:
+        raise RegistryError(f"missing registry root keys: {', '.join(missing_root)}")
+
     if data.get("schema") != SCHEMA:
         raise RegistryError(f"schema must be {SCHEMA!r}")
     if data.get("schema_version") != 1:
@@ -127,11 +192,6 @@ def validate_registry(data: dict[str, Any], repo_root: Path) -> list[dict[str, A
         raise RegistryError(f"authority_scope must be {AUTHORITY_SCOPE!r}")
     if data.get("generation_direction") != GENERATION_DIRECTION:
         raise RegistryError(f"generation_direction must be {GENERATION_DIRECTION!r}")
-
-    allowed_root_keys = {"schema", "schema_version", "authority_scope", "generation_direction", "entries"}
-    unknown_root = sorted(set(data) - allowed_root_keys)
-    if unknown_root:
-        raise RegistryError(f"registry root has unsupported keys: {', '.join(unknown_root)}")
 
     entries = data.get("entries")
     if not isinstance(entries, list) or not entries:
@@ -145,13 +205,12 @@ def validate_registry(data: dict[str, Any], repo_root: Path) -> list[dict[str, A
         if not isinstance(raw_entry, dict):
             raise RegistryError(f"{label}: entry must be an object")
 
-        unknown_keys = sorted(set(raw_entry) - ALLOWED_ENTRY_KEYS)
-        if unknown_keys:
-            raise RegistryError(f"{label}: unsupported keys: {', '.join(unknown_keys)}")
-
         missing = sorted(REQUIRED_ENTRY_KEYS - raw_entry.keys())
         if missing:
             raise RegistryError(f"{label}: missing required keys: {', '.join(missing)}")
+        unknown = sorted(set(raw_entry) - ALLOWED_ENTRY_KEYS)
+        if unknown:
+            raise RegistryError(f"{label}: unapproved metadata keys: {', '.join(unknown)}")
 
         raw_path = _require_string(raw_entry, "path", label)
         rel_path = _safe_repo_path(raw_path, field=f"{label}.path")
@@ -167,9 +226,7 @@ def validate_registry(data: dict[str, Any], repo_root: Path) -> list[dict[str, A
             raise RegistryError(f"{label}.path: duplicate registry path: {path_text}")
         seen_paths.add(path_text)
 
-        absolute = repo_root.joinpath(*rel_path.parts)
-        if not absolute.is_file():
-            raise RegistryError(f"{label}.path: referenced file does not exist: {path_text}")
+        _existing_repo_file(repo_root, rel_path, field=f"{label}.path")
 
         title = _require_string(raw_entry, "title", label)
         doc_type = _require_string(raw_entry, "doc_type", label)
@@ -223,14 +280,6 @@ def validate_registry(data: dict[str, Any], repo_root: Path) -> list[dict[str, A
                 raise RegistryError(f"{label}.reader_level: unsupported value {reader_level!r}")
             normalized["reader_level"] = reader_level
 
-        if "source_of_truth" in raw_entry:
-            source_of_truth = raw_entry["source_of_truth"]
-            if not isinstance(source_of_truth, bool):
-                raise RegistryError(f"{label}.source_of_truth: expected boolean")
-            if source_of_truth and status != "canonical":
-                raise RegistryError(f"{label}.source_of_truth: true requires status='canonical'")
-            normalized["source_of_truth"] = source_of_truth
-
         if "language" in raw_entry:
             normalized["language"] = _require_string(raw_entry, "language", label)
 
@@ -242,11 +291,11 @@ def validate_registry(data: dict[str, Any], repo_root: Path) -> list[dict[str, A
             for target_index, target in enumerate(targets):
                 target_path = _safe_repo_path(target, field=f"{label}.{relation}[{target_index}]")
                 target_text = target_path.as_posix()
-                target_file = repo_root.joinpath(*target_path.parts)
-                if not target_file.is_file():
-                    raise RegistryError(
-                        f"{label}.{relation}[{target_index}]: relation target does not exist: {target_text}"
-                    )
+                _existing_repo_file(
+                    repo_root,
+                    target_path,
+                    field=f"{label}.{relation}[{target_index}]",
+                )
                 if target_text == path_text:
                     raise RegistryError(f"{label}.{relation}: self-reference is forbidden: {path_text}")
                 normalized_targets.append(target_text)
@@ -254,6 +303,7 @@ def validate_registry(data: dict[str, Any], repo_root: Path) -> list[dict[str, A
 
         normalized_entries.append(normalized)
 
+    _validate_supersession_graph(normalized_entries)
     return normalized_entries
 
 
@@ -363,30 +413,37 @@ def check_index(repo_root: Path, registry_path: Path, output_path: Path) -> tupl
     return True, "knowledge registry and generated index are valid/current"
 
 
-def _resolve_repo_path(repo_root: Path, path: Path) -> Path:
-    return path if path.is_absolute() else repo_root / path
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Validate/generate the Genre_test Obsidian knowledge index.")
-    parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[1])
-    parser.add_argument("--registry", type=Path, default=DEFAULT_REGISTRY)
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument(
+        "--repo-root",
+        type=Path,
+        default=Path(__file__).resolve().parents[1],
+        help="Explicit repository root; registry/output locations remain fixed inside this root.",
+    )
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--check", action="store_true", help="Validate and fail if generated output is stale.")
     mode.add_argument("--write", action="store_true", help="Validate then regenerate the derived index.")
     args = parser.parse_args(argv)
 
     repo_root = args.repo_root.resolve()
-    registry_path = _resolve_repo_path(repo_root, args.registry)
-    output_path = _resolve_repo_path(repo_root, args.output)
 
     try:
+        registry_path = _resolved_inside_repo(
+            repo_root,
+            repo_root / DEFAULT_REGISTRY,
+            field="registry",
+        )
+        output_path = _resolved_inside_repo(
+            repo_root,
+            repo_root / DEFAULT_OUTPUT,
+            field="generated output",
+        )
+
         if args.write:
             _, _, rendered = build(repo_root, registry_path)
-            output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_text(rendered, encoding="utf-8")
-            print(f"wrote {output_path.relative_to(repo_root)}")
+            print(f"wrote {DEFAULT_OUTPUT.as_posix()}")
             return 0
 
         ok, message = check_index(repo_root, registry_path, output_path)
