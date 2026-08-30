@@ -165,6 +165,18 @@ if ((Test-Path $venvDir) -and -not (Test-Path $venvPython)) {
     Write-Warning 'Broken .venv detected. Recreating it.'
     Remove-Item -Recurse -Force $venvDir
 }
+if (Test-Path $venvPython) {
+    try {
+        $venvVersion = (& $venvPython -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}|{64 if sys.maxsize > 2**32 else 32}')" 2>$null | Select-Object -Last 1)
+        if ($LASTEXITCODE -ne 0 -or $venvVersion -notmatch '^3\.(12|13)\|64$') {
+            Write-Warning "Existing .venv uses unsupported Python ($venvVersion). Recreating it with Python $($runtime.Version)."
+            Remove-Item -Recurse -Force $venvDir
+        }
+    } catch {
+        Write-Warning 'Existing .venv Python probe failed. Recreating it.'
+        Remove-Item -Recurse -Force $venvDir
+    }
+}
 if (-not (Test-Path $venvPython)) {
     Write-Host 'Creating virtual environment...'
     $args = @($runtime.Prefix) + @('-m', 'venv', $venvDir)
