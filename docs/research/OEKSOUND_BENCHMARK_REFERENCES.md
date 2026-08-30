@@ -129,12 +129,14 @@ Every external DSP reference render used in a benchmark must record:
 - plug-in name and exact installed version;
 - host and host version;
 - sample rate / bit depth / channel configuration;
-- complete parameter/preset identity when reproducibly exportable;
+- complete reproducible processor state: use exported preset/full parameter state when available; otherwise preserve normalized/manual parameter values and automation state plus a human-readable capture (for example screenshots where permitted) with hashes/identity sufficient to reconstruct the processing;
 - source SHA-256 and derived-output SHA-256;
 - loudness/alignment treatment;
 - processing manifest with `candidate_role: reference-only`;
 - optional separate `reference_strength` such as `mild`, `balanced`, or `strong` when useful for the experiment;
 - whether the plug-in was available/licensed locally.
+
+If neither an exported state nor an equivalent reproducible fallback capture is possible, the render is `NOT_ADMISSIBLE_REPRODUCIBILITY` and must not be used as benchmark evidence.
 
 `candidate_role` must remain `reference-only` for every oeksound render in this research lane. `SAFE` and `PROBE` are reserved for project candidate semantics and must not be used here.
 
