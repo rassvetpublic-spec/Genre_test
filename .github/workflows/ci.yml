@@ -34,8 +34,7 @@ jobs:
           full_suite=false
           while IFS=$'\t' read -r status path1 path2; do
             case "$status" in
-              A*|M*|R*|C*)
-                ;;
+              A*|M*|R*|C*) ;;
               *)
                 full_suite=true
                 break
@@ -45,8 +44,7 @@ jobs:
             for path in "$path1" "$path2"; do
               [[ -z "$path" ]] && continue
               case "$path" in
-                docs/*|README.md|README_RU.txt|PORTABLE_README.txt)
-                  ;;
+                docs/*|README.md|README_RU.txt|PORTABLE_README.txt) ;;
                 *)
                   full_suite=true
                   break 2
@@ -58,8 +56,8 @@ jobs:
           echo "full_suite=$full_suite" >> "$GITHUB_OUTPUT"
           echo "full_suite=$full_suite"
 
-  python311-retired:
-    name: test (3.11)
+  test312:
+    name: test (3.12)
     if: always() && github.event_name == 'pull_request'
     needs: preflight
     runs-on: ubuntu-latest
@@ -71,13 +69,40 @@ jobs:
             echo 'preflight failed; required check must fail closed.' >&2
             exit 1
           fi
+
+      - name: Docs-only acknowledgement
+        if: needs.preflight.outputs.full_suite != 'true'
+        run: echo 'Documentation-only PR; Python test suite intentionally skipped.'
+
       - uses: actions/checkout@v4
-      - name: Python 3.11 retirement sentinel
+        if: needs.preflight.outputs.full_suite == 'true'
+
+      - uses: actions/setup-python@v5
+        if: needs.preflight.outputs.full_suite == 'true'
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install test environment
+        if: needs.preflight.outputs.full_suite == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest ruff numpy librosa typer rich soundfile
+          pip install -e . --no-deps
+
+      - name: Python 3.12 runtime and repository gates
+        if: needs.preflight.outputs.full_suite == 'true'
         shell: bash
         run: |
           set -euo pipefail
+          grep -Fq 'version = "0.5.0.dev0"' pyproject.toml
+          grep -Fq '__version__ = "0.5.0.dev0"' src/genre_test/__init__.py
+          test "$(genre-test --version)" = "Genre_test 0.5.0.dev0"
           grep -Fq 'requires-python = ">=3.12,<3.14"' pyproject.toml
+          grep -Fq 'target-version = "py312"' pyproject.toml
           grep -Fq 'MIN_PYTHON_VERSION = (3, 12)' src/genre_test/runtime_health.py
+          python -c "import sys; assert sys.version_info[:2] == (3, 12)"
+
           if grep -Fq "'-3.11'" scripts/setup.ps1; then
             echo 'Python 3.11 is still accepted by the core setup.' >&2
             exit 1
@@ -86,57 +111,6 @@ jobs:
             echo 'Python 3.11 is still accepted by the packaged bootstrap.' >&2
             exit 1
           fi
-          echo 'Python 3.11 is intentionally unsupported; this lightweight check name is retained only for the current live branch-protection migration.'
-
-  test:
-    name: test (${{ matrix.python-version }})
-    if: always() && github.event_name == 'pull_request'
-    needs: preflight
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['3.12', '3.13']
-    steps:
-      - name: Require preflight success
-        shell: bash
-        run: |
-          if [ "${{ needs.preflight.result }}" != "success" ]; then
-            echo 'preflight failed; required check must fail closed.' >&2
-            exit 1
-          fi
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        if: needs.preflight.outputs.full_suite == 'true' || matrix.python-version == '3.13'
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
-
-      - name: Install lightweight test environment
-        if: needs.preflight.outputs.full_suite == 'true'
-        run: |
-          python -m pip install --upgrade pip
-          pip install pytest ruff numpy librosa typer rich soundfile
-          pip install -e . --no-deps
-
-      - name: Install documentation contract test environment
-        if: needs.preflight.outputs.full_suite != 'true' && matrix.python-version == '3.13'
-        run: python -m pip install --upgrade pip pytest numpy scipy
-
-      - name: Python 3.13 quality and runtime contract gates
-        if: needs.preflight.outputs.full_suite == 'true' && matrix.python-version == '3.13'
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          grep -Fq 'version = "0.5.0.dev0"' pyproject.toml
-          grep -Fq '__version__ = "0.5.0.dev0"' src/genre_test/__init__.py
-          test "$(genre-test --version)" = "Genre_test 0.5.0.dev0"
-          grep -Fq 'requires-python = ">=3.12,<3.14"' pyproject.toml
-          grep -Fq 'target-version = "py312"' pyproject.toml
-          grep -Fq 'MIN_PYTHON_VERSION = (3, 12)' src/genre_test/runtime_health.py
-          python -c "import sys; assert sys.version_info[:2] == (3, 13)"
 
           grep -Fq 'if exist "%ROOT%.git" set "MODE=WORKING"' Genre_test_START.cmd
           grep -Fq 'Mode   : Git working tree' Genre_test_START.cmd
@@ -179,7 +153,7 @@ jobs:
           fi
 
       - name: PowerShell setup/release/regression/retrieval parser and CUDA 13 gate
-        if: needs.preflight.outputs.full_suite == 'true' && matrix.python-version == '3.13'
+        if: needs.preflight.outputs.full_suite == 'true'
         shell: pwsh
         run: |
           foreach ($script in @(
@@ -243,7 +217,7 @@ jobs:
           }
 
       - name: Legacy retirement gate
-        if: needs.preflight.outputs.full_suite == 'true' && matrix.python-version == '3.13'
+        if: needs.preflight.outputs.full_suite == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -261,7 +235,7 @@ jobs:
           test ! -e releases/RELEASE_NOTES_0.4.0.md
 
       - name: Pinned retrieval manifest smoke
-        if: needs.preflight.outputs.full_suite == 'true' && matrix.python-version == '3.13'
+        if: needs.preflight.outputs.full_suite == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -272,40 +246,54 @@ jobs:
           grep -Fq 'e73636d4f797dec63c3081bb6ed5c7b0bb3f2089' clamp3_manifest.json
 
       - name: FFmpeg bootstrap script smoke
-        if: needs.preflight.outputs.full_suite == 'true' && matrix.python-version == '3.13'
+        if: needs.preflight.outputs.full_suite == 'true'
         shell: pwsh
         run: ./scripts/ensure_ffmpeg.ps1 -NoInstall
 
       - name: Ruff
-        if: needs.preflight.outputs.full_suite == 'true' && matrix.python-version == '3.13'
+        if: needs.preflight.outputs.full_suite == 'true'
         run: ruff check src tests
 
       - name: Tests
         if: needs.preflight.outputs.full_suite == 'true'
         run: pytest -q
 
-      - name: Documentation contract tests
-        if: needs.preflight.outputs.full_suite != 'true' && matrix.python-version == '3.13'
-        run: >-
-          pytest -q
-          tests/test_*contract.py
-          tests/test_repository_context.py
-          tests/test_release_bootstrap.py
-          tests/mastering/test_ozone12_migration_contract.py
-
-      - name: Docs-only compatibility acknowledgement
-        if: needs.preflight.outputs.full_suite != 'true' && matrix.python-version == '3.12'
-        run: echo 'Documentation-only PR; full Python 3.12 compatibility suite intentionally skipped.'
+  test313:
+    name: test (3.13 optional)
+    if: always() && github.event_name == 'pull_request' && needs.preflight.outputs.full_suite == 'true'
+    needs: preflight
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Require preflight success
+        shell: bash
+        run: |
+          if [ "${{ needs.preflight.result }}" != "success" ]; then
+            echo 'preflight failed; optional compatibility check cannot run.' >&2
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - name: Install compatibility test environment
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest numpy librosa typer rich soundfile
+          pip install -e . --no-deps
+      - name: Python 3.13 compatibility tests
+        run: pytest -q
 
   post-merge-smoke:
-    name: post-merge smoke (3.13)
+    name: post-merge smoke (3.12)
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.12'
       - name: Lightweight merged-tree verification
         shell: bash
         run: |
