@@ -51,12 +51,28 @@ Use `docs/ARCHITECTURE.md` as the map, then switch to the authoritative subsyste
 | Core analysis/history | `docs/ARCHITECTURE.md`, nearby `src/genre_test/**`, tests |
 | CLaMP retrieval | `docs/CLAMP3_ARCHITECTURE.md`, `docs/CLAMP3_TODO.md`, `docs/CLAMP3_RUNTIME*.md` |
 | Shared Technical QC | `docs/SUPERCOMBINE_TODO.md`, Issue #45, nearby shared QC code/tests |
+| SUPERCOMBINE workstation / Shimmer donor migration | `docs/SUPERCOMBINE_TODO.md`, `docs/SUPERCOMBINE_UI_ARCHITECTURE.md`, `docs/SUPERCOMBINE_SHIMMER_DONOR_TODO.md`, Issues #160/#164 |
 | Repair / stems / vocals | `docs/GENERATIVE_DEFECT_PROFILE.md`, `docs/GENERATIVE_AUDIO_REPAIR_*.md`, Issues #50–#52/#63 |
 | Ozone/REAPER mastering | `docs/mastering/ozone12/README.md`, integrated config/tools/code namespace |
 | A/B/X review | Issue #54, `docs/SUPERCOMBINE_TODO.md` |
 | Metadata / asset lineage | Issues #53/#56, `docs/SUPERCOMBINE_TODO.md` |
 | Runtime / ComfyUI | Issues #46/#55, `docs/SUPERCOMBINE_TODO.md` |
 | Agent workflow | `AGENTS.md`, `.github/copilot-instructions.md`, `docs/AGENT_WORKFLOW.md` |
+
+`docs/SUPERCOMBINE_TODO.md` remains the canonical long-term phase backlog. For workstation/Shimmer-donor work, it must be read together with `docs/SUPERCOMBINE_UI_ARCHITECTURE.md` and `docs/SUPERCOMBINE_SHIMMER_DONOR_TODO.md`. The current workstation dependency order is:
+
+```text
+P1 shell/i18n/API/minimal HUD
+ -> P2 Analyze/Catalog/Search wiring
+ -> P3 common #54-compatible A/B/X/Delta transport
+ -> P4 complete runtime/resource HUD
+ -> P5 Repair UI
+ -> P6 Stems/Vocal UI
+ -> P7 Mastering UI
+ -> P8 Project/Vault/Delivery
+```
+
+Repair, Stems/Vocal and Mastering candidate surfaces must consume the P3 common comparison transport rather than create private parallel players.
 
 ## Live-state rule
 
