@@ -1,8 +1,8 @@
 # Technical task: implement Genre_test Product MCP façade
 
 Status: **planned task; implementation is not authorized merely by this file**  
-Track: **Product MCP / Track P**  
-Roadmap: **v0.9**  
+Track: **Product MCP / Track P**
+Roadmap: **v0.9**
 Related Issue: **#146**  
 Protocol baseline checked: **MCP 2026-07-28**  
 Architecture: [`MCP_ARCHITECTURE_PROPOSAL.md`](MCP_ARCHITECTURE_PROPOSAL.md)  
