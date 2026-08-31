@@ -105,7 +105,7 @@ Rules Hub may reuse the structural pattern, but it must not share, mirror as mut
 
 ### MCP
 
-Current Genre_test MCP architecture remains owned by its dedicated MCP documents and work items, including the still-separate Track Q / Track P work. This interoperability baseline does **not** authorize `src/genre_test/mcp/**`, an MCP runtime, a shared cross-repository server, shared tools, or write capability into either peer repository. It must not preempt the dedicated MCP track/PR.
+Genre_test MCP decisions remain owned by their dedicated MCP documents, issues and PRs. Open PR #157 currently proposes a Track Q / Track P split; this interoperability baseline neither accepts that proposal on behalf of #157 nor supersedes it. It does **not** authorize `src/genre_test/mcp/**`, an MCP runtime, a shared cross-repository server, shared tools, or write capability into either peer repository. Interoperability work must not preempt the dedicated MCP track/PR.
 
 ## Authority boundaries
 
