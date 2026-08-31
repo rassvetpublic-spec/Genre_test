@@ -11,6 +11,17 @@ This registry records the primary evidence behind the Genre_test MCP architectur
 
 The registry is not a vendored copy of MCP documentation. External protocol truth remains upstream; this file records which upstream pages were checked, what project conclusion they support, and how authoritative each source is.
 
+## Option C roadmap revalidation — 2026-08-30
+
+Revalidated for the Track Q / Track P roadmap split:
+
+- protocol revision/date: `2026-07-28`;
+- `server/discover` remains the server-side discovery mechanism for the checked revision;
+- client discovery remains optional rather than a mandatory first call;
+- the official Python SDK remains an implementation direction, but Q0 selects and pins no SDK version.
+
+This revalidation authorizes no MCP runtime implementation and no write capability. It records protocol assumptions only.
+
 ## Evidence policy
 
 Source classes:
@@ -62,9 +73,10 @@ Rules:
 | # | Source | Class | Project authority |
 |---:|---|---|---|
 | 19 | [`AGENTS.md`](../AGENTS.md) | PROJECT-CONTRACT | Agent roles, exact-head QA, branch/PR/CI/READY-MTD workflow, authority boundaries and standing automatic MTD. MCP cannot bypass these rules. |
-| 20 | [`docs/ACTIVE_CURRENT.md`](ACTIVE_CURRENT.md) | PROJECT-CONTRACT | Current project state and explicit MCP proposal pointer. |
-| 21 | [`ROADMAP.md`](../ROADMAP.md) | PROJECT-CONTRACT | Current roadmap places an optional MCP façade in v0.9 after stable local APIs exist. This remains authoritative until the user approves a priority change. |
-| 22 | [Issue #146](https://github.com/rassvetpublic-spec/Genre_test/issues/146) | PROJECT-CONTRACT | Active MCP architecture/documentation task and unresolved roadmap-placement decision. |
+| 20 | [`docs/ACTIVE_CURRENT.md`](ACTIVE_CURRENT.md) | PROJECT-CONTRACT | Current project state and the selected split between the early read-only QA evidence track and the v0.9 product MCP façade. |
+| 21 | [`ROADMAP.md`](../ROADMAP.md) | PROJECT-CONTRACT | Track Q is cross-cutting QA evidence infrastructure; the optional Genre_test product MCP façade remains in v0.9 after stable local APIs exist. |
+| 22 | [Issue #146](https://github.com/rassvetpublic-spec/Genre_test/issues/146) | PROJECT-CONTRACT | MCP architecture task and recorded Option C direction. |
+| 23 | [Issue #154](https://github.com/rassvetpublic-spec/Genre_test/issues/154) | PROJECT-CONTRACT | Q0 documentation-only implementation contract for the Track Q / Track P split. |
 
 ## Consolidated protocol facts used by the project
 
@@ -90,7 +102,7 @@ Recheck the registry when any of the following happens:
 - Genre_test moves from local stdio to remote/network MCP;
 - new write-capabilities are proposed;
 - MCP authorization/security requirements change;
-- the roadmap moves MCP earlier than v0.9.
+- the roadmap moves MCP earlier than v0.9 or materially changes the Track Q / Track P boundary.
 
 ## Explicit non-sources
 
