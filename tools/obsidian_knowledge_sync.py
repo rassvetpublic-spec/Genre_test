@@ -154,6 +154,8 @@ def _require_string(entry: dict[str, Any], key: str, label: str) -> str:
     value = entry.get(key)
     if not isinstance(value, str) or not value.strip():
         raise RegistryError(f"{label}.{key}: expected a non-empty string")
+    if "\n" in value or "\r" in value:
+        raise RegistryError(f"{label}.{key}: line breaks are forbidden in single-line string fields")
     return value.strip()
 
 
