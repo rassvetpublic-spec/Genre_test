@@ -105,7 +105,7 @@ Rules Hub may reuse the structural pattern, but it must not share, mirror as mut
 
 ### MCP
 
-Genre_test MCP decisions remain owned by their dedicated MCP documents and issues. Issue #154 selects **Option C**: **Track Q** is a read-only, transport-independent engineering/QA evidence-consumption layer, while **Track P** is the future Genre_test Product MCP façade deferred to v0.9 after stable local service/API boundaries exist. Closed PR #157 is historical context only; the fresh-main integration records the accepted split without importing its stale project-state snapshot.
+Genre_test MCP decisions remain owned by their dedicated MCP documents and issues. Issue #154 selects **Option C**: **Track Q** is a read-only, transport-independent engineering/QA evidence-consumption layer, while **Track P** is the future Genre_test Product MCP façade deferred to v0.9 after stable local service/API boundaries exist. Closed PR #157 is historical context only; the current fresh-main reintegration carries the accepted split without importing its stale project-state snapshot.
 
 This interoperability baseline accepts that Track Q / Track P separation only as a compatibility boundary. It does **not** authorize `src/genre_test/mcp/**`, an MCP runtime, a shared cross-repository server, shared tools, Product MCP acceleration, or write capability into either peer repository. Rules Hub interoperability must remain read-only with respect to Genre_test canonical state unless a later dedicated contract explicitly changes that boundary.
 
