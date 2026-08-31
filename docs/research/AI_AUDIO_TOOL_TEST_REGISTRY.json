@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "updated": "2026-08-30",
+  "updated": "2026-08-31",
   "purpose": "Machine-readable coverage ledger for AI-audio detection, provenance/watermark robustness, forensic analysis, controlled adversarial robustness evaluation, vocoder artifact benchmarking, restoration and cleanup references.",
   "lifecycle": [
     "DISCOVERED",
@@ -248,6 +248,51 @@
       "upstream_revision": null,
       "retest_on_change": true,
       "notes": "Cross-reference docs/SHIMMER_EXTERNAL_REFERENCE.md. Test cleanup-before-mastering, Removed/Delta audition, loudness-matched A/B, HF Mid/Side cleanup and transient safety."
+    },
+    {
+      "id": "oeksound_spiff",
+      "name": "oeksound Spiff",
+      "kind": ["external_dsp_reference", "transient_processing", "benchmark_calibration"],
+      "source": "https://oeksound.com/plugins/spiff",
+      "status": "BLOCKED",
+      "test_required": true,
+      "test_mode": "local_controlled",
+      "blocker": "Requires an authorized locally installed instance plus exact version/state/render-mode capture, pairwise alignment/gain admissibility and replay-equivalence validation.",
+      "watch_required": true,
+      "last_checked": "2026-08-31",
+      "upstream_revision": null,
+      "retest_on_change": true,
+      "notes": "Reference-only adaptive transient processor. Measure realized attack/sustain deltas from aligned outputs/residuals; do not assume sustain/body is unchanged."
+    },
+    {
+      "id": "oeksound_soothe3",
+      "name": "oeksound soothe3",
+      "kind": ["external_dsp_reference", "resonance_suppression", "damage_guard_reference"],
+      "source": "https://oeksound.com/plugins/soothe3/",
+      "status": "BLOCKED",
+      "test_required": true,
+      "test_mode": "local_controlled",
+      "blocker": "Requires an authorized locally installed instance plus exact version/state/render-mode capture, pairwise alignment/gain admissibility and replay-equivalence validation.",
+      "watch_required": true,
+      "last_checked": "2026-08-31",
+      "upstream_revision": null,
+      "retest_on_change": true,
+      "notes": "Reference-only dynamic resonance suppression candidate for harshness/damage-guard calibration. A marker improvement alone is not a production success criterion."
+    },
+    {
+      "id": "oeksound_bloom",
+      "name": "oeksound Bloom",
+      "kind": ["external_dsp_reference", "adaptive_tonal_processing", "robustness_reference"],
+      "source": "https://oeksound.com/plugins/bloom/",
+      "status": "BLOCKED",
+      "test_required": true,
+      "test_mode": "local_controlled",
+      "blocker": "Requires an authorized locally installed instance plus exact version/state/render-mode capture, pairwise alignment/gain admissibility and replay-equivalence validation.",
+      "watch_required": true,
+      "last_checked": "2026-08-31",
+      "upstream_revision": null,
+      "retest_on_change": true,
+      "notes": "Reference-only adaptive tone-shaping candidate for ordinary-processing robustness. Detector-score reduction is explicitly not an optimization objective."
     },
     {
       "id": "authio",
