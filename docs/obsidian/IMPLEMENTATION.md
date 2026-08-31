@@ -136,7 +136,8 @@ Full-repository accounting, frontmatter migration, tag/term analytics, global HO
 - approved `doc_type`, `area`, `status`;
 - exact controlled taxonomy tags;
 - non-empty unique optional lists/relations;
-- `source_of_truth: true` только при `status: canonical`;
+- unconditional rejection of `source_of_truth` and other unapproved authority-claim fields; canonical authority remains in the owning repository document/state;
+- CR/LF rejection in single-line registry strings used by generated Markdown tables;
 - self-relation rejection;
 - Research Radar ownership boundary;
 - generated-index drift.
