@@ -147,6 +147,22 @@ def test_missing_relation_target_is_rejected(tmp_path: Path) -> None:
         sync.validate_registry(sync.load_registry(registry_path), tmp_path)
 
 
+@pytest.mark.parametrize("bad_target", ["docs/a\nb.md", "docs/a\rb.md"])
+def test_multiline_relation_target_is_rejected(tmp_path: Path, bad_target: str) -> None:
+    entry = _entry()
+    entry["related"] = [bad_target]
+    _write(tmp_path / "docs/doc.md")
+    registry_path = tmp_path / sync.DEFAULT_REGISTRY
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    registry_path.write_text(
+        json.dumps(_registry([entry]), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(sync.RegistryError, match="CR/LF forbidden"):
+        sync.validate_registry(sync.load_registry(registry_path), tmp_path)
+
+
 def test_self_relation_is_rejected(tmp_path: Path) -> None:
     entry = _entry()
     entry["related"] = ["docs/doc.md"]

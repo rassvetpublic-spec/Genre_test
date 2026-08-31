@@ -84,6 +84,8 @@ def _safe_repo_path(raw: Any, *, field: str) -> PurePosixPath:
         raise RegistryError(f"{field}: expected a non-empty repository-relative path")
     if "\\" in raw:
         raise RegistryError(f"{field}: use forward slashes in repository paths: {raw!r}")
+    if "\n" in raw or "\r" in raw:
+        raise RegistryError(f"{field}: CR/LF forbidden in repository paths")
     path = PurePosixPath(raw)
     if path.is_absolute() or raw.startswith("/") or ".." in path.parts:
         raise RegistryError(f"{field}: path traversal/absolute path is forbidden: {raw!r}")
