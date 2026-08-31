@@ -1,6 +1,9 @@
 {
-  "openai_model": "${OPENAI_MODEL}",
-  "gemini_model": "${GEMINI_MODEL}",
+  "primary_provider": "ollama",
+  "primary_model": "gpt-oss:20b",
+  "secondary_provider": "gemini",
+  "secondary_model": "gemini-3.7-flash",
+  "ollama_host": "http://127.0.0.1:11434",
   "max_output_tokens": 4096,
   "runs_dir": "tools/ai_review/runs"
 }

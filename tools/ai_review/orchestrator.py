@@ -21,17 +21,22 @@ def _context_input(context_json: str, tail: str) -> str:
     return f"<context_pack>\n{context_json}\n</context_pack>\n\n{tail.strip()}"
 
 
+def _provider_metadata(provider: StructuredProvider) -> dict[str, str]:
+    model = getattr(provider, "model", "unknown")
+    return {"name": provider.name, "model": str(model)}
+
+
 class ConsultOrchestrator:
     def __init__(
         self,
         *,
-        openai: StructuredProvider,
-        gemini: StructuredProvider,
+        primary: StructuredProvider,
+        secondary: StructuredProvider,
         runs_dir: str | Path,
         save_runs: bool = True,
     ) -> None:
-        self.openai = openai
-        self.gemini = gemini
+        self.primary = primary
+        self.secondary = secondary
         self.runs_dir = Path(runs_dir)
         self.save_runs = save_runs
 
@@ -43,7 +48,7 @@ class ConsultOrchestrator:
         proposal_schema = load_schema("proposal")
         review_schema = load_schema("review")
 
-        openai_proposal = self.openai.generate_json(
+        primary_proposal = self.primary.generate_json(
             instructions=_prompt("solver"),
             input_text=_context_input(
                 context_json,
@@ -52,9 +57,9 @@ class ConsultOrchestrator:
             schema=proposal_schema,
             schema_name="proposal",
         )
-        validate_contract(openai_proposal, proposal_schema)
+        validate_contract(primary_proposal, proposal_schema)
 
-        gemini_proposal = self.gemini.generate_json(
+        secondary_proposal = self.secondary.generate_json(
             instructions=_prompt("solver"),
             input_text=_context_input(
                 context_json,
@@ -63,46 +68,46 @@ class ConsultOrchestrator:
             schema=proposal_schema,
             schema_name="proposal",
         )
-        validate_contract(gemini_proposal, proposal_schema)
+        validate_contract(secondary_proposal, proposal_schema)
 
-        openai_review = self.openai.generate_json(
+        primary_review = self.primary.generate_json(
             instructions=_prompt("reviewer"),
             input_text=_context_input(
                 context_json,
-                "<proposal provider=\"gemini\">\n"
-                f"{canonical_json(gemini_proposal)}\n"
+                f"<proposal role=\"secondary\" provider=\"{self.secondary.name}\">\n"
+                f"{canonical_json(secondary_proposal)}\n"
                 "</proposal>\nReview this proposal against the supplied ContextPack.",
             ),
             schema=review_schema,
             schema_name="review",
         )
-        validate_contract(openai_review, review_schema)
+        validate_contract(primary_review, review_schema)
 
-        gemini_review = self.gemini.generate_json(
+        secondary_review = self.secondary.generate_json(
             instructions=_prompt("reviewer"),
             input_text=_context_input(
                 context_json,
-                "<proposal provider=\"openai\">\n"
-                f"{canonical_json(openai_proposal)}\n"
+                f"<proposal role=\"primary\" provider=\"{self.primary.name}\">\n"
+                f"{canonical_json(primary_proposal)}\n"
                 "</proposal>\nReview this proposal against the supplied ContextPack.",
             ),
             schema=review_schema,
             schema_name="review",
         )
-        validate_contract(gemini_review, review_schema)
+        validate_contract(secondary_review, review_schema)
 
         synthesis_payload = (
-            "<proposal provider=\"openai\">\n"
-            f"{canonical_json(openai_proposal)}\n</proposal>\n"
-            "<proposal provider=\"gemini\">\n"
-            f"{canonical_json(gemini_proposal)}\n</proposal>\n"
-            "<review provider=\"openai\" target=\"gemini\">\n"
-            f"{canonical_json(openai_review)}\n</review>\n"
-            "<review provider=\"gemini\" target=\"openai\">\n"
-            f"{canonical_json(gemini_review)}\n</review>\n"
+            f"<proposal role=\"primary\" provider=\"{self.primary.name}\">\n"
+            f"{canonical_json(primary_proposal)}\n</proposal>\n"
+            f"<proposal role=\"secondary\" provider=\"{self.secondary.name}\">\n"
+            f"{canonical_json(secondary_proposal)}\n</proposal>\n"
+            f"<review provider=\"{self.primary.name}\" target=\"secondary\">\n"
+            f"{canonical_json(primary_review)}\n</review>\n"
+            f"<review provider=\"{self.secondary.name}\" target=\"primary\">\n"
+            f"{canonical_json(secondary_review)}\n</review>\n"
             "Synthesize the strongest final proposal. Preserve unresolved risks and evidence gaps."
         )
-        final_proposal = self.openai.generate_json(
+        final_proposal = self.primary.generate_json(
             instructions=_prompt("synthesizer"),
             input_text=_context_input(context_json, synthesis_payload),
             schema=proposal_schema,
@@ -115,18 +120,22 @@ class ConsultOrchestrator:
                 "state": "COMPLETE",
                 "round": 1,
                 "max_rounds": 1,
-                "openai_completed": True,
-                "gemini_completed": True,
+                "primary_completed": True,
+                "secondary_completed": True,
                 "context_sha256": digest,
+            },
+            "providers": {
+                "primary": _provider_metadata(self.primary),
+                "secondary": _provider_metadata(self.secondary),
             },
             "context": context,
             "proposals": {
-                "openai": openai_proposal,
-                "gemini": gemini_proposal,
+                "primary": primary_proposal,
+                "secondary": secondary_proposal,
             },
             "reviews": {
-                "openai_on_gemini": openai_review,
-                "gemini_on_openai": gemini_review,
+                "primary_on_secondary": primary_review,
+                "secondary_on_primary": secondary_review,
             },
             "final": final_proposal,
         }
