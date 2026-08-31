@@ -48,6 +48,55 @@ Audio
 The former packaged release line is retired. Core analysis behavior remains a
 regression baseline while v0.5 retrieval development proceeds.
 
+## Engineering infrastructure (cross-cutting)
+
+### QA evidence track
+
+Genre_test has two intentionally separate MCP directions.
+
+#### Track Q — Engineering / QA evidence consumption
+
+A bounded read-only QA evidence track may develop independently of the product release sequence.
+
+Purpose:
+
+```text
+exact PR HEAD
+    -> deterministic evidence collection
+    -> immutable ReviewEvidencePack
+    -> manual or multi-model QA
+    -> deterministic validation
+```
+
+Planned phases:
+
+- **Q0** architecture / roadmap boundary;
+- **Q1** canonical exact-head `ReviewEvidencePackV1` contract;
+- **Q2** transport-independent Evidence Source abstraction;
+- **Q3** GitHub read-only evidence source;
+- **Q4** Rules Hub policy/provenance evidence source when its stable interface is available;
+- **Q5** deterministic local repository evidence;
+- **Q6** evidence-bound multi-model QA;
+- **Q7** replay / provenance / audit;
+- **Q8** optional bounded GitHub verdict publishing under a separate write-capability approval.
+
+Core rules:
+
+- LLMs do not independently collect live review evidence.
+- Evidence is collected first, frozen, provenance-recorded and hash-bound to the exact PR head.
+- The evidence contract is transport-independent; early implementations may use direct/local or GitHub interfaces before MCP adapters are available.
+- MCP sources are read-only for this track.
+- Track Q does not expose Genre_test product capabilities.
+- Track Q does not accelerate Analyze, Retrieval, Repair, Mastering, REAPER or Ozone implementation.
+- Models do not receive repository merge/release authority.
+- GitHub and current repository contracts remain the engineering source of truth.
+
+#### Track P — Product MCP façade
+
+The Genre_test product MCP façade remains planned for **v0.9**, after stable local service/API boundaries exist.
+
+Track P is the future server-side interface over Genre_test product capabilities. It is independent from the earlier QA evidence-consumer track.
+
 ## ACTIVE: v0.5
 Epic: **#26**
 Detailed roadmap: [`docs/CLAMP3_ROADMAP.md`](docs/CLAMP3_ROADMAP.md)
@@ -263,7 +312,7 @@ Metadata identity fields such as title/artist/album are never silently overwritt
 - **#46 Genre_test-owned ComfyUI bridge nodes** over stable local contracts;
 - **#55 shared GPU ModelRuntimeManager / VRAM scheduler** integrating Resource Monitor telemetry, model residency, acquire/release lifecycle, OOM policy and sidecar shutdown;
 - stable local job API with progress/heartbeat/Safe Stop;
-- optional MCP façade only after stable APIs exist;
+- optional **Genre_test product MCP façade** over stable local APIs; this is Track P and is not accelerated by the earlier read-only QA evidence-consumer Track Q;
 - workflow validation before heavy execution.
 
 ## TARGET: v1.0 — SUPERCOMBINE

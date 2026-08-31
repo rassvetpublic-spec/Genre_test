@@ -5,7 +5,7 @@ Active development version: **0.5.0.dev0**
 Active milestone: **v0.5 CLaMP 3 semantic retrieval**  
 Milestone epic: **#26**  
 Long-term product epic: **#49 SUPERCOMBINE**
-MCP adapter architecture proposal: **#146** (`REQUEST`; architecture/roadmap placement pending; no MCP implementation authorized by this status entry)
+MCP architecture: **#146 / #154** — Option C selected: early read-only QA evidence Track Q is separate from the v0.9 Product MCP façade Track P. Product MCP implementation remains deferred.
 
 `Genre_test/main` plus current GitHub Issues/PR state is the canonical engineering source of truth. A fresh repository-aware agent should start with `docs/REPOSITORY_COLD_START.md` and must not depend on chat history for durable project state.
 
@@ -54,7 +54,7 @@ Planned long-term phases:
 - v0.6 Repair & Stem Lab — #50, #51, #52; Apollo research is tracked under #63;
 - v0.7 Studio Finish / mastering orchestration — including #54 comparison lab;
 - v0.8 Metadata/Catalog/Delivery — #53, #56;
-- v0.9 ComfyUI/runtime orchestration — #46, #55;
+- v0.9 ComfyUI/runtime orchestration — #46, #55; includes the future Genre_test **Product MCP façade / Track P** over stable APIs. The separate QA evidence-consumer **Track Q** is cross-cutting engineering infrastructure and does not advance v0.9 product scope;
 - v1.0 integrated SUPERCOMBINE.
 
 See `ROADMAP.md` and `docs/SUPERCOMBINE_TODO.md`.
