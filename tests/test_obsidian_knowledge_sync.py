@@ -205,6 +205,17 @@ def test_authority_claim_field_is_rejected(tmp_path: Path) -> None:
         sync.validate_registry(sync.load_registry(registry_path), tmp_path)
 
 
+@pytest.mark.parametrize("field", ["title", "summary"])
+@pytest.mark.parametrize("value", ["line one\nline two", "line one\rline two"])
+def test_multiline_rendered_string_is_rejected(tmp_path: Path, field: str, value: str) -> None:
+    entry = _entry()
+    entry[field] = value
+    registry_path, _ = _prepare(tmp_path, _registry([entry]))
+
+    with pytest.raises(sync.RegistryError, match="line breaks are forbidden"):
+        sync.validate_registry(sync.load_registry(registry_path), tmp_path)
+
+
 def test_unknown_entry_key_is_rejected(tmp_path: Path) -> None:
     entry = _entry()
     entry["made_up_field"] = "x"
