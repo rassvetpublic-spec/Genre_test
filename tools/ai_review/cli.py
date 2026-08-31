@@ -8,14 +8,13 @@ import sys
 from .config import load_settings
 from .errors import AIReviewError
 from .orchestrator import ConsultOrchestrator
-from .providers.gemini_provider import GeminiProvider
-from .providers.openai_provider import OpenAIProvider
+from .providers.factory import build_provider
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m tools.ai_review",
-        description="Local OpenAI ↔ Gemini cross-model consultation.",
+        description="Local configurable cross-model consultation.",
     )
     parser.add_argument(
         "--config",
@@ -41,16 +40,23 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         settings = load_settings(args.config)
-        openai = OpenAIProvider(
-            model=settings.openai_model,
+        primary = build_provider(
+            settings.primary_provider,
+            model=settings.primary_model,
             max_output_tokens=settings.max_output_tokens,
+            ollama_host=settings.ollama_host,
         )
-        gemini = GeminiProvider(model=settings.gemini_model)
+        secondary = build_provider(
+            settings.secondary_provider,
+            model=settings.secondary_model,
+            max_output_tokens=settings.max_output_tokens,
+            ollama_host=settings.ollama_host,
+        )
 
         if args.command == "consult":
             result = ConsultOrchestrator(
-                openai=openai,
-                gemini=gemini,
+                primary=primary,
+                secondary=secondary,
                 runs_dir=settings.runs_dir,
                 save_runs=not args.no_save,
             ).consult(args.task)

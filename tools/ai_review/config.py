@@ -10,12 +10,17 @@ from .errors import ConfigurationError
 
 
 _ENV_REF = re.compile(r"^\$\{([A-Z0-9_]+)\}$")
+_SUPPORTED_PROVIDERS = {"ollama", "openai", "gemini"}
+_DEFAULT_OLLAMA_HOST = "http://127.0.0.1:11434"
 
 
 @dataclass(frozen=True)
 class Settings:
-    openai_model: str
-    gemini_model: str
+    primary_provider: str
+    primary_model: str
+    secondary_provider: str
+    secondary_model: str
+    ollama_host: str
     max_output_tokens: int
     runs_dir: Path
 
@@ -34,6 +39,35 @@ def _resolve_scalar(value: object, field_name: str) -> object:
             f"Set {env_name} or replace the placeholder in config.yaml."
         )
     return resolved
+
+
+def _setting(
+    raw: dict[str, object],
+    *,
+    key: str,
+    env_name: str,
+    default: object | None = None,
+) -> object:
+    if env_name in os.environ and os.environ[env_name]:
+        return os.environ[env_name]
+    value = raw.get(key, default)
+    return _resolve_scalar(value, key)
+
+
+def _normalize_provider(value: object, field_name: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ConfigurationError(f"{field_name} must resolve to a non-empty string.")
+    provider = value.strip().lower()
+    if provider not in _SUPPORTED_PROVIDERS:
+        supported = ", ".join(sorted(_SUPPORTED_PROVIDERS))
+        raise ConfigurationError(f"{field_name} must be one of: {supported}.")
+    return provider
+
+
+def _normalize_model(value: object, field_name: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ConfigurationError(f"{field_name} must resolve to a non-empty string.")
+    return value.strip()
 
 
 def load_settings(path: str | Path | None = None) -> Settings:
@@ -55,25 +89,90 @@ def load_settings(path: str | Path | None = None) -> Settings:
     if not isinstance(raw, dict):
         raise ConfigurationError("config.yaml root must be an object.")
 
-    openai_model = _resolve_scalar(raw.get("openai_model"), "openai_model")
-    gemini_model = _resolve_scalar(raw.get("gemini_model"), "gemini_model")
+    # v0.1 compatibility is role-local rather than all-or-nothing. Seed each
+    # role from the corresponding legacy model when present, then allow the
+    # new file keys and AI_REVIEW_* environment variables to override each
+    # field independently. This supports legacy, mixed-migration, and fully
+    # role-neutral configs without silently dropping untouched legacy values.
+    primary_provider_default: object = (
+        "openai" if "openai_model" in raw else "ollama"
+    )
+    primary_model_default: object = raw.get("openai_model", "gpt-oss:20b")
+    secondary_provider_default: object = "gemini"
+    secondary_model_default: object = raw.get(
+        "gemini_model", "gemini-3.7-flash"
+    )
+
+    primary_provider_value = _setting(
+        raw,
+        key="primary_provider",
+        env_name="AI_REVIEW_PRIMARY_PROVIDER",
+        default=primary_provider_default,
+    )
+    primary_model_value = _setting(
+        raw,
+        key="primary_model",
+        env_name="AI_REVIEW_PRIMARY_MODEL",
+        default=primary_model_default,
+    )
+    secondary_provider_value = _setting(
+        raw,
+        key="secondary_provider",
+        env_name="AI_REVIEW_SECONDARY_PROVIDER",
+        default=secondary_provider_default,
+    )
+    secondary_model_value = _setting(
+        raw,
+        key="secondary_model",
+        env_name="AI_REVIEW_SECONDARY_MODEL",
+        default=secondary_model_default,
+    )
+
+    primary_provider = _normalize_provider(primary_provider_value, "primary_provider")
+    primary_model = _normalize_model(primary_model_value, "primary_model")
+    secondary_provider = _normalize_provider(secondary_provider_value, "secondary_provider")
+    secondary_model = _normalize_model(secondary_model_value, "secondary_model")
+
+    if (primary_provider, primary_model) == (secondary_provider, secondary_model):
+        raise ConfigurationError(
+            "primary and secondary provider/model must differ for independent consultation."
+        )
+
+    uses_ollama = primary_provider == "ollama" or secondary_provider == "ollama"
+    if uses_ollama:
+        ollama_host_value = _setting(
+            raw,
+            key="ollama_host",
+            env_name="AI_REVIEW_OLLAMA_HOST",
+            default=_DEFAULT_OLLAMA_HOST,
+        )
+        if not isinstance(ollama_host_value, str) or not ollama_host_value.strip():
+            raise ConfigurationError("ollama_host must resolve to a non-empty string.")
+        ollama_host = ollama_host_value.strip().rstrip("/")
+        if not (
+            ollama_host.startswith("http://") or ollama_host.startswith("https://")
+        ):
+            raise ConfigurationError("ollama_host must start with http:// or https://.")
+    else:
+        # Ollama is an optional backend. Stale or unresolved Ollama-only
+        # settings must not break a topology that selects only other providers.
+        ollama_host = _DEFAULT_OLLAMA_HOST
+
     max_output_tokens = int(
         os.getenv("AI_REVIEW_MAX_OUTPUT_TOKENS", raw.get("max_output_tokens", 4096))
     )
     runs_dir = Path(
         os.getenv("AI_REVIEW_RUNS_DIR", str(raw.get("runs_dir", "tools/ai_review/runs")))
     )
-
-    if not isinstance(openai_model, str) or not openai_model.strip():
-        raise ConfigurationError("openai_model must resolve to a non-empty string.")
-    if not isinstance(gemini_model, str) or not gemini_model.strip():
-        raise ConfigurationError("gemini_model must resolve to a non-empty string.")
     if max_output_tokens < 256:
         raise ConfigurationError("max_output_tokens must be at least 256.")
 
     return Settings(
-        openai_model=openai_model.strip(),
-        gemini_model=gemini_model.strip(),
+        primary_provider=primary_provider,
+        primary_model=primary_model,
+        secondary_provider=secondary_provider,
+        secondary_model=secondary_model,
+        ollama_host=ollama_host,
         max_output_tokens=max_output_tokens,
         runs_dir=runs_dir,
     )
