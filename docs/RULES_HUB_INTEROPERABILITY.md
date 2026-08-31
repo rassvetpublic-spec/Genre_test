@@ -1,6 +1,6 @@
 # Rules Hub interoperability baseline
 
-Status: **ACCEPT_WITH_CHANGES / docs-contract only**  
+Status: **ACCEPT_WITH_CHANGES / docs-contract only**
 Issue: **#178**
 
 This document is the Genre_test owner for the accepted interoperability boundary with `rassvetpublic-spec/rassvet-rules-hub`.
