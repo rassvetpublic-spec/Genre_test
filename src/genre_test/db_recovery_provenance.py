@@ -24,15 +24,19 @@ def _readonly_provenance(path: Path) -> dict[str, str]:
     path = Path(path).expanduser().resolve()
     if not path.is_file():
         return {"status": "unknown/legacy"}
+    connection: sqlite3.Connection | None = None
     try:
-        with sqlite3.connect(
+        connection = sqlite3.connect(
             f"{path.as_uri()}?mode=ro",
             uri=True,
             timeout=5,
-        ) as connection:
-            return read_database_provenance(connection)
+        )
+        return read_database_provenance(connection)
     except sqlite3.Error:
         return {"status": "unknown/legacy"}
+    finally:
+        if connection is not None:
+            connection.close()
 
 
 def _is_access_journal(path: Path) -> bool:
@@ -127,7 +131,8 @@ def _write_output_provenance(
     *,
     source_fingerprint: str,
 ) -> dict[str, str]:
-    with sqlite3.connect(output) as connection:
+    connection = sqlite3.connect(output)
+    try:
         user_version = int(connection.execute("PRAGMA user_version").fetchone()[0])
         payload = create_database_provenance(
             connection,
@@ -135,7 +140,9 @@ def _write_output_provenance(
             schema_version=str(user_version),
         )
         connection.commit()
-    return payload
+        return payload
+    finally:
+        connection.close()
 
 
 def repair_database(
