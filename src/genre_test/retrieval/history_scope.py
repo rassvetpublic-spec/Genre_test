@@ -421,7 +421,7 @@ def build_history_scope(
     )
     try:
         output_fingerprint = _source_fingerprint(output)
-    except Exception as exc:
+    except (OSError, ValueError) as exc:
         output_journal: dict[str, object] = {
             "recorded": False,
             "journal_path": str(default_journal_path()),
