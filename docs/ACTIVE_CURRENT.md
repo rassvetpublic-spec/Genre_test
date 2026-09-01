@@ -1,72 +1,73 @@
-# ACTIVE / CURRENT
+---
+title: "Genre_test Active Current"
+doc_type: status
+area: project
+status: active
+summary: "Текущий engineering snapshot Genre_test на pre-refactor boundary перед SUPERCOMBINE P1."
+tags:
+  - область/project
+  - тип/status
+  - статус/active
+---
 
-Published stable version: **none**  
-Active development version: **0.5.0.dev0**  
-Active milestone: **v0.5 CLaMP 3 semantic retrieval**  
-Milestone epic: **#26**  
+# Genre_test Active Current
+
+Published stable version: **none**
+
+Active development version: **0.5.0.dev0**
+
+Active milestone: **v0.5 CLaMP 3 semantic retrieval**
+
+Milestone epic: **#26**
+
 Long-term product epic: **#49 SUPERCOMBINE**
-MCP architecture: **#146 / #154** — Option C selected: early read-only QA evidence Track Q is separate from the v0.9 Product MCP façade Track P. Product MCP implementation remains deferred.
 
-`Genre_test/main` plus current GitHub Issues/PR state is the canonical engineering source of truth. A fresh repository-aware agent should start with `docs/REPOSITORY_COLD_START.md` and must not depend on chat history for durable project state.
+`Genre_test/main` + live GitHub Issues/PR state — engineering source of truth. Этот файл фиксирует current snapshot, но не заменяет live task state.
 
-## Current execution state
+## Current boundary state
 
-There is deliberately no single hard-coded "current first implementation issue" in this file. GitHub Issues are task contracts and their live state changes faster than this summary.
-
-For v0.5 execution, use:
-
-1. open Issues under epic **#26** for live task state and acceptance criteria;
-2. `docs/CLAMP3_TODO.md` for the current implementation/acceptance checklist;
-3. the assigned Issue/PR for the exact next allowed action.
-
-Known P0 state at this snapshot:
-
-- **#27 runtime compatibility/isolation** — completed and merged via PR #72; selected architecture is an isolated persistent subprocess sidecar;
-- **#28 retrieval schemas/protocol** — implementation foundation complete in main;
-- **#29 real CLaMP 3 + MERT backend** — implementation and hardened target-PC evidence complete in main;
-- **#30 persistent embedding cache/index** — implementation foundation is in main; real-catalog acceptance remains open;
-- **#41 model licensing/provenance** — still open and remains a v0.5 release gate.
-
-If no Issue is assigned, a new agent must not invent work from chat memory. It should inspect current open Issues and dependencies, then choose only a task that is unambiguously claimable under `AGENTS.md`.
-
-## Product north star
-
-Genre_test is evolving from a genre/profile analyzer into a local-first studio-finish workstation for generative songs:
+**PRE-REFACTOR FREEZE.**
 
 ```text
-Generated mix / stems
-  -> Analyze / Catalog / Search
-  -> Technical QC + timestamped markers
-  -> Repair artifacts
-  -> Vocal/stem post-processing
-  -> Mix/master orchestration
-  -> Synchronized A/B/X review
-  -> Metadata/tag audit
-  -> Delivery / studio-ready master
+mature core / retrieval / QC / legacy Tk presentation
+        |
+        v
+#184 README + Obsidian/Markdown authoring freeze
+        |
+        v
+#171 durable exact-head QA verdict bridge
+        |
+================ REFACTOR BOUNDARY ================
+        |
+        v
+#164 SUPERCOMBINE P1 workstation
 ```
 
-The target is removal of audible defects, unstable synthetic artifacts and weak/raw production characteristics while preserving immutable sources, evidence provenance and reproducible processing manifests.
+P0 workstation architecture #160 / PR #161 уже merged и канонична в `docs/SUPERCOMBINE_UI_ARCHITECTURE.md`.
 
-**AI-origin detector evasion, watermark stripping and provenance concealment are not product objectives.**
+После boundary:
 
-Planned long-term phases:
+- старый Tk GUI и CLI остаются compatibility surfaces;
+- **новые product features не расширяют Tk presentation architecture**;
+- новые UI/service функции реализуются через workstation/application-service architecture;
+- Workstation API является adapter над existing Genre_test services, а не вторым backend/source of truth.
 
-- v0.6 Repair & Stem Lab — #50, #51, #52; Apollo research is tracked under #63;
-- v0.7 Studio Finish / mastering orchestration — including #54 comparison lab;
-- v0.8 Metadata/Catalog/Delivery — #53, #56;
-- v0.9 ComfyUI/runtime orchestration — #46, #55; includes the future Genre_test **Product MCP façade / Track P** over stable APIs. The separate QA evidence-consumer **Track Q** is cross-cutting engineering infrastructure and does not advance v0.9 product scope;
-- v1.0 integrated SUPERCOMBINE.
+## Immediate execution train
 
-See `ROADMAP.md` and `docs/SUPERCOMBINE_TODO.md`.
+1. **#184** — pre-refactor docs/knowledge freeze;
+2. **#171** — постоянное решение exact-head QA verdict contract;
+3. **#164** — Workstation P1: shell, RU/EN, local service/API/job facade, runtime HUD adapter;
+4. **#94** — fail-closed explicit history correctness gate должен быть закрыт до Catalog/Search Workstation P2 acceptance;
+5. **#34** — Catalog/Search functional integration в Workstation P2.
 
-## Protected core analysis baseline
+`#155 ReviewEvidencePackV1` архитектурно разблокирован после Option C, но на boundary имеет состояние `PARKED_READY`, чтобы не смешивать большой QA-infrastructure track с P1 refactor train.
 
-The protected ordinary-analysis baseline remains:
+## Protected ordinary-analysis baseline
 
 ```text
 Audio
-  -> MAEST Discogs519 fine-style evidence
-  -> AudioSet AST semantic evidence
+  -> MAEST Discogs519
+  -> AudioSet AST
   -> BPM / key / native source metadata
   -> deterministic profile fusion
   -> AudioProfile schema 4
@@ -74,144 +75,102 @@ Audio
   -> history / Validation / build comparison
 ```
 
-Retrieval, repair and mastering work may not silently change these outputs without a dedicated reviewed migration.
+Retrieval, workstation, repair и mastering не меняют эти semantics без отдельной reviewed/versioned migration.
 
-Stable core runtime:
+Runtime baseline:
 
-- **Python 3.13 x64 primary**;
-- Python 3.12 x64 supported fallback;
-- Python 3.11 unsupported;
-- PyTorch 2.12.1;
-- NVIDIA CUDA 13.0 / cu130;
-- RTX 5070 Ti / `sm_120` proven on the target workstation;
-- CPU-only mode supported;
-- FFmpeg required for extended decode fallback.
+- Python `3.13` primary;
+- Python `3.12` fallback;
+- Python `3.11` unsupported;
+- PyTorch `2.12.1`;
+- CUDA `13.0` / cu130;
+- RTX 5070 Ti / `sm_120` verified;
+- CPU-only supported;
+- FFmpeg required for extended decode fallback;
+- **#27 runtime compatibility/isolation** — completed; selected runtime is the isolated persistent Python 3.12 CLaMP 3 sidecar.
 
-The supported user entry point is `Genre_test_START.cmd`. Scripts under `scripts/` are implementation details unless a task contract says otherwise.
+Supported user entry point: `Genre_test_START.cmd`.
 
-## Active v0.5: CLaMP 3 retrieval
+## v0.5 retrieval state
 
-Selected backend family: **CLaMP 3 SAAS + MERT + XLM-R** behind an **optional isolated persistent Python 3.12 subprocess sidecar**.
-
-The isolated route was selected after real target-PC validation. The older upstream Python 3.10/CUDA 11.8 recipe is reference evidence only; core-native CLaMP inference was intentionally not selected.
-
-Purpose:
-
-- audio-to-audio semantic similarity;
-- Russian/multilingual free-text-to-music search;
-- representative segment search;
-- custom segment search;
-- persistent local catalog embeddings;
-- deterministic Core Sound summary;
-- later controlled zero-shot descriptors;
-- conservative tempo/structure timeline after the segment foundation.
-
-Planned GUI surface:
+Selected production/reference family:
 
 ```text
-Анализ | Каталог | Поиск | Validation | Проверка
+Audio -> MERT -> CLaMP 3 SAAS
+Text  -> XLM-R -> CLaMP 3 SAAS
 ```
 
-CLaMP 3 does not replace MAEST, AudioSet AST, tempo/key DSP, AudioProfile, history, Validation or build comparison. Retrieval failure must not break ordinary Analyze startup.
+Runtime: optional isolated persistent Python 3.12 sidecar.
 
-Current-state retrieval contracts:
+Foundation already in `main`:
 
-- `docs/CLAMP3_ARCHITECTURE.md`
-- `docs/CLAMP3_RUNTIME.md`
-- `docs/CLAMP3_RUNTIME_P0.md`
-- `docs/CLAMP3_RETRIEVAL_ACCEPTANCE.md`
-- `docs/THIRD_PARTY_MODELS.md`
+- versioned retrieval contracts/schema;
+- persistent track/text/segment embeddings;
+- exact cosine index and deterministic ranking;
+- audio similarity search;
+- RU multilingual text search;
+- representative/custom segment search;
+- CLI/export/query history;
+- benchmark/catalog acceptance tooling;
+- model-free `mfcc-acoustic78` benchmark baseline.
 
-Planning/scope references are useful for phase intent but are **not current-state authority**; if they conflict with `Genre_test/main`, live GitHub state, or the current-state contracts above, the current sources win:
+Remaining v0.5 work is predominantly real-catalog/relevance acceptance, selected product descriptions, release policy/packaging and Workstation integration. Exact checklist: `docs/CLAMP3_TODO.md`.
 
-- `docs/CLAMP3_ROADMAP.md`
-- `docs/CLAMP3_TODO.md`
-- `docs/CLAMP3_OUTPUT_SCOPE.md`
+MERT licensing/provenance release gate remains #41. It does **not** block Workstation P1 shell refactoring.
 
-Current retrieval state layout is flat under `.genre_test/`:
+## Catalog/Search presentation ownership
+
+Historical v0.5 UI wording `Анализ | Каталог | Поиск | Validation | Проверка` is no longer a command to add new feature tabs to Tk.
+
+Issue #34 now owns the **functional** Catalog/Search requirements for Workstation P2:
 
 ```text
-.genre_test/
-  history.sqlite3
-  retrieval.sqlite3
-  logs/
-  models/
-  runtimes/clamp3/.venv/
-  upstream/clamp3/
+Project | Analyze | Catalog | Search | Repair | Stems | Master | Compare | Delivery | Settings
 ```
 
-## Third-party model gate
+Existing Tk functionality remains operational during migration; presentation replacement is incremental.
 
-CLaMP code/selected weight provenance is recorded, while the documented audio path uses `m-a-p/MERT-v1-95M`, whose model terms remain a release constraint tracked by **#41**.
+## Resource/runtime ownership
 
-Until that gate is complete:
+Resource Monitor collector was implemented under #48 and remains canonical telemetry truth.
 
-- the MERT-backed retrieval backend remains optional/experimental for release-policy purposes;
-- no MERT weights are committed or bundled;
-- the stack is not described as commercially unrestricted;
-- exact model revisions/checksums/licenses remain part of provenance diagnostics and release documentation.
+Workstation HUD must consume/adapt that runtime data. It must not create a second Shimmer/HTTP polling truth. #55 full ModelRuntimeManager stays deferred; #164 may define only minimal DTO seams such as `RuntimeSnapshot`, `BackendCapability` and `JobStatus`.
 
-## v0.5 output truth rule
+## Comparison transport ownership
 
-```text
-MEASURED / MODEL EVIDENCE
-  -> RESOLVED ANALYSIS
-  -> DETERMINISTIC DESCRIPTION
-  -> OPTIONAL CREATIVE RECOMMENDATIONS (future)
-```
+Full #54 A/B/X Comparison Lab remains a later studio-finish feature, but the shared transport kernel is required earlier by Workstation P3 before Repair/Stems/Master surfaces depend on it.
 
-Descriptions must never outrun their evidence. CLaMP similarity is not automatically a calibrated semantic fact, and structure change-points must not be promoted to Verse/Chorus/Drop labels without evidence.
+No private repair-only or mastering-only transport should be created.
 
-## Large-catalog evidence
+## MCP state
 
-Existing v0.4 history provides the first real retrieval corpus:
+Option C is selected and merged:
 
-```text
-10,439 discovered files
-10,436 successful Auto analyses
-10,383 semantic OK
-~775 h audio
-```
+- **Track Q** — bounded read-only engineering/QA evidence consumption, transport-independent and cross-cutting;
+- **Track P** — Product MCP façade remains v0.9 after stable local service/API boundaries exist.
 
-This history should be reused as catalog metadata. Retrieval indexing must not unnecessarily rerun MAEST/AST.
+Old #146 A/B decision is completed/closed. Product MCP runtime is not current scope.
 
-## Geekatplay integration status
+## Obsidian / repository knowledge
 
-Existing forks:
+Repository root is one Obsidian Vault. Authority model:
 
-```text
-rassvetpublic-spec/music-suite
-rassvetpublic-spec/ComfyUI-MusicMapper-nodes
-```
+> ONE FACT -> ONE CANONICAL OWNER -> MANY VIEWS
 
-`docs/GEEKATPLAY_ORG_AUDIT.md` is the canonical reuse audit. Selected directions include:
+Current knowledge layer:
 
-- Music Suite technical metrics/markers and mastering-orchestration patterns;
-- Song Geometry Mapper time/feature/edge concepts;
-- synchronized comparison ideas from ABCvers;
-- asset integrity/provenance/lineage patterns;
-- model-cache/runtime patterns for future shared GPU scheduling.
+- `docs/obsidian/KNOWLEDGE_REGISTRY.json` — navigation metadata only;
+- `docs/obsidian/KNOWLEDGE_INDEX.md` — generated projection;
+- `docs/obsidian/MARKDOWN_AUTHORING_STANDARD.md` — post-boundary authoring contract;
+- `docs/obsidian/MARKDOWN_LEGACY_BASELINE.json` — grandfathered Markdown blob identities.
 
-These are evidence/reuse inputs, not permission to copy code without per-upstream provenance and license checks.
-
-## Retained analysis regression baseline (from retired v0.4 line)
-
-These behaviors remain useful regression expectations even though the v0.4 release/tag/package line is retired:
-
-- default output view: `all`
-- optional full source path
-- live Device / mode / view / path switching between tracks
-- Safe Stop for Analysis and Validation
-- dark theme by default with live Dark / Light switching
-- Expert mode exposes MAEST windows and Top-K
-- CPU-only UI does not offer CUDA
-- History and log paths clickable
+New or changed human-maintained Markdown must follow the authoring passport. Unchanged historical docs are not mass-rewritten.
 
 ## Ozone 12 mastering consolidation
 
 `Genre_test` is the only active engineering destination for AUDIO_MASTERING.
 
-Ozone 12 Advanced is an optional v0.7 mastering backend and REAPER is its render host. The active Ozone knowledge/config/tooling boundary is:
+Canonical boundary:
 
 ```text
 docs/mastering/ozone12/
@@ -220,68 +179,23 @@ tools/mastering/ozone12/
 src/genre_test/mastering/ozone12/
 ```
 
-The standalone `OZONE12_MASTERING_LAB` repository and `legacy/OZONE12_MASTERING_LAB/` are frozen migration/provenance evidence. New mastering architecture and implementation belong in Genre_test.
+Standalone `OZONE12_MASTERING_LAB` and `legacy/OZONE12_MASTERING_LAB/` are frozen provenance/migration evidence. No new writes go to the standalone repository.
 
-Backend-neutral measurements belong in shared technical/QC layers; Ozone XML, ParamID/schema/build guards, `ElementChain`, preset construction and REAPER/Ozone render logic stay inside the Ozone boundary.
+Ozone 12 Advanced is optional; REAPER is the Ozone render host. Backend-neutral QC belongs in shared technical layers.
 
-See `docs/mastering/ozone12/README.md` and `docs/mastering/ozone12/MIGRATION_FROM_OZONE12_MASTERING_LAB.md`.
+## Governance
 
-## Release state
+`AGENTS.md` remains authoritative.
 
-There is **no currently published packaged stable release**. The former v0.4 portable release line has been retired from the active repository and GitHub Releases/Tags.
-
-`Genre_test_START.cmd` retains packaged-mode bootstrap capability for a future release, but no historical v0.4 ZIP or checksum file is an active release artifact or source of truth.
-
-## Governance and merge policy
-
-`AGENTS.md` is authoritative for repository governance.
-
-Key current rule: the project has **standing automatic MTD authorization** for already approved-scope work. Once a PR reaches exact-head `READY-MTD <40-char-sha>` with all required QA, Audio Science when triggered, CI, scope and evidence gates satisfied, `RELEASE_MANAGER` may merge, verify `main`, and delete the merged head branch without requesting a fresh MTD token.
-
-Standing MTD does **not** authorize new/material architecture decisions, scope expansion, unrelated work, missing/inconclusive evidence, or bypassing required review gates. Explicit `mtd`, `MTD` or `мтд` remains a valid scoped override.
-
-## Repository governance
-
-Canonical repository: `rassvetpublic-spec/Genre_test`.
-
-Current governance baseline:
-
-- repository visibility: **public**;
-- default branch: `main`;
-- GitHub Ruleset: `Protect main`, enforcement `active`, applies to the default branch;
-- direct updates require a Pull Request;
-- merge method allowed by the Ruleset: squash only;
-- live required status contexts remain `test (3.11)`, `test (3.12)`, `test (3.13)` during the ruleset migration;
-- `test (3.11)` is now a lightweight **retirement sentinel** that verifies Python 3.11 is rejected; it does not install or execute Python 3.11;
-- `test (3.12)` runs compatibility pytest only;
-- `test (3.13)` is the primary full quality/runtime-contract + pytest gate;
-- docs-only PRs keep the required contexts, skip heavy Python setup/Ruff/full pytest, run lightweight repository contract tests on Python 3.13, and fail the required contexts if preflight fails;
-- superseded PR CI is cancelled through workflow concurrency;
-- merge-to-main no longer repeats the full matrix; it runs only a lightweight Python 3.13 merged-tree smoke;
-- strict required-status-check policy is enabled;
-- deletion and non-fast-forward updates are blocked;
-- no Ruleset bypass actors are configured;
-- the repository also retains `.githooks/pre-push` as a local defense-in-depth guard.
-
-The legacy `test (3.11)` context name cannot be removed from the live GitHub ruleset through the currently available repository connector because that connector exposes ruleset reads but not administration writes. Removing that label is a governance migration only; it is no longer part of the supported runtime matrix.
-
-Repository-owned governance configuration/check tooling lives under `config/github/`, `scripts/github-*.ps1`, and `CHECK_GOVERNANCE.cmd`.
-
-## Cold-start acceptance
-
-A fresh agent with only `Genre_test/main` and live GitHub state must be able to recover:
+Normal flow:
 
 ```text
-PRODUCT
-CURRENT VERSION
-CURRENT MILESTONE
-CURRENT ARCHITECTURE
-PROTECTED BASELINES
-COMPLETED WORK
-ACTIVE / BLOCKED WORK
-GOVERNANCE
-ASSIGNED TASK CONTRACT
-NEXT ALLOWED ACTION
+Issue -> branch -> PR -> exact-head CI/QA
+      -> READY-MTD -> squash merge -> post-merge verify -> cleanup
 ```
 
-The exact recovery procedure and conflict policy are defined in `docs/REPOSITORY_COLD_START.md`.
+The standing automatic MTD authorization applies only to already-approved scope after required exact-head evidence is complete. Temporary #171 review-format exceptions used for previous cleanup trains do not automatically extend to #164.
+
+## Cold-start rule
+
+A fresh agent must start with `docs/REPOSITORY_COLD_START.md`, then inspect live GitHub state before claiming work. Chat history is never durable authority.

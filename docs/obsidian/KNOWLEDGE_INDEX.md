@@ -12,7 +12,7 @@ generation_direction: "JSON_TO_MARKDOWN"
 
 > Derived/rebuildable navigation view. Canonical project facts remain in their owning repository documents/state; this index never overrides them.
 
-Registered principal documents: **13**.
+Registered principal documents: **16**.
 
 Coverage is intentionally partial in Phase 1. Unregistered files are not implied to be unimportant, deprecated, or non-canonical.
 
@@ -22,7 +22,7 @@ Coverage is intentionally partial in Phase 1. Unregistered files are not implied
 
 | Document | Type | Status | Summary |
 |---|---|---|---|
-| [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] | `runbook` | `canonical` | Порядок восстановления project state из main и live GitHub без зависимости от истории чатов. |
+| [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] | `runbook` | `canonical` | Порядок восстановления project state, refactor-boundary state и task admission из main/live GitHub без зависимости от чатов. |
 | [[AGENTS|Конституция агентов Genre_test]] | `protocol` | `canonical` | Канонический governance-контракт ролей, authority, claim discipline, exact-head review и standing automatic MTD. |
 
 ### `mastering`
@@ -35,11 +35,14 @@ Coverage is intentionally partial in Phase 1. Unregistered files are not implied
 
 | Document | Type | Status | Summary |
 |---|---|---|---|
-| [[README|Genre_test — вход в проект]] | `guide` | `active` | Краткая точка входа в Genre_test: текущая версия, защищённый анализ, runtime, запуск и основные subsystem-направления. |
+| [[ROADMAP|Genre_test Roadmap]] | `status` | `active` | Release и architecture sequence от active v0.5 retrieval через Workstation P1-P8 к integrated SUPERCOMBINE v1.0. |
+| [[README|Genre_test — вход в проект]] | `guide` | `active` | Главная точка входа: active v0.5, pre-refactor boundary, protected core, retrieval, SUPERCOMBINE, Ozone и Obsidian authoring. |
+| [[docs/obsidian/MARKDOWN_AUTHORING_STANDARD|Markdown Authoring Standard Genre_test]] | `protocol` | `canonical` | Post-boundary passport, structure, grandfathering и generated-path rules для human-maintained Markdown. |
 | [[docs/obsidian/PLUGIN_PROFILE.yaml|Plugin-soft профиль Obsidian Genre_test]] | `reference` | `active` | Phase 0 профиль core/recommended/optional Obsidian capabilities и запретов на plugin-owned authority. |
+| [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] | `architecture` | `canonical` | Owner-approved post-boundary Workstation architecture, donor policy, service/API layering and P1-P8 implementation order. |
 | [[docs/obsidian/TAG_TAXONOMY|Taxonomy тегов Genre_test]] | `protocol` | `active` | Controlled taxonomy, разделяющая document tags, technical terms, local keywords и Research Radar semantics. |
 | [[docs/obsidian/RELATION_SCHEMA|Typed relation schema Genre_test]] | `protocol` | `active` | Typed relation vocabulary для human-maintained knowledge без создания второго relation/state owner. |
-| [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] | `status` | `active` | Текущий development snapshot проекта, активный milestone, защищённые baseline и subsystem-состояние; live GitHub state остаётся обязательной проверкой. |
+| [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] | `status` | `active` | Current snapshot на pre-refactor boundary: immediate train #184 -> #171 -> #164, protected baselines и subsystem ownership. |
 | [[docs/obsidian/CLI_POLICY|Политика Obsidian CLI Genre_test]] | `runbook` | `active` | Правила безопасного optional local использования Obsidian CLI без превращения GUI/CLI в CI или state authority. |
 | [[docs/obsidian/PROPERTY_SCHEMA|Схема Properties Genre_test]] | `protocol` | `active` | Phase 0 contract для human metadata, generated projections и ownership boundary Obsidian knowledge layer. |
 
@@ -63,19 +66,36 @@ Coverage is intentionally partial in Phase 1. Unregistered files are not implied
 | [[AGENTS|Конституция агентов Genre_test]] | `related` | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] |
 | [[AGENTS|Конституция агентов Genre_test]] | `related` | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] |
 | [[README|Genre_test — вход в проект]] | `related` | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] |
+| [[README|Genre_test — вход в проект]] | `related` | [[ROADMAP|Genre_test Roadmap]] |
 | [[README|Genre_test — вход в проект]] | `related` | [[docs/CLAMP3_ARCHITECTURE|Архитектура retrieval CLaMP 3]] |
+| [[README|Genre_test — вход в проект]] | `related` | [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] |
 | [[README|Genre_test — вход в проект]] | `related` | [[docs/mastering/ozone12/README|Подсистема мастеринга Ozone 12]] |
+| [[README|Genre_test — вход в проект]] | `related` | [[docs/obsidian/MARKDOWN_AUTHORING_STANDARD|Markdown Authoring Standard Genre_test]] |
 | [[README|Genre_test — вход в проект]] | `related` | [[docs/research/RESEARCH_RADAR|Research Radar v2 Genre_test]] |
+| [[ROADMAP|Genre_test Roadmap]] | `related` | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] |
+| [[ROADMAP|Genre_test Roadmap]] | `related` | [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] |
+| [[ROADMAP|Genre_test Roadmap]] | `related` | [[docs/CLAMP3_ARCHITECTURE|Архитектура retrieval CLaMP 3]] |
 | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] | `related` | [[README|Genre_test — вход в проект]] |
+| [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] | `related` | [[ROADMAP|Genre_test Roadmap]] |
 | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] | `related` | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] |
+| [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] | `related` | [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] |
 | [[docs/CLAMP3_ARCHITECTURE|Архитектура retrieval CLaMP 3]] | `related` | [[docs/CLAMP3_RUNTIME|docs/CLAMP3_RUNTIME.md]] |
 | [[docs/CLAMP3_ARCHITECTURE|Архитектура retrieval CLaMP 3]] | `related` | [[docs/THIRD_PARTY_MODELS|docs/THIRD_PARTY_MODELS.md]] |
 | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] | `depends_on` | [[AGENTS|Конституция агентов Genre_test]] |
 | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] | `related` | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] |
 | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] | `related` | [[docs/ARCHITECTURE|docs/ARCHITECTURE.md]] |
+| [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] | `related` | [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] |
+| [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] | `related` | [[docs/obsidian/MARKDOWN_AUTHORING_STANDARD|Markdown Authoring Standard Genre_test]] |
+| [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] | `related` | [[README|Genre_test — вход в проект]] |
+| [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] | `related` | [[ROADMAP|Genre_test Roadmap]] |
+| [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] | `related` | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] |
 | [[docs/mastering/ozone12/README|Подсистема мастеринга Ozone 12]] | `related` | [[docs/mastering/ozone12/MIGRATION_FROM_OZONE12_MASTERING_LAB|docs/mastering/ozone12/MIGRATION_FROM_OZONE12_MASTERING_LAB.md]] |
 | [[docs/obsidian/CLI_POLICY|Политика Obsidian CLI Genre_test]] | `depends_on` | [[docs/obsidian/PROPERTY_SCHEMA|Схема Properties Genre_test]] |
 | [[docs/obsidian/CLI_POLICY|Политика Obsidian CLI Genre_test]] | `related` | [[docs/obsidian/PLUGIN_PROFILE.yaml|Plugin-soft профиль Obsidian Genre_test]] |
+| [[docs/obsidian/MARKDOWN_AUTHORING_STANDARD|Markdown Authoring Standard Genre_test]] | `depends_on` | [[docs/obsidian/PROPERTY_SCHEMA|Схема Properties Genre_test]] |
+| [[docs/obsidian/MARKDOWN_AUTHORING_STANDARD|Markdown Authoring Standard Genre_test]] | `depends_on` | [[docs/obsidian/TAG_TAXONOMY|Taxonomy тегов Genre_test]] |
+| [[docs/obsidian/MARKDOWN_AUTHORING_STANDARD|Markdown Authoring Standard Genre_test]] | `related` | [[README|Genre_test — вход в проект]] |
+| [[docs/obsidian/MARKDOWN_AUTHORING_STANDARD|Markdown Authoring Standard Genre_test]] | `related` | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] |
 | [[docs/obsidian/PLUGIN_PROFILE.yaml|Plugin-soft профиль Obsidian Genre_test]] | `related` | [[docs/obsidian/PROPERTY_SCHEMA|Схема Properties Genre_test]] |
 | [[docs/obsidian/PLUGIN_PROFILE.yaml|Plugin-soft профиль Obsidian Genre_test]] | `related` | [[docs/obsidian/CLI_POLICY|Политика Obsidian CLI Genre_test]] |
 | [[docs/obsidian/PROPERTY_SCHEMA|Схема Properties Genre_test]] | `related` | [[docs/obsidian/TAG_TAXONOMY|Taxonomy тегов Genre_test]] |
