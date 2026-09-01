@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from genre_test import db_recovery as core
 from genre_test.db_access_journal import (
     access_summary,
     current_build_identity,
@@ -95,6 +96,45 @@ def test_journal_failure_is_explicit_but_does_not_block_audit(
     assert database_fingerprint(source) == before
     assert report["journal"]["recorded"] is False
     assert report["journal"]["error"]
+
+
+def test_unhealthy_audit_is_journaled_as_failure(tmp_path: Path, monkeypatch) -> None:
+    state = tmp_path / "state"
+    monkeypatch.setenv("GENRE_TEST_DATA_DIR", str(state))
+    source = _make_history(tmp_path / "history.sqlite3")
+    fingerprint = database_fingerprint(source)
+    stat = source.stat()
+    unhealthy = core.DatabaseReport(
+        path=str(source.resolve()),
+        kind="history",
+        size_bytes=stat.st_size,
+        mtime_ns=stat.st_mtime_ns,
+        wal_bytes=0,
+        shm_bytes=0,
+        fingerprint=fingerprint,
+        journal_mode="delete",
+        quick_check="database disk image is malformed",
+        integrity_check=None,
+        healthy=False,
+        score=-1_000_000,
+        error=None,
+    )
+    monkeypatch.setattr(
+        "genre_test.db_recovery_provenance.core.audit_database",
+        lambda path, full_integrity=False: unhealthy,
+    )
+
+    report = audit_database(source)
+
+    assert report["healthy"] is False
+    assert report["target_unchanged"] is True
+    assert report["journal"]["recorded"] is True
+    assert report["access_provenance"]["last_read"] is None
+    with sqlite3.connect(state / "database_access.sqlite3") as connection:
+        success = connection.execute(
+            "SELECT success FROM access_events ORDER BY rowid DESC LIMIT 1"
+        ).fetchone()[0]
+    assert success == 0
 
 
 def test_scan_excludes_access_journal_and_direct_self_audit_is_rejected(
