@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sqlite3
 import sys
+import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -12,6 +14,7 @@ from . import db_recovery as core
 from .db_access_journal import (
     access_summary,
     create_database_provenance,
+    default_journal_path,
     read_database_provenance,
     record_database_access,
 )
@@ -32,6 +35,12 @@ def _readonly_provenance(path: Path) -> dict[str, str]:
         return {"status": "unknown/legacy"}
 
 
+def _is_access_journal(path: Path) -> bool:
+    candidate = Path(path).expanduser().resolve(strict=False)
+    journal = default_journal_path().expanduser().resolve(strict=False)
+    return candidate == journal
+
+
 def audit_database(
     path: Path,
     *,
@@ -41,6 +50,9 @@ def audit_database(
     """Audit through the stable core and add external provenance without target mutation."""
 
     path = Path(path).expanduser().resolve()
+    if _is_access_journal(path):
+        raise ValueError("database access journal cannot audit itself")
+
     before: str | None = None
     after: str | None = None
     try:
@@ -95,9 +107,14 @@ def scan_databases(
     full_integrity: bool = False,
 ) -> list[dict[str, Any]]:
     selected = list(roots) if roots is not None else core.default_search_roots()
+    candidates = [
+        path
+        for path in core.discover_databases(selected)
+        if not _is_access_journal(path)
+    ]
     reports = [
         audit_database(path, full_integrity=full_integrity, operation="scan")
-        for path in core.discover_databases(selected)
+        for path in candidates
     ]
     return sorted(
         reports,
@@ -131,26 +148,66 @@ def repair_database(
 ) -> dict[str, Any]:
     source = Path(source).expanduser().resolve()
     output = Path(output).expanduser().resolve()
+    if source == output:
+        raise ValueError("output must not overwrite source")
+    if output.exists() and not force:
+        raise FileExistsError(f"output already exists: {output}")
+    if _is_access_journal(source) or _is_access_journal(output):
+        raise ValueError("database access journal cannot be a repair source or output")
+
     source_before = core.database_fingerprint(source)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    staging = output.with_name(output.name + f".provenance-stage-{uuid.uuid4().hex}")
+    previous_backup: Path | None = None
+    output_metadata: dict[str, str] = {}
+    actions: list[str] = []
+
     try:
         core_report = core.repair_database(
             source,
-            output,
-            force=force,
+            staging,
+            force=False,
             reindex=reindex,
             full_integrity=full_integrity,
         )
+        actions.extend(core_report.actions)
+
         output_metadata = _write_output_provenance(
-            output,
+            staging,
             source_fingerprint=source_before,
         )
-        output_audit = core.audit_database(output, full_integrity=full_integrity)
-        if not output_audit.healthy:
-            raise RuntimeError("provenance-enriched repaired copy failed final audit")
+        actions.append("embedded-provenance")
+
+        staging_audit = core.audit_database(staging, full_integrity=full_integrity)
+        if not staging_audit.healthy:
+            raise RuntimeError("provenance-enriched staged repair failed final audit")
+
         source_after = core.database_fingerprint(source)
         if source_after != source_before:
             raise RuntimeError("source changed while provenance-aware repair was running")
+
+        if output.exists():
+            if not force:
+                raise FileExistsError(f"output appeared during repair: {output}")
+            stamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+            previous_backup = output.with_name(
+                output.name + f".pre-repair-{stamp}.bak"
+            )
+            os.replace(output, previous_backup)
+            actions.append(f"destination-backup:{previous_backup}")
+
+        try:
+            os.replace(staging, output)
+            output_audit = core.audit_database(output, full_integrity=full_integrity)
+            if not output_audit.healthy:
+                raise RuntimeError("published provenance-enriched repair failed final audit")
+        except Exception:
+            output.unlink(missing_ok=True)
+            if previous_backup is not None and previous_backup.exists():
+                os.replace(previous_backup, output)
+            raise
     except Exception as exc:
+        staging.unlink(missing_ok=True)
         record_database_access(
             target_path=source,
             target_fingerprint=source_before,
@@ -187,6 +244,8 @@ def repair_database(
     payload = core_report.to_dict()
     payload.update(
         {
+            "output": str(output),
+            "actions": actions,
             "source_fingerprint_after": source_after,
             "source_unchanged": source_after == source_before,
             "output_fingerprint": output_audit.fingerprint,
