@@ -88,13 +88,13 @@ Repository documents describe canonical ownership and durable state, while live 
 
 ## Current refactor boundary
 
-На snapshot после #184 repository находится перед первым production workstation refactor slice.
+После merge #184 repository переходит через pre-refactor knowledge freeze к первому production workstation refactor slice. Durable exact-head QA bridge уже завершён через #171 / merged PR #188 и не является оставшейся зависимостью #164.
 
 ```text
 pre-refactor sanitation / knowledge freeze
         |
-        +-- #184
-        +-- #171 durable QA contract
+        +-- #171 / PR #188 durable QA bridge: COMPLETE
+        +-- #184 Obsidian/Markdown boundary: CURRENT GATE
         |
 ================ REFACTOR BOUNDARY ================
         |
@@ -163,7 +163,8 @@ Knowledge principle:
 - новый `.md` требует approved passport;
 - изменяемый grandfathered `.md` требует passport в том же PR;
 - generated Research Radar/Obsidian projections имеют отдельный owner/schema;
-- `CHECK_OBSIDIAN.cmd` проверяет registry/index и Markdown authoring contract.
+- `CHECK_OBSIDIAN.cmd` проверяет registry/index и Markdown authoring contract;
+- repository CI выполняет stdlib authoring checker даже для docs-only PR, поэтому локальная команда не является единственным enforcement surface.
 
 ## GitHub workflow
 
@@ -186,9 +187,9 @@ Standing automatic MTD не отменяет exact-head evidence gates и не �
 
 ## QA boundary
 
-Issue #171 остаётся отдельным governance dependency перед #164. Временные format-only exceptions предыдущих cleanup trains не считаются постоянным contract.
+Issue #171 завершён через merged PR #188. Канонический `qa-verdict-bridge` нормализует только допустимый independent exact-head Codex clean-review signal в commit status `qa-verdict-bridge`; он не выдаёт `READY-MTD`, не заменяет Audio Science и не переживает смену head SHA.
 
-RELEASE_MANAGER агрегирует evidence; он не превращает свободный prose review в `QA_APPROVED` ad hoc.
+RELEASE_MANAGER агрегирует exact-head evidence; он не превращает свободный prose review в `QA_APPROVED` ad hoc.
 
 ## Runtime and repository facts
 
