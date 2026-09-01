@@ -4,7 +4,6 @@ import json
 import re
 import unittest
 from pathlib import Path
-from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -61,7 +60,7 @@ EXPECTED_OWNERSHIP_CLASSES = [
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 
 
-def load_profile() -> dict[str, Any]:
+def load_profile() -> dict[str, object]:
     return json.loads(PROFILE_PATH.read_text(encoding="utf-8"))
 
 
