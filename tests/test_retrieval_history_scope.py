@@ -13,6 +13,7 @@ from genre_test.db_access_journal import (
     read_database_provenance,
     record_database_access,
 )
+from genre_test.retrieval import history_scope as history_scope_module
 from genre_test.retrieval.catalog import load_catalog_tracks
 from genre_test.retrieval.history_scope import _source_fingerprint, build_history_scope
 
@@ -273,6 +274,40 @@ def test_scope_build_rejects_access_journal_as_force_output(tmp_path: Path) -> N
         )
 
     assert journal.read_bytes() == before
+
+
+def test_post_publish_fingerprint_failure_is_reported_without_invalidating_scope(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "history.sqlite3"
+    output = tmp_path / "scope.sqlite3"
+    _create_source(source)
+    real_fingerprint = history_scope_module._source_fingerprint
+
+    def _flaky_fingerprint(path: Path) -> str:
+        candidate = Path(path).resolve()
+        if candidate == output.resolve() and output.exists():
+            raise PermissionError("transient scanner lock")
+        return real_fingerprint(path)
+
+    monkeypatch.setattr(history_scope_module, "_source_fingerprint", _flaky_fingerprint)
+
+    report = history_scope_module.build_history_scope(
+        source,
+        output,
+        analyzer_version="0.4.0",
+        analysis_mode="auto",
+    )
+
+    assert output.is_file()
+    with sqlite3.connect(output) as connection:
+        assert connection.execute("PRAGMA quick_check").fetchone()[0] == "ok"
+    assert report.journal["source"]["recorded"] is True
+    assert report.journal["output"]["recorded"] is False
+    assert "PermissionError: transient scanner lock" in str(
+        report.journal["output"]["error"]
+    )
 
 
 def test_source_fingerprint_ignores_zero_length_wal_creation(tmp_path: Path) -> None:
