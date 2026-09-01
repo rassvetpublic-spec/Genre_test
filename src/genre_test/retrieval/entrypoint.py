@@ -99,10 +99,15 @@ def explicit_history_paths(argv: list[str]) -> tuple[Path, ...]:
         if token == "--":
             break
         if token == "--history":
-            if index + 1 < len(argv) and not argv[index + 1].startswith("-"):
-                selected.append(Path(argv[index + 1]))
-                index += 2
-                continue
+            if index + 1 < len(argv):
+                value = argv[index + 1]
+                # A single-dash value is a valid Click Path value (for example,
+                # ``-missing.sqlite3``). Preserve long-option/missing-value handling for
+                # Click instead of misclassifying another ``--option`` as a source path.
+                if value != "--" and not value.startswith("--"):
+                    selected.append(Path(value))
+                    index += 2
+                    continue
         elif token.startswith("--history="):
             value = token.partition("=")[2]
             if not value:
