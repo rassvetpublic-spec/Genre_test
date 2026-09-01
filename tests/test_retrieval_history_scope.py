@@ -7,8 +7,14 @@ from pathlib import Path
 
 import pytest
 
+from genre_test.db_access_journal import access_summary, read_database_provenance
 from genre_test.retrieval.catalog import load_catalog_tracks
 from genre_test.retrieval.history_scope import _source_fingerprint, build_history_scope
+
+
+@pytest.fixture(autouse=True)
+def _isolated_genre_test_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GENRE_TEST_DATA_DIR", str(tmp_path / "state"))
 
 
 def _sha256(path: Path) -> str:
@@ -122,6 +128,8 @@ def test_build_history_scope_filters_mixed_history_and_preserves_source(tmp_path
     assert report.duplicate_track_ids == 0
     assert report.integrity_check == "ok"
     assert report.source_unchanged is True
+    assert report.journal["source"]["recorded"] is True
+    assert report.journal["output"]["recorded"] is True
     assert _sha256(source) == before
 
     con = sqlite3.connect(output)
@@ -134,11 +142,21 @@ def test_build_history_scope_filters_mixed_history_and_preserves_source(tmp_path
         "SELECT last_path FROM tracks WHERE track_id='sha256:b'"
     ).fetchone()[0] == "D:/music/b-v04.wav"
     meta = dict(con.execute("SELECT key, value FROM retrieval_history_scope_meta"))
+    provenance = read_database_provenance(con)
     con.close()
     assert meta["analyzer_version"] == "0.4.0"
     assert meta["analysis_mode"] == "auto"
     assert meta["selected_tracks"] == "2"
     assert meta["source_fingerprint_policy"] == "db+nonempty-wal-v1"
+    assert provenance["status"] == "known"
+    assert provenance["source_fingerprint"] == report.source_fingerprint
+
+    source_access = access_summary(target_fingerprint=report.source_fingerprint)
+    output_access = access_summary(target_fingerprint=_source_fingerprint(output))
+    assert source_access.last_scope_build is not None
+    assert source_access.last_read is not None
+    assert output_access.last_scope_build is not None
+    assert output_access.last_write is not None
 
     catalog = load_catalog_tracks(output)
     assert [track.track_id for track in catalog] == ["sha256:a", "sha256:b"]
