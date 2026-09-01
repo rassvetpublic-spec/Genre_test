@@ -56,13 +56,16 @@ tags:
 
 `tags` должны точно соответствовать `area`, `doc_type` и `status`. Для `doc_type` с `_` в tag используется `-`.
 
+Validator намеренно поддерживает ограниченный детерминированный YAML-compatible subset без внешнего YAML runtime. Quoted scalar должен начинаться и заканчиваться одной и той же одинарной или двойной кавычкой; незакрытые или несовпадающие кавычки запрещены. Сложные inline YAML structures вместо контролируемого passport subset не используются.
+
 Разрешённые дополнительные properties определяются `docs/obsidian/PROPERTY_SCHEMA.md`, `docs/obsidian/RELATION_SCHEMA.md` и `docs/obsidian/TAG_TAXONOMY.md`. Пустые optional arrays запрещены.
 
 ## Document structure
 
 Human-maintained документ после миграции должен:
 
-- иметь ровно один H1;
+- иметь ровно один H1 в column-zero ATX форме `# Heading`;
+- использовать только column-zero ATX headings (`#` ... `######`); Setext headings и ATX headings с начальным отступом запрещены;
 - использовать H2/H3/... и не перескакивать через уровень заголовка;
 - держать repository paths, commands, identifiers, schema names, model IDs и exact values в code formatting;
 - ссылаться на существующего canonical owner вместо копирования большого блока уже принадлежащих ему фактов;
@@ -118,7 +121,9 @@ python tools/check_markdown_authoring.py
 - невалидных `doc_type` / `area` / `status`;
 - несовпадающих controlled tags;
 - отсутствующего или множественного H1;
+- Setext/indented heading syntax;
 - пропуска heading level;
+- malformed/unbalanced quoted passport scalar;
 - CRLF/CR в новом или мигрированном документе.
 
 ## Refactor boundary
