@@ -7,7 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from genre_test.db_access_journal import access_summary, read_database_provenance
+from genre_test.db_access_journal import (
+    access_summary,
+    default_journal_path,
+    read_database_provenance,
+    record_database_access,
+)
 from genre_test.retrieval.catalog import load_catalog_tracks
 from genre_test.retrieval.history_scope import _source_fingerprint, build_history_scope
 
@@ -108,6 +113,20 @@ def _create_source(path: Path, *, duplicate: bool = False) -> None:
     con.executemany("INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, ?)", runs)
     con.commit()
     con.close()
+
+
+def _create_access_journal(tmp_path: Path) -> Path:
+    result = record_database_access(
+        target_path=tmp_path / "journal-target.sqlite3",
+        target_fingerprint="f" * 64,
+        operation="read",
+        access_mode="readonly",
+        success=True,
+    )
+    assert result.recorded is True
+    journal = default_journal_path()
+    assert journal.is_file()
+    return journal
 
 
 def test_build_history_scope_filters_mixed_history_and_preserves_source(tmp_path: Path) -> None:
@@ -219,6 +238,41 @@ def test_build_history_scope_refuses_to_replace_output_without_force(tmp_path: P
         )
 
     assert output.read_text(encoding="utf-8") == "keep"
+
+
+def test_scope_build_rejects_access_journal_as_source(tmp_path: Path) -> None:
+    journal = _create_access_journal(tmp_path)
+    before = journal.read_bytes()
+    output = tmp_path / "scope.sqlite3"
+
+    with pytest.raises(ValueError, match="access journal"):
+        build_history_scope(
+            journal,
+            output,
+            analyzer_version="0.4.0",
+            analysis_mode="auto",
+        )
+
+    assert journal.read_bytes() == before
+    assert not output.exists()
+
+
+def test_scope_build_rejects_access_journal_as_force_output(tmp_path: Path) -> None:
+    source = tmp_path / "history.sqlite3"
+    _create_source(source)
+    journal = _create_access_journal(tmp_path)
+    before = journal.read_bytes()
+
+    with pytest.raises(ValueError, match="access journal"):
+        build_history_scope(
+            source,
+            journal,
+            analyzer_version="0.4.0",
+            analysis_mode="auto",
+            force=True,
+        )
+
+    assert journal.read_bytes() == before
 
 
 def test_source_fingerprint_ignores_zero_length_wal_creation(tmp_path: Path) -> None:
