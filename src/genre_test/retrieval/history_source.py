@@ -5,6 +5,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+HISTORY_SOURCE_ERROR_CODES = frozenset(
+    {
+        "history_source_missing",
+        "history_source_invalid_path",
+        "history_source_invalid_schema",
+        "history_source_corrupt",
+        "history_source_unreadable",
+    }
+)
+
 _REQUIRED_COLUMNS = {
     "tracks": frozenset({"track_id", "last_path"}),
     "runs": frozenset({"track_id", "result_json", "analyzed_at"}),
@@ -54,6 +64,8 @@ def _failure(
     missing_tables: tuple[str, ...] = (),
     missing_columns: tuple[str, ...] = (),
 ) -> HistorySourceError:
+    if code not in HISTORY_SOURCE_ERROR_CODES:
+        raise ValueError(f"unsupported history source error code: {code}")
     return HistorySourceError(
         HistorySourceFailure(
             code=code,
