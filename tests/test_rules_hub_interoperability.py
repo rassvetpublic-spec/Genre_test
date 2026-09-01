@@ -14,6 +14,9 @@ PROPERTY_SCHEMA_PATH = ROOT / "docs" / "obsidian" / "PROPERTY_SCHEMA.md"
 RELATION_SCHEMA_PATH = ROOT / "docs" / "obsidian" / "RELATION_SCHEMA.md"
 RESEARCH_RADAR_PATH = ROOT / "docs" / "research" / "RESEARCH_RADAR.md"
 
+EXPECTED_PEER_REVISION = "687b17e68ecf2cfd41dae33b70079eb24ef4c69d"
+EXPECTED_PROPOSAL_BLOB = "8e50e35f4c5411fa08eadfdad9314f69e6da84e7"
+
 EXPECTED_DOC_TYPES = [
     "architecture",
     "protocol",
@@ -66,6 +69,20 @@ def read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def fenced_values_after(text: str, label: str) -> list[str]:
+    start = text.index(label) + len(label)
+    match = re.search(r"```text\s*\n(.*?)\n```", text[start:], re.DOTALL)
+    if match is None:
+        raise AssertionError(f"Missing fenced vocabulary after {label!r}")
+    return [line.strip() for line in match.group(1).splitlines() if line.strip()]
+
+
+def level3_code_headings_between(text: str, start_label: str, end_label: str) -> list[str]:
+    start = text.index(start_label) + len(start_label)
+    end = text.index(end_label, start)
+    return re.findall(r"(?m)^### `([^`]+)`\s*$", text[start:end])
+
+
 class RulesHubInteroperabilityContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -97,6 +114,8 @@ class RulesHubInteroperabilityContractTests(unittest.TestCase):
             peer["source_path"],
             "docs/GENRE_TEST_INTEROPERABILITY_PROPOSAL.md",
         )
+        self.assertEqual(peer["revision"], EXPECTED_PEER_REVISION)
+        self.assertEqual(peer["source_blob"], EXPECTED_PROPOSAL_BLOB)
         self.assertIsNotNone(HEX40.fullmatch(peer["revision"]))
         self.assertIsNotNone(HEX40.fullmatch(peer["source_blob"]))
         self.assertNotIn("branch", peer)
@@ -108,39 +127,39 @@ class RulesHubInteroperabilityContractTests(unittest.TestCase):
         self.assertIn(invariant, self.interop)
         self.assertIn(invariant, self.property_schema)
 
-    def test_shared_document_type_vocabulary_matches_phase_zero(self) -> None:
+    def test_shared_document_type_vocabulary_matches_complete_phase_zero_set(self) -> None:
         actual = self.profile["shared_vocabulary"]["doc_type"]
-        self.assertEqual(actual, EXPECTED_DOC_TYPES)
-        for value in actual:
-            with self.subTest(doc_type=value):
-                self.assertRegex(
-                    self.property_schema,
-                    rf"(?m)^\s*{re.escape(value)}\s*$",
-                )
+        canonical = fenced_values_after(self.property_schema, "Document types:")
+        self.assertEqual(canonical, EXPECTED_DOC_TYPES)
+        self.assertEqual(actual, canonical)
 
-    def test_shared_status_vocabulary_matches_phase_zero(self) -> None:
+    def test_shared_status_vocabulary_matches_complete_phase_zero_set(self) -> None:
         actual = self.profile["shared_vocabulary"]["status"]
-        self.assertEqual(actual, EXPECTED_STATUSES)
-        for value in actual:
-            with self.subTest(status=value):
-                self.assertRegex(
-                    self.property_schema,
-                    rf"(?m)^\s*{re.escape(value)}\s*$",
-                )
+        canonical = fenced_values_after(self.property_schema, "Document statuses:")
+        self.assertEqual(canonical, EXPECTED_STATUSES)
+        self.assertEqual(actual, canonical)
 
-    def test_shared_typed_relations_match_phase_zero(self) -> None:
+    def test_shared_typed_relations_match_complete_phase_zero_set(self) -> None:
         actual = self.profile["shared_vocabulary"]["typed_relations"]
-        self.assertEqual(actual, EXPECTED_RELATIONS)
-        for value in actual:
-            with self.subTest(relation=value):
-                self.assertIn(f"### `{value}`", self.relation_schema)
+        canonical = level3_code_headings_between(
+            self.relation_schema,
+            "## P0 relation set для human-maintained docs",
+            "## Пустые relations не добавляются",
+        )
+        self.assertEqual(canonical, EXPECTED_RELATIONS)
+        self.assertEqual(actual, canonical)
 
-    def test_ownership_classes_have_the_same_local_meaning(self) -> None:
+    def test_ownership_classes_match_complete_local_set(self) -> None:
         actual = self.profile["shared_vocabulary"]["ownership_classes"]
-        self.assertEqual(actual, EXPECTED_OWNERSHIP_CLASSES)
+        canonical = level3_code_headings_between(
+            self.property_schema,
+            "## Классы repository knowledge",
+            "## Human-maintained Properties",
+        )
+        self.assertEqual(canonical, EXPECTED_OWNERSHIP_CLASSES)
+        self.assertEqual(actual, canonical)
         for value in actual:
             with self.subTest(ownership_class=value):
-                self.assertIn(f"### `{value}`", self.property_schema)
                 self.assertIn(value, self.interop)
 
     def test_area_and_domain_fields_remain_project_local(self) -> None:
@@ -221,7 +240,8 @@ class RulesHubInteroperabilityContractTests(unittest.TestCase):
 
     def test_compatibility_fixture_never_uses_live_peer_branch_as_authority(self) -> None:
         peer = self.profile["peer"]
-        self.assertIsNotNone(HEX40.fullmatch(peer["revision"]))
+        self.assertEqual(peer["revision"], EXPECTED_PEER_REVISION)
+        self.assertEqual(peer["source_blob"], EXPECTED_PROPOSAL_BLOB)
         self.assertNotIn("main", peer)
         self.assertNotIn("branch", peer)
         self.assertNotIn("ref", peer)
