@@ -1,0 +1,94 @@
+{
+  "schema": "genre-test-rules-hub-interop-profile-v1",
+  "schema_version": 1,
+  "authority_class": "compatibility_fixture_evidence_only",
+  "peer": {
+    "repository": "rassvetpublic-spec/rassvet-rules-hub",
+    "revision": "687b17e68ecf2cfd41dae33b70079eb24ef4c69d",
+    "source_path": "docs/GENRE_TEST_INTEROPERABILITY_PROPOSAL.md",
+    "source_blob": "8e50e35f4c5411fa08eadfdad9314f69e6da84e7"
+  },
+  "accepted_by": {
+    "repository": "rassvetpublic-spec/Genre_test",
+    "contract_path": "docs/RULES_HUB_INTEROPERABILITY.md",
+    "issue": 178,
+    "pull_request": 179
+  },
+  "invariant": "ONE FACT -> ONE CANONICAL OWNER -> MANY VIEWS",
+  "shared_vocabulary": {
+    "doc_type": [
+      "architecture",
+      "protocol",
+      "reference",
+      "research",
+      "decision",
+      "runbook",
+      "status",
+      "index",
+      "guide",
+      "machine_prompt"
+    ],
+    "status": [
+      "canonical",
+      "active",
+      "proposal",
+      "reference",
+      "archived",
+      "generated"
+    ],
+    "typed_relations": [
+      "parent",
+      "depends_on",
+      "implementation_of",
+      "supersedes",
+      "superseded_by",
+      "evidence_for",
+      "research_for",
+      "related"
+    ],
+    "ownership_classes": [
+      "canonical_document",
+      "canonical_machine_state",
+      "generated_projection",
+      "derived_index",
+      "visualization"
+    ],
+    "provenance": {
+      "required": [
+        "repository",
+        "path",
+        "revision"
+      ],
+      "classification_field_options": [
+        "classification",
+        "ownership_class"
+      ]
+    }
+  },
+  "project_local_fields": [
+    "area",
+    "domain_registries",
+    "product_capabilities",
+    "specialized_lifecycle_fields"
+  ],
+  "projection_semantics": {
+    "source_class": "canonical_machine_state",
+    "target_class": "generated_projection",
+    "direction": "one_way",
+    "reverse_authority": false
+  },
+  "research_radar": {
+    "shared_structure_only": true,
+    "shared_mutable_state": false,
+    "canonical_machine_state_format": "JSON",
+    "generated_projection_format": "Markdown"
+  },
+  "forbidden_cross_project_semantics": [
+    "shared_mutable_vault",
+    "shared_mutable_research_radar_state",
+    "peer_repository_authority_override",
+    "live_peer_branch_ci_dependency",
+    "cross_repository_canonical_mutation",
+    "bidirectional_json_markdown_state_sync"
+  ]
+}
