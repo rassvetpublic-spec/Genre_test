@@ -188,11 +188,14 @@ def record_database_access(
     if access_mode not in ALLOWED_ACCESS_MODES:
         raise ValueError(f"unsupported database access mode: {access_mode}")
 
-    path = Path(target_path).expanduser().resolve(strict=False)
-    journal = Path(journal_path or default_journal_path()).expanduser().resolve(strict=False)
-    identity = build_identity or current_build_identity()
-    fingerprint = target_fingerprint or path_fallback_fingerprint(path)
+    journal: Path | None = None
     try:
+        path = Path(target_path).expanduser().resolve(strict=False)
+        journal = Path(journal_path or default_journal_path()).expanduser().resolve(strict=False)
+        identity = build_identity or current_build_identity()
+        fingerprint = target_fingerprint or path_fallback_fingerprint(path)
+        stamp = event_utc or utc_now_iso()
+
         journal.parent.mkdir(parents=True, exist_ok=True)
         with sqlite3.connect(journal) as connection:
             _initialize_journal(connection)
@@ -221,7 +224,7 @@ def record_database_access(
                     str(uuid.uuid4()),
                     fingerprint,
                     str(path),
-                    event_utc or utc_now_iso(),
+                    stamp,
                     operation,
                     access_mode,
                     identity.app_version,
@@ -237,10 +240,10 @@ def record_database_access(
                 ),
             )
             connection.commit()
-    except (OSError, sqlite3.Error) as exc:
+    except Exception as exc:
         return JournalWriteResult(
             recorded=False,
-            journal_path=str(journal),
+            journal_path=str(journal or journal_path or "<unavailable>"),
             error=f"{type(exc).__name__}: {exc}",
         )
     return JournalWriteResult(recorded=True, journal_path=str(journal))
