@@ -411,7 +411,6 @@ def build_history_scope(
         raise FileExistsError(f"output appeared during build: {output}")
     os.replace(temporary, output)
 
-    output_fingerprint = _source_fingerprint(output)
     source_journal = record_database_access(
         target_path=source,
         target_fingerprint=source_fingerprint_before,
@@ -420,14 +419,26 @@ def build_history_scope(
         success=True,
         details=f"derived_scope={output}",
     )
-    output_journal = record_database_access(
-        target_path=output,
-        target_fingerprint=output_fingerprint,
-        operation="scope-build",
-        access_mode="readwrite",
-        success=True,
-        details=f"source_fingerprint={source_fingerprint_before}",
-    )
+    try:
+        output_fingerprint = _source_fingerprint(output)
+    except Exception as exc:
+        output_journal: dict[str, object] = {
+            "recorded": False,
+            "journal_path": str(default_journal_path()),
+            "error": (
+                "output fingerprint unavailable after successful atomic publication: "
+                f"{type(exc).__name__}: {exc}"
+            ),
+        }
+    else:
+        output_journal = record_database_access(
+            target_path=output,
+            target_fingerprint=output_fingerprint,
+            operation="scope-build",
+            access_mode="readwrite",
+            success=True,
+            details=f"source_fingerprint={source_fingerprint_before}",
+        ).to_dict()
 
     return ScopeBuildReport(
         source=str(source),
@@ -443,7 +454,7 @@ def build_history_scope(
         source_unchanged=source_unchanged,
         journal={
             "source": source_journal.to_dict(),
-            "output": output_journal.to_dict(),
+            "output": output_journal,
         },
     )
 
