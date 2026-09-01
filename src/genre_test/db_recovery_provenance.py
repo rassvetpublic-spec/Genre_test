@@ -79,7 +79,7 @@ def audit_database(
         target_fingerprint=report.fingerprint or after or before,
         operation=operation,
         access_mode="readonly",
-        success=report.error is None and target_unchanged is not False,
+        success=report.healthy and target_unchanged is not False,
         details=(
             report.error
             or (
