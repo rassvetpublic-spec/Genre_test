@@ -5,7 +5,6 @@ import re
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 PROFILE_PATH = ROOT / "tests" / "fixtures" / "rules_hub_interop" / "profile_v1.json"
 INTEROP_PATH = ROOT / "docs" / "RULES_HUB_INTEROPERABILITY.md"
