@@ -98,6 +98,36 @@ def test_journal_failure_is_explicit_but_does_not_block_audit(
     assert report["journal"]["error"]
 
 
+def test_identity_discovery_failure_stays_inside_best_effort_boundary(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    journal = tmp_path / "journal.sqlite3"
+    target = tmp_path / "history.sqlite3"
+
+    def _identity_failure():
+        raise OSError("restricted service identity")
+
+    monkeypatch.setattr(
+        "genre_test.db_access_journal.current_build_identity",
+        _identity_failure,
+    )
+
+    result = record_database_access(
+        target_path=target,
+        target_fingerprint=None,
+        operation="audit",
+        access_mode="readonly",
+        success=True,
+        journal_path=journal,
+    )
+
+    assert result.recorded is False
+    assert result.journal_path == str(journal.resolve())
+    assert "OSError: restricted service identity" in str(result.error)
+    assert not journal.exists()
+
+
 def test_unhealthy_audit_is_journaled_as_failure(tmp_path: Path, monkeypatch) -> None:
     state = tmp_path / "state"
     monkeypatch.setenv("GENRE_TEST_DATA_DIR", str(state))
