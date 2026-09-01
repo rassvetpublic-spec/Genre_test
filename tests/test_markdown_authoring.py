@@ -115,6 +115,39 @@ def test_heading_level_skip_fails(tmp_path: Path) -> None:
     assert any("heading level skip" in error for error in errors)
 
 
+def test_setext_heading_is_rejected_by_explicit_atx_only_contract(tmp_path: Path) -> None:
+    path = "docs/new.md"
+    bad = _compliant("Bad") + b"\nSecond H1\n=========\n"
+    target = tmp_path / path
+    target.parent.mkdir(parents=True)
+    target.write_bytes(bad)
+
+    errors = validate_repository(tmp_path, _baseline("docs/old.md", b"old"), tracked_paths=[path])
+    assert any("Setext headings are forbidden" in error for error in errors)
+
+
+def test_indented_atx_heading_is_rejected(tmp_path: Path) -> None:
+    path = "docs/new.md"
+    bad = _compliant("Bad").replace(b"## Section", b"  ## Section")
+    target = tmp_path / path
+    target.parent.mkdir(parents=True)
+    target.write_bytes(bad)
+
+    errors = validate_repository(tmp_path, _baseline("docs/old.md", b"old"), tracked_paths=[path])
+    assert any("indented ATX headings are forbidden" in error for error in errors)
+
+
+def test_unterminated_quoted_frontmatter_scalar_is_rejected(tmp_path: Path) -> None:
+    path = "docs/new.md"
+    bad = _compliant("Bad").replace(b'title: "Bad"', b'title: "Broken')
+    target = tmp_path / path
+    target.parent.mkdir(parents=True)
+    target.write_bytes(bad)
+
+    errors = validate_repository(tmp_path, _baseline("docs/old.md", b"old"), tracked_paths=[path])
+    assert any("malformed quoted frontmatter scalar" in error for error in errors)
+
+
 def test_current_baseline_is_anchored_to_pinned_git_tree() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     baseline = load_baseline(repo_root / "docs/obsidian/MARKDOWN_LEGACY_BASELINE.json")
