@@ -240,7 +240,7 @@ def record_database_access(
                 ),
             )
             connection.commit()
-    except Exception as exc:
+    except (OSError, RuntimeError, ValueError, sqlite3.Error) as exc:
         return JournalWriteResult(
             recorded=False,
             journal_path=str(journal or journal_path or "<unavailable>"),
