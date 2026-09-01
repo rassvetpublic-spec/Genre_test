@@ -71,6 +71,8 @@ def validate_explicit_history(path: Path) -> Path:
     The connection uses SQLite read-only URI mode. In addition to the retrieval schema,
     a read-only quick integrity pass is required so page-level corruption cannot escape
     schema-only validation and fail later outside the stable source-error contract.
+    The current catalog query also orders matching ``runs`` rows by ``r.rowid``; that
+    prerequisite is exercised here before dispatch rather than assumed from table shape.
     """
 
     selected = Path(path)
@@ -113,6 +115,15 @@ def validate_explicit_history(path: Path) -> Path:
                     + ", ".join(missing),
                     missing_columns=missing,
                 )
+
+            try:
+                connection.execute("SELECT r.rowid FROM runs AS r LIMIT 0").fetchall()
+            except sqlite3.Error as exc:
+                raise _failure(
+                    "history_source_invalid_schema",
+                    selected,
+                    "explicit analysis history does not expose runs.rowid required by retrieval",
+                ) from exc
 
             quick_rows = connection.execute("PRAGMA quick_check").fetchall()
             quick_messages = tuple(str(row[0]) for row in quick_rows if row)
