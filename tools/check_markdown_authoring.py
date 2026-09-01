@@ -52,6 +52,8 @@ STATUSES = {"canonical", "active", "proposal", "reference", "archived", "generat
 REQUIRED_KEYS = {"title", "doc_type", "area", "status", "summary", "tags"}
 ROOT_MARKDOWN_SCOPE = {"AGENTS.md", "README.md", "README_RUS.md", "ROADMAP.md"}
 HEADING_RE = re.compile(r"^(#{1,6})\s+\S")
+INDENTED_ATX_RE = re.compile(r"^ {1,3}#{1,6}\s+\S")
+SETEXT_UNDERLINE_RE = re.compile(r"^ {0,3}(?:=+|-+)\s*$")
 KEY_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_-]*):(?:\s*(.*))?$")
 HEX40_RE = re.compile(r"^[0-9a-f]{40}$")
 
@@ -64,7 +66,9 @@ def _safe_path(raw: str) -> str:
     if not raw or "\\" in raw or "\n" in raw or "\r" in raw:
         raise AuthoringError(f"invalid repository path: {raw!r}")
     path = PurePosixPath(raw)
-    if path.is_absolute() or ".." in path.parts or any(part in {"", "."} for part in path.parts):
+    if path.is_absolute() or ".." in path.parts or any(
+        part in {"", "."} for part in path.parts
+    ):
         raise AuthoringError(f"unsafe repository path: {raw!r}")
     return path.as_posix()
 
@@ -124,14 +128,19 @@ def load_baseline(path: Path) -> dict[str, object]:
 
 
 def _in_scope(path: str) -> bool:
-    return path in ROOT_MARKDOWN_SCOPE or (path.startswith("docs/") and path.endswith(".md"))
+    return path in ROOT_MARKDOWN_SCOPE or (
+        path.startswith("docs/") and path.endswith(".md")
+    )
 
 
 def _is_exempt(path: str, baseline: dict[str, object]) -> bool:
     exempt_paths = set(baseline["exempt_paths"])  # type: ignore[arg-type]
     if path in exempt_paths:
         return True
-    return any(path.startswith(prefix) for prefix in baseline["exempt_prefixes"])  # type: ignore[union-attr]
+    return any(
+        path.startswith(prefix)
+        for prefix in baseline["exempt_prefixes"]  # type: ignore[union-attr]
+    )
 
 
 def _git_tree_blobs(repo_root: Path, commit: str) -> dict[str, str]:
@@ -198,9 +207,7 @@ def verify_baseline_against_git(
         )
 
     mismatches = [
-        path
-        for path in sorted(expected_paths)
-        if blobs.get(path) != tree.get(path)
+        path for path in sorted(expected_paths) if blobs.get(path) != tree.get(path)
     ]
     if mismatches:
         raise AuthoringError(
@@ -211,7 +218,12 @@ def verify_baseline_against_git(
 
 def _unquote(value: str) -> str:
     value = value.strip()
-    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+    quote_chars = {"'", '"'}
+    begins_quoted = bool(value) and value[0] in quote_chars
+    ends_quoted = bool(value) and value[-1] in quote_chars
+    if begins_quoted or ends_quoted:
+        if len(value) < 2 or not begins_quoted or value[0] != value[-1]:
+            raise AuthoringError(f"malformed quoted frontmatter scalar: {value!r}")
         return value[1:-1]
     return value
 
@@ -277,7 +289,11 @@ def parse_passport(text: str) -> tuple[dict[str, object], str]:
         raise AuthoringError(f"unsupported status: {status}")
 
     tags = fields["tags"]
-    if not isinstance(tags, list) or not tags or not all(isinstance(tag, str) and tag for tag in tags):
+    if (
+        not isinstance(tags, list)
+        or not tags
+        or not all(isinstance(tag, str) and tag for tag in tags)
+    ):
         raise AuthoringError("tags must be a non-empty YAML list")
     if len(tags) != len(set(tags)):
         raise AuthoringError("duplicate controlled tags are forbidden")
@@ -298,6 +314,9 @@ def validate_structure(body: str) -> list[str]:
     headings: list[int] = []
     in_fence = False
     fence_token: str | None = None
+    previous_line = ""
+    saw_indented_atx = False
+    saw_setext = False
 
     for line in body.splitlines():
         stripped = line.lstrip()
@@ -309,13 +328,25 @@ def validate_structure(body: str) -> list[str]:
             elif token == fence_token:
                 in_fence = False
                 fence_token = None
+            previous_line = ""
             continue
         if in_fence:
             continue
+
+        if INDENTED_ATX_RE.match(line):
+            saw_indented_atx = True
+        if previous_line.strip() and SETEXT_UNDERLINE_RE.fullmatch(line):
+            saw_setext = True
+
         match = HEADING_RE.match(line)
         if match:
             headings.append(len(match.group(1)))
+        previous_line = line
 
+    if saw_indented_atx:
+        errors.append("indented ATX headings are forbidden; use column-zero ATX headings")
+    if saw_setext:
+        errors.append("Setext headings are forbidden; use column-zero ATX headings")
     if headings.count(1) != 1:
         errors.append("document must contain exactly one H1")
     if headings and headings[0] != 1:
@@ -388,7 +419,9 @@ def validate_repository(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Validate Genre_test Markdown authoring boundary")
+    parser = argparse.ArgumentParser(
+        description="Validate Genre_test Markdown authoring boundary"
+    )
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     parser.add_argument("--baseline", type=Path, default=DEFAULT_BASELINE)
     args = parser.parse_args(argv)
