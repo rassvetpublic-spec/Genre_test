@@ -12,7 +12,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
-from ..db_access_journal import create_database_provenance, record_database_access
+from ..db_access_journal import (
+    create_database_provenance,
+    default_journal_path,
+    record_database_access,
+)
 
 DuplicatePolicy = Literal["error", "latest"]
 _SCOPE_META_TABLE = "retrieval_history_scope_meta"
@@ -128,6 +132,9 @@ def _validate_scope_inputs(
     analysis_mode: str,
     duplicate_policy: DuplicatePolicy,
 ) -> None:
+    journal = default_journal_path().expanduser().resolve(strict=False)
+    if source.resolve(strict=False) == journal or output.resolve(strict=False) == journal:
+        raise ValueError("database access journal cannot be a scope-build source or output")
     if not source.is_file():
         raise FileNotFoundError(f"source history not found: {source}")
     if source.resolve() == output.resolve():
