@@ -14,6 +14,7 @@ from .settings import SettingsStore
 
 DONOR_REPOSITORY = "https://github.com/henricksmedia/shimmer"
 DONOR_REVISION = "ff8344ae1a77bd7eb5be46b55c83813e923d3d2c"
+DONOR_CLASSIFICATION = "REIMPLEMENT_FROM_PINNED_UI_REQUIREMENTS"
 
 
 @dataclass
@@ -34,7 +35,8 @@ class WorkstationService:
             "donor": {
                 "repository": DONOR_REPOSITORY,
                 "revision": DONOR_REVISION,
-                "classification": "UI_REFERENCE_ADAPT",
+                "classification": DONOR_CLASSIFICATION,
+                "direct_code_port": False,
             },
         }
 
