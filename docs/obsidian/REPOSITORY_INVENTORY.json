@@ -3,7 +3,7 @@
   "schema_version": 1,
   "authority_scope": "derived_projection_only",
   "generation_direction": "REPOSITORY_TO_DERIVED_JSON",
-  "source_fingerprint": "ba1093ca5a3dc0980858e3d052002df65f99cbc23a8d3e51de18543e204a29b7",
+  "source_fingerprint": "f46fb66c08af1cef89fa04fd644735446ec6b92285a29b77629b074cb0731801",
   "canonical_inputs": {
     "knowledge_registry": "docs/obsidian/KNOWLEDGE_REGISTRY.json",
     "markdown_boundary": "docs/obsidian/MARKDOWN_LEGACY_BASELINE.json",
@@ -19,18 +19,18 @@
     "audio/renders/model weights/caches"
   ],
   "counts": {
-    "canonical_document": 92,
+    "canonical_document": 93,
     "canonical_machine_state": 6,
     "derived_index": 4,
-    "generated_projection": 42,
+    "generated_projection": 43,
     "visualization": 3
   },
   "registration_counts": {
     "exempt": 22,
-    "generated_view": 23,
+    "generated_view": 24,
     "grandfathered": 72,
     "not_applicable": 11,
-    "registered": 19
+    "registered": 20
   },
   "entries": [
     {
@@ -46,7 +46,7 @@
       "path": "README.md",
       "ownership_class": "canonical_document",
       "registration_state": "registered",
-      "blob_sha": "595f85090eaf2a18a9512b93ca38f6adef03d70e",
+      "blob_sha": "5655f3843a4a528ba1c56db462b4df4880ec7196",
       "area": "project",
       "doc_type": "guide",
       "status": "active"
@@ -61,7 +61,7 @@
       "path": "ROADMAP.md",
       "ownership_class": "canonical_document",
       "registration_state": "registered",
-      "blob_sha": "9fce9ac513dde492a8b6988c3c6ec236c2c5ca2d",
+      "blob_sha": "cab2e8d587fc77f6a576773ff9506fd02cd2854e",
       "area": "project",
       "doc_type": "status",
       "status": "active"
@@ -179,6 +179,15 @@
       "ownership_class": "canonical_document",
       "registration_state": "grandfathered",
       "blob_sha": "b5a789cd1966d16ae8b0e4c066dda30924e4d8a9"
+    },
+    {
+      "path": "docs/DONOR_INTAKE.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "registered",
+      "blob_sha": "66e70b034a738123ee6fee7bb5564c15fd235c5c",
+      "area": "project",
+      "doc_type": "protocol",
+      "status": "canonical"
     },
     {
       "path": "docs/ENGINEERING_EVIDENCE_2026-08-30.md",
@@ -634,7 +643,7 @@
       "path": "docs/obsidian/KNOWLEDGE_REGISTRY.json",
       "ownership_class": "canonical_machine_state",
       "registration_state": "not_applicable",
-      "blob_sha": "fa2da54c3fa368ba6cf1012d67a6eb387f96f910"
+      "blob_sha": "c520ef683189bfe8c8a1529d62f40f0b5d002d3a"
     },
     {
       "path": "docs/obsidian/MARKDOWN_AUTHORING_STANDARD.md",
@@ -785,6 +794,12 @@
     },
     {
       "path": "docs/obsidian/registry_views/a774ff112ca6614f7c5a.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/a96b3aa1babb31fecfb6.md",
       "ownership_class": "generated_projection",
       "registration_state": "generated_view",
       "blob_sha": null

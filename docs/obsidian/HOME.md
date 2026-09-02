@@ -20,10 +20,10 @@ canonical_owner: "docs/obsidian/KNOWLEDGE_REGISTRY.json"
 
 ## Core entry points
 
-- [[README|Genre_test — вход в проект]] — Главная точка входа: active v0.5, refactor boundary, protected core, retrieval, SUPERCOMBINE, Ozone и Obsidian authoring.
+- [[README|Genre_test — вход в проект]] — Главная точка входа: active v0.5, product boundary, protected core, retrieval, SUPERCOMBINE, Ozone и Obsidian authoring.
 - [[AGENTS|Конституция агентов Genre_test]] — Канонический governance-контракт ролей, authority, claim discipline, review evidence и standing automatic MTD.
 - [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] — Current repository snapshot after the refactor boundary, with protected baselines, subsystem ownership and Workstation/SUPERCOMBINE as the forward product surface.
-- [[ROADMAP|Genre_test Roadmap]] — Release и architecture sequence от active v0.5 retrieval через Workstation P1-P8 к integrated SUPERCOMBINE v1.0.
+- [[ROADMAP|Genre_test Roadmap]] — Release and architecture sequence from active v0.5 retrieval through SUPERCOMBINE, detector evidence research and integrated v1.0.
 - [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] — Порядок восстановления project state, refactor-boundary state и task admission из main/live GitHub без зависимости от чатов.
 - [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] — Owner-approved post-boundary Workstation architecture, donor policy, service/API layering and P1-P8 implementation order.
 - [[docs/obsidian/MARKDOWN_AUTHORING_STANDARD|Markdown Authoring Standard Genre_test]] — Post-boundary passport, structure, grandfathering и generated-path rules для human-maintained Markdown.
@@ -51,6 +51,7 @@ canonical_owner: "docs/obsidian/KNOWLEDGE_REGISTRY.json"
 - [[docs/obsidian/CLI_POLICY|Политика Obsidian CLI Genre_test]] (`active` / `runbook`)
 - [[docs/obsidian/PROPERTY_SCHEMA|Схема Properties Genre_test]] (`active` / `protocol`)
 - [[docs/DATABASE_RECOVERY|Genre_test Database Recovery]] (`canonical` / `runbook`)
+- [[docs/DONOR_INTAKE|Genre_test Donor Intake Contract]] (`canonical` / `protocol`)
 - [[docs/obsidian/MARKDOWN_AUTHORING_STANDARD|Markdown Authoring Standard Genre_test]] (`canonical` / `protocol`)
 - [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] (`canonical` / `architecture`)
 
@@ -79,4 +80,4 @@ canonical_owner: "docs/obsidian/KNOWLEDGE_REGISTRY.json"
 
 ## Projection identity
 
-Source fingerprint: `ba1093ca5a3dc0980858e3d052002df65f99cbc23a8d3e51de18543e204a29b7`
+Source fingerprint: `f46fb66c08af1cef89fa04fd644735446ec6b92285a29b77629b074cb0731801`

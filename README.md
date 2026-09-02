@@ -3,7 +3,7 @@ title: "Genre_test"
 doc_type: guide
 area: project
 status: active
-summary: "Главная точка входа в Genre_test: текущее состояние, pre-refactor boundary, runtime, retrieval, SUPERCOMBINE и канонические документы."
+summary: "Главная точка входа в Genre_test: текущее состояние, product boundary, runtime, retrieval, SUPERCOMBINE и канонические документы."
 tags:
   - область/project
   - тип/guide
@@ -77,9 +77,37 @@ Generated mix / stems
 - каждый derived asset получает provenance/processing identity;
 - optional heavy backends fail independently;
 - destructive operations previewable/reversible;
-- AI-origin detector evasion, watermark stripping и provenance concealment не являются целями продукта.
+- detector robustness/evidence research отделено от обычных критериев качества repair/mastering;
+- detector-score evasion, watermark stripping и provenance concealment не являются production-целями.
 
 Long-term epic: **#49 SUPERCOMBINE**. Текущий retrieval epic: **#26**.
+
+## Product boundary
+
+Genre_test имеет узкую продуктовую границу. Донорские репозитории и исследовательские технологии не расширяют её автоматически.
+
+**В scope:**
+
+1. music analysis, catalog и semantic retrieval;
+2. Technical QC и evidence-traceable audio measurements;
+3. generative-song repair, stem repair и vocal repair;
+4. studio-finish/mastering orchestration и controlled A/B/X review;
+5. AI-origin/provenance detector research, detector robustness evaluation и воспроизводимые evidence packages по #80/#198;
+6. runtime/model lifecycle, research infrastructure и delivery tooling, необходимые этим задачам.
+
+**Вне product boundary:**
+
+- dubbing pipeline;
+- audiobook production pipeline;
+- general-purpose TTS studio;
+- general-purpose voice-cloning product;
+- film/video localization workflow.
+
+Технология из out-of-scope проекта может быть использована только как узкий donor component для конкретной in-scope задачи — например process containment, device diagnostics, phrase alignment или controlled research fixture. Для donor intake действует отдельный `product_fit: IN_SCOPE | DONOR_ONLY | OUT_OF_SCOPE` gate; donor feature list сам по себе не становится roadmap.
+
+Detector Evidence Lab (#198) является first-class research surface, но detector score не является mastering-quality truth. Обычные Repair/Mastering workflows не должны скрыто минимизировать detector score. VoiceStudio (#199) рассматривается только как runtime/operations donor; dubbing, audiobook, TTS-studio и voice-cloning product features из него не переносятся.
+
+Donor intake contract: [`docs/DONOR_INTAKE.md`](docs/DONOR_INTAKE.md).
 
 ## Current protected analysis baseline
 

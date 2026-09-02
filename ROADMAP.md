@@ -3,7 +3,7 @@ title: "Genre_test Roadmap"
 doc_type: status
 area: project
 status: active
-summary: "Release and architecture sequence from active v0.5 retrieval through the SUPERCOMBINE workstation and v1.0 integration."
+summary: "Release and architecture sequence from active v0.5 retrieval through the SUPERCOMBINE workstation, detector evidence research and v1.0 integration."
 tags:
   - область/project
   - тип/status
@@ -36,7 +36,32 @@ Boundary rules:
 - measured/model evidence separated from description/recommendation;
 - derived assets carry lineage/processing manifests;
 - optional heavy backends fail independently;
+- detector robustness/evidence research is allowed as an explicit research surface;
+- ordinary repair/mastering never treats detector-score reduction as a quality objective;
 - no detector-evasion, watermark stripping or provenance concealment objective.
+
+## Product boundary
+
+Roadmap admission is limited to these product families:
+
+1. music analysis / catalog / semantic retrieval;
+2. Technical QC and evidence-traceable measurements;
+3. generative-song, stem and vocal repair;
+4. studio-finish/mastering orchestration and controlled A/B/X review;
+5. AI-origin/provenance detector research and reproducible robustness evidence under #80/#198;
+6. runtime/model lifecycle, research infrastructure and delivery tooling required by those capabilities.
+
+Explicitly outside the product roadmap:
+
+- dubbing pipeline;
+- audiobook production pipeline;
+- general-purpose TTS studio;
+- general-purpose voice-cloning product;
+- film/video localization workflow.
+
+Donor technology from those domains may enter only as a bounded component for an existing in-scope Issue. Every donor intake records `product_fit: IN_SCOPE | DONOR_ONLY | OUT_OF_SCOPE`; a donor feature list never becomes roadmap automatically. VoiceStudio #199 is therefore a runtime/operations donor, not a new speech-production product line.
+
+Canonical donor intake contract: `docs/DONOR_INTAKE.md`.
 
 ## Current line — `0.5.0.dev0`
 
@@ -112,6 +137,20 @@ Issue #94 is a hard gate: an explicit missing/invalid `--history` path must fail
 
 The future local API must map source/infrastructure errors into structured failures, never `200 OK / tracks: 0` for a failed prerequisite.
 
+## Cross-cutting Detector Evidence Lab
+
+Issue #198 is a first-class research/evidence track under #80. It is not a release-line mastering objective and may evolve alongside product releases when evidence work is useful.
+
+Allowed outputs include versioned detector evidence manifests, reproducible false-positive/false-negative cases, detector disagreement/calibration reports and responsible-disclosure evidence packages.
+
+Boundary:
+
+- detector result is research evidence, not provenance ground truth;
+- exact processing history must be preserved;
+- ordinary Repair/Mastering acceptance does not optimize detector score;
+- no hidden watermark/provenance removal;
+- evidence-audio rights are distinct from source-code licensing.
+
 ## v0.6 — Repair & Stem Lab
 
 Primary product issues:
@@ -163,6 +202,8 @@ Identity metadata is never silently overwritten from model inference.
 - stable local job API with progress/heartbeat/Safe Stop;
 - **Track P Product MCP façade** over stable APIs.
 
+Runtime donor work such as #199 may pull forward narrowly scoped process-containment, capability-truth or doctor primitives when they directly support an in-scope backend. It must not import dubbing/audiobook/TTS product scope.
+
 ### Track Q — cross-cutting QA infrastructure
 
 Option C is already selected. Read-only Track Q engineering/QA evidence infrastructure may evolve outside release numbering without advancing product MCP scope.
@@ -196,7 +237,9 @@ Graduation principles:
 - Russian-first user documentation;
 - real generative-song end-to-end fixtures;
 - explicit third-party provenance/terms;
-- no anti-detector-evasion objective.
+- detector evidence research remains explicit and auditable;
+- no detector-score evasion objective;
+- no dubbing/audiobook/TTS-studio product expansion.
 
 ## Knowledge and authoring layer
 

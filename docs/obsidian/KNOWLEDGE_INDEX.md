@@ -12,7 +12,7 @@ generation_direction: "JSON_TO_MARKDOWN"
 
 > Derived/rebuildable navigation view. Canonical project facts remain in their owning repository documents/state; this index never overrides them.
 
-Registered principal documents: **20**.
+Registered principal documents: **21**.
 
 Registration is now enforced for new or materially migrated human Markdown; unchanged grandfathered documents may remain outside the principal registry.
 
@@ -37,8 +37,9 @@ Registration is now enforced for new or materially migrated human Markdown; unch
 | Document | Type | Status | Summary |
 |---|---|---|---|
 | [[docs/DATABASE_RECOVERY|Genre_test Database Recovery]] | `runbook` | `canonical` | Канонический fail-closed workflow поиска, read-only аудита и атомарного repair SQLite с внешним access journal и provenance derived copies. |
-| [[ROADMAP|Genre_test Roadmap]] | `status` | `active` | Release и architecture sequence от active v0.5 retrieval через Workstation P1-P8 к integrated SUPERCOMBINE v1.0. |
-| [[README|Genre_test — вход в проект]] | `guide` | `active` | Главная точка входа: active v0.5, refactor boundary, protected core, retrieval, SUPERCOMBINE, Ozone и Obsidian authoring. |
+| [[docs/DONOR_INTAKE|Genre_test Donor Intake Contract]] | `protocol` | `canonical` | Canonical admission gate for donor technologies: product fit, provenance, authority boundaries, evidence class and acceptance before port/adaptation. |
+| [[ROADMAP|Genre_test Roadmap]] | `status` | `active` | Release and architecture sequence from active v0.5 retrieval through SUPERCOMBINE, detector evidence research and integrated v1.0. |
+| [[README|Genre_test — вход в проект]] | `guide` | `active` | Главная точка входа: active v0.5, product boundary, protected core, retrieval, SUPERCOMBINE, Ozone и Obsidian authoring. |
 | [[docs/obsidian/MARKDOWN_AUTHORING_STANDARD|Markdown Authoring Standard Genre_test]] | `protocol` | `canonical` | Post-boundary passport, structure, grandfathering и generated-path rules для human-maintained Markdown. |
 | [[docs/obsidian/PLUGIN_PROFILE.yaml|Plugin-soft профиль Obsidian Genre_test]] | `reference` | `active` | Phase 0 профиль core/recommended/optional Obsidian capabilities и запретов на plugin-owned authority. |
 | [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] | `architecture` | `canonical` | Owner-approved post-boundary Workstation architecture, donor policy, service/API layering and P1-P8 implementation order. |
@@ -82,9 +83,11 @@ Registration is now enforced for new or materially migrated human Markdown; unch
 | [[README|Genre_test — вход в проект]] | `related` | [[docs/mastering/ozone12/README|Подсистема мастеринга Ozone 12]] |
 | [[README|Genre_test — вход в проект]] | `related` | [[docs/obsidian/MARKDOWN_AUTHORING_STANDARD|Markdown Authoring Standard Genre_test]] |
 | [[README|Genre_test — вход в проект]] | `related` | [[docs/research/RESEARCH_RADAR|Research Radar v2 Genre_test]] |
+| [[README|Genre_test — вход в проект]] | `related` | [[docs/DONOR_INTAKE|Genre_test Donor Intake Contract]] |
 | [[ROADMAP|Genre_test Roadmap]] | `related` | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] |
 | [[ROADMAP|Genre_test Roadmap]] | `related` | [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] |
 | [[ROADMAP|Genre_test Roadmap]] | `related` | [[docs/CLAMP3_ARCHITECTURE|Архитектура retrieval CLaMP 3]] |
+| [[ROADMAP|Genre_test Roadmap]] | `related` | [[docs/DONOR_INTAKE|Genre_test Donor Intake Contract]] |
 | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] | `related` | [[README|Genre_test — вход в проект]] |
 | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] | `related` | [[ROADMAP|Genre_test Roadmap]] |
 | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] | `related` | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] |
@@ -95,6 +98,9 @@ Registration is now enforced for new or materially migrated human Markdown; unch
 | [[docs/DATABASE_ACCESS_PROVENANCE|Database Access Provenance]] | `related` | [[docs/DATABASE_RECOVERY|Genre_test Database Recovery]] |
 | [[docs/DATABASE_ACCESS_PROVENANCE|Database Access Provenance]] | `related` | [[docs/RETRIEVAL_HISTORY_SCOPE|docs/RETRIEVAL_HISTORY_SCOPE.md]] |
 | [[docs/DATABASE_RECOVERY|Genre_test Database Recovery]] | `related` | [[docs/DATABASE_ACCESS_PROVENANCE|Database Access Provenance]] |
+| [[docs/DONOR_INTAKE|Genre_test Donor Intake Contract]] | `related` | [[README|Genre_test — вход в проект]] |
+| [[docs/DONOR_INTAKE|Genre_test Donor Intake Contract]] | `related` | [[ROADMAP|Genre_test Roadmap]] |
+| [[docs/DONOR_INTAKE|Genre_test Donor Intake Contract]] | `related` | [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] |
 | [[docs/QA_VERDICT_BRIDGE|QA Verdict Bridge]] | `depends_on` | [[AGENTS|Конституция агентов Genre_test]] |
 | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] | `depends_on` | [[AGENTS|Конституция агентов Genre_test]] |
 | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] | `related` | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] |
