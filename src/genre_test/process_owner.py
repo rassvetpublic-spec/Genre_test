@@ -4,10 +4,38 @@ import os
 import signal
 import subprocess
 import sys
+import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, Any
+
+_GATE_ENV = "GENRE_TEST_PROCESS_OWNER_GATE"
+_WINDOWS_BOOTSTRAP = r'''
+import ctypes
+import os
+import subprocess
+import sys
+from ctypes import wintypes
+
+name = os.environ.pop("GENRE_TEST_PROCESS_OWNER_GATE")
+kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+kernel32.OpenEventW.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.LPCWSTR]
+kernel32.OpenEventW.restype = wintypes.HANDLE
+kernel32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+kernel32.WaitForSingleObject.restype = wintypes.DWORD
+kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+kernel32.CloseHandle.restype = wintypes.BOOL
+handle = kernel32.OpenEventW(0x00100000, False, name)
+if not handle:
+    raise SystemExit(125)
+try:
+    if kernel32.WaitForSingleObject(handle, 0xFFFFFFFF) != 0:
+        raise SystemExit(126)
+finally:
+    kernel32.CloseHandle(handle)
+raise SystemExit(subprocess.call(sys.argv[1:], env=os.environ))
+'''
 
 
 class ProcessOwnerError(RuntimeError):
@@ -86,10 +114,10 @@ class _WindowsJob:
             )
 
         info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
-        info.BasicLimitInformation.LimitFlags = 0x00002000  # KILL_ON_JOB_CLOSE
+        info.BasicLimitInformation.LimitFlags = 0x00002000
         ok = kernel32.SetInformationJobObject(
             handle,
-            9,  # JobObjectExtendedLimitInformation
+            9,
             ctypes.byref(info),
             ctypes.sizeof(info),
         )
@@ -103,10 +131,6 @@ class _WindowsJob:
         self._ctypes = ctypes
         self._kernel32 = kernel32
         self._handle = handle
-
-    @property
-    def closed(self) -> bool:
-        return self._handle is None
 
     def assign(self, process: subprocess.Popen[Any]) -> None:
         if self._handle is None:
@@ -139,12 +163,64 @@ class _WindowsJob:
             raise ProcessOwnerError(f"CloseHandle failed with Win32 error {error}")
 
 
+class _WindowsLaunchGate:
+    """Named event that keeps the bootstrap blocked until Job assignment."""
+
+    def __init__(self) -> None:
+        if os.name != "nt":
+            raise ProcessOwnerError("Windows launch gate requested on a non-Windows host")
+        import ctypes
+        from ctypes import wintypes
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.CreateEventW.argtypes = [
+            ctypes.c_void_p,
+            wintypes.BOOL,
+            wintypes.BOOL,
+            wintypes.LPCWSTR,
+        ]
+        kernel32.CreateEventW.restype = wintypes.HANDLE
+        kernel32.SetEvent.argtypes = [wintypes.HANDLE]
+        kernel32.SetEvent.restype = wintypes.BOOL
+        kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+        kernel32.CloseHandle.restype = wintypes.BOOL
+
+        name = f"Local\\GenreTestProcessOwner-{uuid.uuid4()}"
+        handle = kernel32.CreateEventW(None, True, False, name)
+        if not handle:
+            raise ProcessOwnerError(
+                f"CreateEventW failed with Win32 error {ctypes.get_last_error()}"
+            )
+        self.name = name
+        self._ctypes = ctypes
+        self._kernel32 = kernel32
+        self._handle = handle
+
+    def release(self) -> None:
+        if self._handle is None:
+            raise ProcessOwnerError("cannot release a closed Windows launch gate")
+        if not self._kernel32.SetEvent(self._handle):
+            error = self._ctypes.get_last_error()
+            raise ProcessOwnerError(f"SetEvent failed with Win32 error {error}")
+
+    def close(self) -> None:
+        if self._handle is None:
+            return
+        handle = self._handle
+        self._handle = None
+        if not self._kernel32.CloseHandle(handle):
+            error = self._ctypes.get_last_error()
+            raise ProcessOwnerError(f"CloseHandle failed with Win32 error {error}")
+
+
 class ProcessOwner:
     """Own one external operation and its complete process subtree.
 
-    POSIX launches a new session and terminates/kills the corresponding process
-    group. Windows assigns the root process to a Job Object configured with
-    ``JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE``. Closing the owner is idempotent.
+    POSIX launches a new session and owns its process group. Windows launches a
+    Python bootstrap that waits on a named event, assigns that bootstrap to a Job
+    Object with ``JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE``, then releases the event.
+    The requested command therefore cannot create descendants before Job
+    containment is active.
     """
 
     def __init__(self, *, terminate_timeout: float = 3.0) -> None:
@@ -182,9 +258,8 @@ class ProcessOwner:
         if not argv or any(not part for part in argv):
             raise ValueError("command must contain non-empty argv entries")
 
-        kwargs: dict[str, Any] = {
+        base_kwargs: dict[str, Any] = {
             "cwd": None if cwd is None else os.fspath(Path(cwd)),
-            "env": None if env is None else dict(env),
             "stdin": stdin,
             "stdout": stdout,
             "stderr": stderr,
@@ -192,36 +267,79 @@ class ProcessOwner:
             "shell": False,
         }
         if os.name == "nt":
-            kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+            process = self._spawn_windows(argv, env=env, base_kwargs=base_kwargs)
         else:
-            kwargs["start_new_session"] = True
+            process = self._spawn_posix(argv, env=env, base_kwargs=base_kwargs)
+        self._process = process
+        return process
 
+    def _spawn_posix(
+        self,
+        argv: list[str],
+        *,
+        env: Mapping[str, str] | None,
+        base_kwargs: Mapping[str, Any],
+    ) -> subprocess.Popen[Any]:
+        kwargs = dict(base_kwargs)
+        kwargs["env"] = None if env is None else dict(env)
+        kwargs["start_new_session"] = True
         try:
-            process = subprocess.Popen(argv, **kwargs)
+            return subprocess.Popen(argv, **kwargs)
         except OSError as exc:
-            raise ProcessOwnerError(f"failed to start owned process: {type(exc).__name__}") from exc
+            raise ProcessOwnerError(
+                f"failed to start owned process: {type(exc).__name__}"
+            ) from exc
 
+    def _spawn_windows(
+        self,
+        argv: list[str],
+        *,
+        env: Mapping[str, str] | None,
+        base_kwargs: Mapping[str, Any],
+    ) -> subprocess.Popen[Any]:
+        gate = _WindowsLaunchGate()
+        job: _WindowsJob | None = None
+        process: subprocess.Popen[Any] | None = None
         try:
-            if os.name == "nt":
-                job = _WindowsJob()
-                try:
-                    job.assign(process)
-                except BaseException:
-                    job.close()
-                    raise
-                self._windows_job = job
-            self._process = process
+            job = _WindowsJob()
+            child_env = dict(os.environ if env is None else env)
+            child_env[_GATE_ENV] = gate.name
+            kwargs = dict(base_kwargs)
+            kwargs["env"] = child_env
+            kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+            launch_argv = [sys.executable, "-c", _WINDOWS_BOOTSTRAP, *argv]
+            process = subprocess.Popen(launch_argv, **kwargs)
+            job.assign(process)
+            self._windows_job = job
+            gate.release()
             return process
+        except OSError as exc:
+            if process is not None:
+                self._terminate_unowned_root(process)
+            if job is not None:
+                job.close()
+            raise ProcessOwnerError(
+                f"failed to start owned process: {type(exc).__name__}"
+            ) from exc
         except BaseException:
-            self._terminate_unowned_root(process)
+            if process is not None:
+                if job is not None:
+                    try:
+                        job.terminate(1)
+                    except ProcessOwnerError:
+                        self._terminate_unowned_root(process)
+                else:
+                    self._terminate_unowned_root(process)
+            if job is not None:
+                job.close()
+            self._windows_job = None
             raise
+        finally:
+            gate.close()
 
     def wait(self, timeout: float | None = None) -> ProcessExit:
         process = self._require_process()
-        try:
-            returncode = process.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            raise
+        returncode = process.wait(timeout=timeout)
         return ProcessExit(pid=process.pid, returncode=returncode)
 
     def close(self) -> None:
@@ -231,12 +349,14 @@ class ProcessOwner:
         process = self._process
         if process is None:
             return
-        if process.poll() is None:
-            if os.name == "nt":
-                self._terminate_windows_tree(process)
-            else:
-                self._terminate_posix_tree(process)
-        self._close_windows_job()
+        try:
+            if process.poll() is None:
+                if os.name == "nt":
+                    self._terminate_windows_tree(process)
+                else:
+                    self._terminate_posix_tree(process)
+        finally:
+            self._close_windows_job()
 
     def _terminate_posix_tree(self, process: subprocess.Popen[Any]) -> None:
         try:
