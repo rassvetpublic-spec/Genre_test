@@ -10,7 +10,7 @@
       "doc_type": "guide",
       "area": "project",
       "status": "active",
-      "summary": "Главная точка входа: active v0.5, pre-refactor boundary, protected core, retrieval, SUPERCOMBINE, Ozone и Obsidian authoring.",
+      "summary": "Главная точка входа: active v0.5, refactor boundary, protected core, retrieval, SUPERCOMBINE, Ozone и Obsidian authoring.",
       "tags": ["область/project", "тип/guide", "статус/active"],
       "aliases": ["Genre_test"],
       "terms": ["AudioProfile", "CLaMP 3", "SUPERCOMBINE", "refactor boundary"],
@@ -22,7 +22,7 @@
       "doc_type": "protocol",
       "area": "agents",
       "status": "canonical",
-      "summary": "Канонический governance-контракт ролей, authority, claim discipline, exact-head review и standing automatic MTD.",
+      "summary": "Канонический governance-контракт ролей, authority, claim discipline, review evidence и standing automatic MTD.",
       "tags": ["область/agents", "тип/protocol", "статус/canonical"],
       "terms": ["READY-MTD", "QA_REVIEWER", "AUDIO_SCIENCE", "RELEASE_MANAGER"],
       "related": ["docs/REPOSITORY_COLD_START.md", "docs/ACTIVE_CURRENT.md", "docs/QA_VERDICT_BRIDGE.md"]
@@ -44,7 +44,7 @@
       "doc_type": "status",
       "area": "project",
       "status": "active",
-      "summary": "Current snapshot на pre-refactor boundary: immediate train #184 -> #171 -> #164, protected baselines и subsystem ownership.",
+      "summary": "Current repository snapshot after the refactor boundary, with protected baselines, subsystem ownership and Workstation/SUPERCOMBINE as the forward product surface.",
       "tags": ["область/project", "тип/status", "статус/active"],
       "terms": ["0.5.0.dev0", "CLaMP 3", "SUPERCOMBINE", "PRE-REFACTOR FREEZE"],
       "related": ["README.md", "ROADMAP.md", "docs/REPOSITORY_COLD_START.md", "docs/SUPERCOMBINE_UI_ARCHITECTURE.md"]
@@ -92,7 +92,40 @@
       "summary": "Текущая v0.5 архитектура CLaMP 3 retrieval как optional persistent isolated sidecar без замены защищённого Core Analyze.",
       "tags": ["область/retrieval", "тип/architecture", "статус/canonical"],
       "terms": ["CLaMP 3", "MERT", "XLM-R", "embedding", "cosine similarity"],
-      "related": ["docs/CLAMP3_RUNTIME.md", "docs/THIRD_PARTY_MODELS.md"]
+      "related": ["docs/CLAMP3_RUNTIME.md", "docs/THIRD_PARTY_MODELS.md", "docs/RETRIEVAL_HISTORY_SOURCE_CONTRACT.md"]
+    },
+    {
+      "path": "docs/RETRIEVAL_HISTORY_SOURCE_CONTRACT.md",
+      "title": "Retrieval Explicit History Source Contract",
+      "doc_type": "protocol",
+      "area": "retrieval",
+      "status": "canonical",
+      "summary": "Fail-closed validation and structured error mapping for explicitly selected retrieval analysis-history SQLite sources.",
+      "tags": ["область/retrieval", "тип/protocol", "статус/canonical"],
+      "terms": ["--history", "history_source_error", "SQLite", "EXIT_SOURCE_ERROR"],
+      "depends_on": ["docs/CLAMP3_ARCHITECTURE.md"]
+    },
+    {
+      "path": "docs/DATABASE_RECOVERY.md",
+      "title": "Genre_test Database Recovery",
+      "doc_type": "runbook",
+      "area": "project",
+      "status": "canonical",
+      "summary": "Канонический fail-closed workflow поиска, read-only аудита и атомарного repair SQLite с внешним access journal и provenance derived copies.",
+      "tags": ["область/project", "тип/runbook", "статус/canonical"],
+      "terms": ["SQLite", "quick_check", "integrity_check", "repair"],
+      "related": ["docs/DATABASE_ACCESS_PROVENANCE.md"]
+    },
+    {
+      "path": "docs/DATABASE_ACCESS_PROVENANCE.md",
+      "title": "Database Access Provenance",
+      "doc_type": "protocol",
+      "area": "runtime",
+      "status": "canonical",
+      "summary": "External provenance contract for Genre_test SQLite reads, repairs, scoped builds, and derived database identity without mutating audited source databases.",
+      "tags": ["область/runtime", "тип/protocol", "статус/canonical"],
+      "terms": ["SQLite", "database_access.sqlite3", "build fingerprint", "provenance"],
+      "related": ["docs/DATABASE_RECOVERY.md", "docs/RETRIEVAL_HISTORY_SCOPE.md"]
     },
     {
       "path": "docs/research/RESEARCH_OPERATING_RULES.md",
