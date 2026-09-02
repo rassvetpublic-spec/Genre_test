@@ -1,11 +1,11 @@
 ---
 title: "Database Access Provenance"
 doc_type: protocol
-area: runtime-data
+area: runtime
 status: canonical
 summary: "External provenance contract for Genre_test SQLite reads, repairs, scoped builds, and derived database identity without mutating audited source databases."
 tags:
-  - область/runtime-data
+  - область/runtime
   - тип/protocol
   - статус/canonical
 ---
