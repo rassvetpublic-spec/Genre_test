@@ -1,0 +1,39 @@
+filters:
+  and:
+    - 'file.ext == "md"'
+    - or:
+        - 'depends_on != null'
+        - 'evidence_for != null'
+        - 'implementation_of != null'
+        - 'parent != null'
+        - 'related != null'
+        - 'research_for != null'
+        - 'superseded_by != null'
+        - 'supersedes != null'
+properties:
+  file.name:
+    displayName: File
+  title:
+    displayName: Title
+  area:
+    displayName: Area
+  doc_type:
+    displayName: Type
+views:
+  - type: table
+    name: Typed relations
+    order:
+      - title
+      - area
+      - doc_type
+      - depends_on
+      - evidence_for
+      - implementation_of
+      - parent
+      - related
+      - research_for
+      - superseded_by
+      - supersedes
+    groupBy:
+      property: area
+      direction: ASC

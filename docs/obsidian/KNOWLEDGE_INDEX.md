@@ -12,9 +12,9 @@ generation_direction: "JSON_TO_MARKDOWN"
 
 > Derived/rebuildable navigation view. Canonical project facts remain in their owning repository documents/state; this index never overrides them.
 
-Registered principal documents: **16**.
+Registered principal documents: **17**.
 
-Coverage is intentionally partial in Phase 1. Unregistered files are not implied to be unimportant, deprecated, or non-canonical.
+Registration is now enforced for new or materially migrated human Markdown; unchanged grandfathered documents may remain outside the principal registry.
 
 ## Areas
 
@@ -23,6 +23,7 @@ Coverage is intentionally partial in Phase 1. Unregistered files are not implied
 | Document | Type | Status | Summary |
 |---|---|---|---|
 | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] | `runbook` | `canonical` | Порядок восстановления project state, refactor-boundary state и task admission из main/live GitHub без зависимости от чатов. |
+| [[docs/QA_VERDICT_BRIDGE|QA Verdict Bridge]] | `protocol` | `canonical` | Fail-closed normalization contract for independent GitHub Codex review evidence into deterministic qa-verdict-bridge status. |
 | [[AGENTS|Конституция агентов Genre_test]] | `protocol` | `canonical` | Канонический governance-контракт ролей, authority, claim discipline, exact-head review и standing automatic MTD. |
 
 ### `mastering`
@@ -65,6 +66,7 @@ Coverage is intentionally partial in Phase 1. Unregistered files are not implied
 |---|---|---|
 | [[AGENTS|Конституция агентов Genre_test]] | `related` | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] |
 | [[AGENTS|Конституция агентов Genre_test]] | `related` | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] |
+| [[AGENTS|Конституция агентов Genre_test]] | `related` | [[docs/QA_VERDICT_BRIDGE|QA Verdict Bridge]] |
 | [[README|Genre_test — вход в проект]] | `related` | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] |
 | [[README|Genre_test — вход в проект]] | `related` | [[ROADMAP|Genre_test Roadmap]] |
 | [[README|Genre_test — вход в проект]] | `related` | [[docs/CLAMP3_ARCHITECTURE|Архитектура retrieval CLaMP 3]] |
@@ -81,6 +83,7 @@ Coverage is intentionally partial in Phase 1. Unregistered files are not implied
 | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] | `related` | [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] |
 | [[docs/CLAMP3_ARCHITECTURE|Архитектура retrieval CLaMP 3]] | `related` | [[docs/CLAMP3_RUNTIME|docs/CLAMP3_RUNTIME.md]] |
 | [[docs/CLAMP3_ARCHITECTURE|Архитектура retrieval CLaMP 3]] | `related` | [[docs/THIRD_PARTY_MODELS|docs/THIRD_PARTY_MODELS.md]] |
+| [[docs/QA_VERDICT_BRIDGE|QA Verdict Bridge]] | `depends_on` | [[AGENTS|Конституция агентов Genre_test]] |
 | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] | `depends_on` | [[AGENTS|Конституция агентов Genre_test]] |
 | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] | `related` | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] |
 | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] | `related` | [[docs/ARCHITECTURE|docs/ARCHITECTURE.md]] |
@@ -112,10 +115,8 @@ Coverage is intentionally partial in Phase 1. Unregistered files are not implied
 - Registry authority: `knowledge_navigation_metadata_only` only.
 - Generation direction: `JSON_TO_MARKDOWN` only.
 - Research Radar mutable state remains canonical under `docs/research/data/*.json` and is not copied here.
-- `docs/research/obsidian/**` and `docs/development/research_radar/**` remain generated Research Radar projections/facades.
-- Source documents remain authoritative according to `AGENTS.md`, `docs/ACTIVE_CURRENT.md`, subsystem contracts and live GitHub state.
-- Obsidian, Graph, Bases, plugins, search and this index are views/interfaces, not project-state owners.
+- Obsidian HOME, Bases, analytics, Graph and this index are derived views, not project-state owners.
 
 ## Validation
 
-Run `python tools/obsidian_knowledge_sync.py --check` to validate the registry and detect generated-index drift.
+Run `python tools/obsidian_knowledge_sync.py --check` to validate all Obsidian repository projections and registration drift.

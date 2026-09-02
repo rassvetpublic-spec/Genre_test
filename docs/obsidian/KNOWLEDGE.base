@@ -1,0 +1,46 @@
+filters:
+  and:
+    - 'file.ext == "md"'
+    - 'doc_type != null'
+properties:
+  file.name:
+    displayName: File
+  title:
+    displayName: Title
+  area:
+    displayName: Area
+  doc_type:
+    displayName: Type
+  status:
+    displayName: Status
+  summary:
+    displayName: Summary
+views:
+  - type: table
+    name: By area
+    order:
+      - title
+      - doc_type
+      - status
+      - summary
+    groupBy:
+      property: area
+      direction: ASC
+  - type: table
+    name: By type
+    order:
+      - title
+      - area
+      - status
+    groupBy:
+      property: doc_type
+      direction: ASC
+  - type: table
+    name: By status
+    order:
+      - title
+      - area
+      - doc_type
+    groupBy:
+      property: status
+      direction: ASC

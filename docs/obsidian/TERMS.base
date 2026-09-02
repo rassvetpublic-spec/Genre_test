@@ -1,0 +1,32 @@
+filters:
+  and:
+    - 'file.ext == "md"'
+    - or:
+        - 'terms != null'
+        - 'keywords_ru != null'
+        - 'keywords_en != null'
+properties:
+  file.name:
+    displayName: File
+  title:
+    displayName: Title
+  area:
+    displayName: Area
+  terms:
+    displayName: Terms
+  keywords_ru:
+    displayName: Keywords RU
+  keywords_en:
+    displayName: Keywords EN
+views:
+  - type: table
+    name: Terms and keywords
+    order:
+      - title
+      - area
+      - terms
+      - keywords_ru
+      - keywords_en
+    groupBy:
+      property: area
+      direction: ASC

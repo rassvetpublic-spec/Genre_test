@@ -1,0 +1,827 @@
+{
+  "schema": "genre-test-repository-inventory-v1",
+  "schema_version": 1,
+  "authority_scope": "derived_projection_only",
+  "generation_direction": "REPOSITORY_TO_DERIVED_JSON",
+  "source_fingerprint": "3aa5f6a79c5b310c2052601edf75c97102e59785c2baa444ded822ae5a8f7d72",
+  "canonical_inputs": {
+    "knowledge_registry": "docs/obsidian/KNOWLEDGE_REGISTRY.json",
+    "markdown_boundary": "docs/obsidian/MARKDOWN_LEGACY_BASELINE.json",
+    "research_machine_state_prefix": "docs/research/data/"
+  },
+  "excluded_from_authority": [
+    "GitHub live Issue/PR/check state",
+    "local .obsidian state",
+    "audio/renders/model weights/caches"
+  ],
+  "counts": {
+    "canonical_document": 90,
+    "canonical_machine_state": 5,
+    "derived_index": 4,
+    "generated_projection": 22,
+    "visualization": 3
+  },
+  "registration_counts": {
+    "exempt": 22,
+    "grandfathered": 73,
+    "not_applicable": 13,
+    "registered": 16
+  },
+  "entries": [
+    {
+      "path": "AGENTS.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "registered",
+      "blob_sha": "8956d7b8a6c30d77801026eb21aef771068363e4",
+      "area": "agents",
+      "doc_type": "protocol",
+      "status": "canonical"
+    },
+    {
+      "path": "README.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "registered",
+      "blob_sha": "595f85090eaf2a18a9512b93ca38f6adef03d70e",
+      "area": "project",
+      "doc_type": "guide",
+      "status": "active"
+    },
+    {
+      "path": "README_RUS.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "347ef67861aaadb935c7b31ae5b6709b7e1c5b58"
+    },
+    {
+      "path": "ROADMAP.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "registered",
+      "blob_sha": "9fce9ac513dde492a8b6988c3c6ec236c2c5ca2d",
+      "area": "project",
+      "doc_type": "status",
+      "status": "active"
+    },
+    {
+      "path": "docs/ACTIVE_CURRENT.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "registered",
+      "blob_sha": "35b69a8bbcc4d435dd8af25dfc0003ca49eed5ed",
+      "area": "project",
+      "doc_type": "status",
+      "status": "active"
+    },
+    {
+      "path": "docs/AGENT_WORKFLOW.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "2128fa430f07db6ff1cb9e0821c05e07e02be30d"
+    },
+    {
+      "path": "docs/AI_ORIGIN_PROVENANCE_LAB.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "ca7eb3b8136a1fd1edbec9414d7cf267c14684f9"
+    },
+    {
+      "path": "docs/AI_ORIGIN_ROADMAP.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "2c2450c8195a2f447080a7290e24199104c917a2"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "d630fb7cea23aa171cca5e4a5a68e44a3262d652"
+    },
+    {
+      "path": "docs/CLAMP3_ARCHITECTURE.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "registered",
+      "blob_sha": "bbabbc5020c88c4604390612e25a74fc83eea327",
+      "area": "retrieval",
+      "doc_type": "architecture",
+      "status": "canonical"
+    },
+    {
+      "path": "docs/CLAMP3_OUTPUT_SCOPE.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "b3a45e37b1bf740171d4595468557f9a047148d2"
+    },
+    {
+      "path": "docs/CLAMP3_RETRIEVAL_ACCEPTANCE.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "b8fb547b24a6751b4f8372fd51c7011086443edb"
+    },
+    {
+      "path": "docs/CLAMP3_ROADMAP.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "77cffac887c16736741ed7d5ab61fac10582f8b2"
+    },
+    {
+      "path": "docs/CLAMP3_RUNTIME.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "537e46cb672dbfbc6f41aaaa6c7b8f66132110f1"
+    },
+    {
+      "path": "docs/CLAMP3_RUNTIME_P0.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "21d442870eb6c36288b40dd7cab20f137f11b439"
+    },
+    {
+      "path": "docs/CLAMP3_TODO.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "79c40d36e7470762aef0791a155a8842532bf599"
+    },
+    {
+      "path": "docs/CLAMP3_WINDOWS_SPIKE_2026-08-26.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "0a4066c0f5e9fc94016552cdc89658f6c2f2fa7f"
+    },
+    {
+      "path": "docs/CYANITE_EXTERNAL_REFERENCE.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "479bf2e673c1b4157b6c67a4d61c332392257e96"
+    },
+    {
+      "path": "docs/DATABASE_RECOVERY.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "91b737458721080ef4d8c2eb5adac34aec78f3dd"
+    },
+    {
+      "path": "docs/DATABASE_RECOVERY_TODO.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "b5a789cd1966d16ae8b0e4c066dda30924e4d8a9"
+    },
+    {
+      "path": "docs/ENGINEERING_EVIDENCE_2026-08-30.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "1b181ad7ac95c3a5ea1e51cc48800675fc3040de"
+    },
+    {
+      "path": "docs/FAR_TODO.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "eaacfaed40c631774747cb4c4b5c607a0198e2a4"
+    },
+    {
+      "path": "docs/GEEKATPLAY_ORG_AUDIT.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "191f9401054c77320bea216f94faf079a62f7fa2"
+    },
+    {
+      "path": "docs/GEEKATPLAY_TOOLKIT_INTEGRATION.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "9aa70d5cf58676eab53485d2de0912883a8099ed"
+    },
+    {
+      "path": "docs/GENERATIVE_AUDIO_REPAIR_BENCHMARK.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "902e12906d82419c10fef951730c2f6a500bb55e"
+    },
+    {
+      "path": "docs/GENERATIVE_AUDIO_REPAIR_BENCHMARK_TS_STEREO_ADDENDUM.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "d5699d460ec6b9cc547e51d44c09b5fbc2a54b39"
+    },
+    {
+      "path": "docs/GENERATIVE_AUDIO_REPAIR_SOURCE_REGISTRY.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "0d60a4713181fead23e3e33f3803616eedf2260f"
+    },
+    {
+      "path": "docs/GENERATIVE_AUDIO_REPAIR_SOURCE_REGISTRY_ADDENDUM_2026-08-28.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "81f4aa00f96bc9f0c3061d84f1098dfeda486b94"
+    },
+    {
+      "path": "docs/GENERATIVE_AUDIO_REPAIR_TOP10_AUDIT.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "fb384f48c0ecdbaed105cf4376215df45e256736"
+    },
+    {
+      "path": "docs/GENERATIVE_AUDIO_TS_STEREO_DIAGNOSTICS_2026-08-28.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "a576d7f8b8c3843494cc965af5a767ccc9ca1b1d"
+    },
+    {
+      "path": "docs/GENERATIVE_DEFECT_PROFILE.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "f565789775e5bf12764892dae2475249166a3eeb"
+    },
+    {
+      "path": "docs/GPU_RUNTIME.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "4b53dc080fdfec64360c9eccc54a4aae2ceae6ef"
+    },
+    {
+      "path": "docs/MCP_ARCHITECTURE_PROPOSAL.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "b27985e587d2c7911e03e4f824cd5126f65f7867"
+    },
+    {
+      "path": "docs/MCP_IMPLEMENTATION_TASK.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "64cea8889ae5306f245baf3341e793adfd2622bb"
+    },
+    {
+      "path": "docs/MCP_SOURCE_REGISTRY.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "e9e41fef068bf3042ca0d090f1e9a7cd36a3deff"
+    },
+    {
+      "path": "docs/MFCC_SOURCE_REGISTRY.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "2d1d061110715263dde2da787509f69c40439570"
+    },
+    {
+      "path": "docs/MFCC_TIMBRAL_BASELINE.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "00c1c87ff8bcd1c32ff7ab383a3236da913a4fd0"
+    },
+    {
+      "path": "docs/MODELS.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "6c87f33500c1e772fe15193a405d79c263575eec"
+    },
+    {
+      "path": "docs/MUSIC_SUITE_METRIC_AUDIT.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "3277bd6675dbfea6635ac43522a8f41e19c67d25"
+    },
+    {
+      "path": "docs/OPEN_SOURCE_AUDIO_RND_REFERENCES.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "7652508bb6a2dd8fdacb14c99fc349517edb8e1e"
+    },
+    {
+      "path": "docs/QA_VERDICT_BRIDGE.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "registered",
+      "blob_sha": "196210f24cbc5077d068344ddbfdc2c2c16b79cb",
+      "area": "agents",
+      "doc_type": "protocol",
+      "status": "canonical"
+    },
+    {
+      "path": "docs/README.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "920017d403d2cfa22a73c32abeaec5fc593e5d01"
+    },
+    {
+      "path": "docs/REPOSITORY_COLD_START.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "registered",
+      "blob_sha": "a70ff5f1bb58fa031d35def444b7ff744c8c43ab",
+      "area": "agents",
+      "doc_type": "runbook",
+      "status": "canonical"
+    },
+    {
+      "path": "docs/REPOSITORY_SECURITY.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "412e7a7c3168bc29eaea86c37881254dc415b633"
+    },
+    {
+      "path": "docs/RETRIEVAL_HISTORY_SCOPE.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "ff51e3e6fee94df3f9e46b71842782a78a8b61c9"
+    },
+    {
+      "path": "docs/RULES_HUB_INTEROPERABILITY.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "d6aae299b18fb7d2b6b8150862a62366f87800a8"
+    },
+    {
+      "path": "docs/RUNTIME_DATA.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "34ea8c349887da90ac1f00bc20c058c217f30229"
+    },
+    {
+      "path": "docs/SAFE_STOP.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "dfbb8cb4f9ca6be3e015dac2a175718769af0232"
+    },
+    {
+      "path": "docs/SHIMMER_EXTERNAL_REFERENCE.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "da8686f6d9c88684f5c0a6c8ae133e46659a0b98"
+    },
+    {
+      "path": "docs/SUBAGENT_ORCHESTRATION_EXTERNAL_REFERENCE.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "b39875483ff6141a9649167c48039126cd5ccc39"
+    },
+    {
+      "path": "docs/SUPERCOMBINE_SHIMMER_DONOR_TODO.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "04079b9597cd88988d7283f97d1122eb312551c3"
+    },
+    {
+      "path": "docs/SUPERCOMBINE_TODO.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "f05d9d81b34cc3ac46c8f2566331e50cccde7aa0"
+    },
+    {
+      "path": "docs/SUPERCOMBINE_UI_ARCHITECTURE.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "registered",
+      "blob_sha": "790720b61c51477e36bcc5b693a2b6ddde8d22c4",
+      "area": "project",
+      "doc_type": "architecture",
+      "status": "canonical"
+    },
+    {
+      "path": "docs/TECHNICAL_MASTERING_METRICS.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "08ad802475475cfd739431511b2d8e8c24a98d2d"
+    },
+    {
+      "path": "docs/TEMPORAL_STRUCTURE_PROFILE.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "0aae3388d850b01a79ba6af1141bb24267566c1f"
+    },
+    {
+      "path": "docs/TEMPORAL_STRUCTURE_RESEARCH_PIPELINE.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "15522bb18f8d1d64feda0ba92024222350429963"
+    },
+    {
+      "path": "docs/TEMPORAL_STRUCTURE_SOURCES.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "ee19955b4d4c5271e3763850655fe88fefa34920"
+    },
+    {
+      "path": "docs/THIRD_PARTY_MODELS.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "8fc1b17e9e58b806cf99a1fe3a864a4e7c737f74"
+    },
+    {
+      "path": "docs/UPSTREAM_FORKS.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "5fbf0a29453720504881228421126f5d69ae6060"
+    },
+    {
+      "path": "docs/VALIDATION_LAB.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "3f2cd761ab7bdce0413112f8e4a23dd11595c6fe"
+    },
+    {
+      "path": "docs/development/research_radar/KEYWORD_MAP.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "6d3a25681cebc576fd06c9abbd8a7fbc88e407c8"
+    },
+    {
+      "path": "docs/development/research_radar/README.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "59aa13cb129208fa4cab59b5a3914e0bcf44a011"
+    },
+    {
+      "path": "docs/development/research_radar/RESEARCH_PROMPT.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "c48e44fdcf138f2196e0857b31ec3a1902d31f54"
+    },
+    {
+      "path": "docs/development/research_radar/RESEARCH_STATE.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "e80295e813057e3d3b9fab6ca833202f84d1539b"
+    },
+    {
+      "path": "docs/development/research_radar/SOURCE_REGISTRY.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "23f411dd0e3e5134a440d74cf4ca540d413cc0d1"
+    },
+    {
+      "path": "docs/development/research_radar/runs/README.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "f7f833877bd0be522ffd400dbda256c708fffba9"
+    },
+    {
+      "path": "docs/mastering/ozone12/EXECUTABLE_MIGRATION.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "9b63f11b09d9d8f85d47389da9bacc0a9169d7e6"
+    },
+    {
+      "path": "docs/mastering/ozone12/MIGRATION_FROM_OZONE12_MASTERING_LAB.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "1e7f1dca57e5c99771f54f0af407b1d90e0075e7"
+    },
+    {
+      "path": "docs/mastering/ozone12/README.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "registered",
+      "blob_sha": "c75cca203980269c526e74fec149e1e14d932454",
+      "area": "mastering",
+      "doc_type": "architecture",
+      "status": "canonical"
+    },
+    {
+      "path": "docs/mastering/ozone12/checklists/FINAL_APPROVAL_CHECKLIST.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "65aa6b46b9249138d87540f3a842a7978ee0fb02"
+    },
+    {
+      "path": "docs/mastering/ozone12/checklists/PRE_RENDER_CHECKLIST.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "d23527988e0dfae66bef1df44b2d51fca47238fa"
+    },
+    {
+      "path": "docs/mastering/ozone12/core/00_READ_FIRST_SOURCE_OF_TRUTH.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "ff3ae3e9e8fe777d62521ff88f174e0bf353c63a"
+    },
+    {
+      "path": "docs/mastering/ozone12/core/01_WORKFLOW_ALL_TRACKS.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "aa3670089d060b7240e048a9dac0232b1c48ff0c"
+    },
+    {
+      "path": "docs/mastering/ozone12/core/02_XML_RULEBOOK.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "ad4ee73c28228b042549b0088329e0d8a97657bc"
+    },
+    {
+      "path": "docs/mastering/ozone12/core/03_TRANSIENT_SUSTAIN_PROTOCOL.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "d068363ced32a2d415a3fd3842964f3b5e2d8088"
+    },
+    {
+      "path": "docs/mastering/ozone12/core/04_MODULE_PLAYBOOK.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "70ef46adb8cf0414c1e92e5a24677a488fbe0704"
+    },
+    {
+      "path": "docs/mastering/ozone12/core/05_MAXIMIZER_RULES.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "2770a134ac8f2c661b48c5fff0c386ac80f67651"
+    },
+    {
+      "path": "docs/mastering/ozone12/core/07_CODEC_AUDIT_AND_EXPORT.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "06d3ee36fe3a762e09d6a5ee33eaeea5f886a8e0"
+    },
+    {
+      "path": "docs/mastering/ozone12/core/13_CONFIRMED_XML_SCHEMA_BUILD_1331.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "d78910f617eb39575764bf7ee841c7ff56ab7d42"
+    },
+    {
+      "path": "docs/mastering/ozone12/core/15_AUTOMATIC_MASTERING_METER.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "03e0baf97db0d5d4a026ecffe2283b0ae058cc89"
+    },
+    {
+      "path": "docs/mastering/ozone12/core/16_SUNO55_LOSSY_SOURCE_TS_MASTERING_PROTOCOL.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "ae22272b5bb4dcc2e2007251b4969a123f18377b"
+    },
+    {
+      "path": "docs/mastering/ozone12/research/SUNO55_MASTERING_RESEARCH_2026-08-30.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "23020e50597e130091edfb6644713e096a5c2ede"
+    },
+    {
+      "path": "docs/mastering/ozone12/skills/OZONE12_XML_TRANSIENT_SUSTAIN_SKILL.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "1fd295a3950154c06d83370fa300cb2a4a5a0700"
+    },
+    {
+      "path": "docs/mastering/ozone12/templates/SOURCE_REGISTRY_TEMPLATE.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "5909a221a86e201f05f0d3822bb88084a2052f9b"
+    },
+    {
+      "path": "docs/mastering/ozone12/templates/STAGE_DECISION_TEMPLATE.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "dcff26e99b5f4d86c93c70f44511764ecef6638b"
+    },
+    {
+      "path": "docs/obsidian/CLI_POLICY.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "registered",
+      "blob_sha": "96f196e989ac6ff2d1b78aef329287712c983244",
+      "area": "project",
+      "doc_type": "runbook",
+      "status": "active"
+    },
+    {
+      "path": "docs/obsidian/HOME.md",
+      "ownership_class": "derived_index",
+      "registration_state": "not_applicable",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/IMPLEMENTATION.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "aaeb31009ff6889731c5be9288523c7f967f46a3"
+    },
+    {
+      "path": "docs/obsidian/KNOWLEDGE.base",
+      "ownership_class": "visualization",
+      "registration_state": "not_applicable",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/KNOWLEDGE_ANALYTICS.md",
+      "ownership_class": "derived_index",
+      "registration_state": "not_applicable",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/KNOWLEDGE_INDEX.md",
+      "ownership_class": "derived_index",
+      "registration_state": "not_applicable",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/KNOWLEDGE_REGISTRY.json",
+      "ownership_class": "canonical_machine_state",
+      "registration_state": "not_applicable",
+      "blob_sha": "b28f9d9237643bb5f12c0f6ea9a2482417b1234f"
+    },
+    {
+      "path": "docs/obsidian/MARKDOWN_AUTHORING_STANDARD.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "registered",
+      "blob_sha": "1a3794641d1cb1548b2fea8f9f7a3a464b1ff088",
+      "area": "project",
+      "doc_type": "protocol",
+      "status": "canonical"
+    },
+    {
+      "path": "docs/obsidian/MARKDOWN_LEGACY_BASELINE.json",
+      "ownership_class": "canonical_machine_state",
+      "registration_state": "not_applicable",
+      "blob_sha": "13a5e8653cee6f6cee73016ae61cc023931c0272"
+    },
+    {
+      "path": "docs/obsidian/PLUGIN_PROFILE.yaml",
+      "ownership_class": "canonical_document",
+      "registration_state": "not_applicable",
+      "blob_sha": "6907597dc9fbf4288ad272d7e87806c833612f59",
+      "area": "project",
+      "doc_type": "reference",
+      "status": "active"
+    },
+    {
+      "path": "docs/obsidian/PROPERTY_SCHEMA.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "registered",
+      "blob_sha": "72d962cea915f7939b57db9e545b402d8d7521bc",
+      "area": "project",
+      "doc_type": "protocol",
+      "status": "active"
+    },
+    {
+      "path": "docs/obsidian/RELATIONS.base",
+      "ownership_class": "visualization",
+      "registration_state": "not_applicable",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/RELATION_SCHEMA.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "registered",
+      "blob_sha": "beb2d5c4d7a946c4c1481231344f791b30702385",
+      "area": "project",
+      "doc_type": "protocol",
+      "status": "active"
+    },
+    {
+      "path": "docs/obsidian/REPOSITORY_INVENTORY.json",
+      "ownership_class": "derived_index",
+      "registration_state": "not_applicable",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/TAG_TAXONOMY.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "registered",
+      "blob_sha": "e18e2575d00645165c56937db7ce37fe8f47fab6",
+      "area": "project",
+      "doc_type": "protocol",
+      "status": "active"
+    },
+    {
+      "path": "docs/obsidian/TERMS.base",
+      "ownership_class": "visualization",
+      "registration_state": "not_applicable",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/research/OEKSOUND_BENCHMARK_REFERENCES.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "176bdc5dc8c662d8a359aca9c1b726bfc2b9f475"
+    },
+    {
+      "path": "docs/research/RESEARCH_OPERATING_RULES.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "registered",
+      "blob_sha": "7a9d81a170c252f38dec9a3bb73495d6089c5761",
+      "area": "research",
+      "doc_type": "protocol",
+      "status": "canonical"
+    },
+    {
+      "path": "docs/research/RESEARCH_RADAR.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "registered",
+      "blob_sha": "0ab6499e9f01f8c7fe4bc1204960225f567de6a4",
+      "area": "research",
+      "doc_type": "runbook",
+      "status": "canonical"
+    },
+    {
+      "path": "docs/research/data/RADAR_TOPICS.json",
+      "ownership_class": "canonical_machine_state",
+      "registration_state": "not_applicable",
+      "blob_sha": "31547042a7626c14d8afa8d42273ef0c3009e643"
+    },
+    {
+      "path": "docs/research/data/RESEARCH_STATE.json",
+      "ownership_class": "canonical_machine_state",
+      "registration_state": "not_applicable",
+      "blob_sha": "7478978420bb1e51e5e676f300f3b6070bf107e4"
+    },
+    {
+      "path": "docs/research/data/SOURCE_REGISTRY.json",
+      "ownership_class": "canonical_machine_state",
+      "registration_state": "not_applicable",
+      "blob_sha": "218b19e70065bfcd3f183425623050ecd9bb7cf2"
+    },
+    {
+      "path": "docs/research/obsidian/RESEARCH_HOME.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "2e38a65200bcd4feb527026f6c9fbe7f902ca8b7"
+    },
+    {
+      "path": "docs/research/obsidian/RESEARCH_STATE.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "dbf8b7ca3d326d3b65b93c33e0c37eeadecd379c"
+    },
+    {
+      "path": "docs/research/obsidian/SOURCES/source__ai-audio-tool-test-registry.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "6834300e8f7710f436e66f75470c5439d19712bb"
+    },
+    {
+      "path": "docs/research/obsidian/SOURCES/source__clamp3-architecture.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "a8c40c5a812abcc05e59976f719059fea2343716"
+    },
+    {
+      "path": "docs/research/obsidian/SOURCES/source__cyanite.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "e29014d1c7b38ee6e75c3c05572033b465eda003"
+    },
+    {
+      "path": "docs/research/obsidian/SOURCES/source__generative-audio-repair-sources.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "addfa007c1384a36739d1cb215a79a1ac9df4847"
+    },
+    {
+      "path": "docs/research/obsidian/SOURCES/source__mcp-source-registry.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "bd7f189c6e88dbf6c3c1ff2eac03a839317764bd"
+    },
+    {
+      "path": "docs/research/obsidian/SOURCES/source__open-source-audio-rnd.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "c278ead45c7d62b4f6dd8028de4ad873f41a266e"
+    },
+    {
+      "path": "docs/research/obsidian/SOURCES/source__shimmer.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "2a0efa853b547afdd902cbe235b1414b8ca706b7"
+    },
+    {
+      "path": "docs/research/obsidian/SOURCES/source__temporal-structure-sources.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "8b5bcf43f40fa0fc4c1f96e2051dec3c9f3f8040"
+    },
+    {
+      "path": "docs/research/obsidian/TOPICS/topic__agent-orchestration.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "5f65dd9eb444c17b6d34167b8b1cfe50d40f5ccb"
+    },
+    {
+      "path": "docs/research/obsidian/TOPICS/topic__ai-audio-detection.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "e147d2571c7e83510db4a323f5fd02614b5f083a"
+    },
+    {
+      "path": "docs/research/obsidian/TOPICS/topic__audio-text-embeddings.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "faf215ed3541b300cd3344ac91e2ba9e9f58bd22"
+    },
+    {
+      "path": "docs/research/obsidian/TOPICS/topic__generative-audio-repair.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "5f58a84199a4973978881b72cc8997352efb331b"
+    },
+    {
+      "path": "docs/research/obsidian/TOPICS/topic__mastering-qc.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "7e5c094b8c8c5ec5a76bc532544716dcfeadc3b2"
+    },
+    {
+      "path": "docs/research/obsidian/TOPICS/topic__retrieval-evaluation.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "exempt",
+      "blob_sha": "62e5370e36271e41669232e294c0d634d968903d"
+    },
+    {
+      "path": "docs/research/runs/README.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "grandfathered",
+      "blob_sha": "fc162d488e5cd14a7fa3b440b70c7edc2bd5b7a6"
+    }
+  ]
+}
