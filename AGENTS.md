@@ -1,3 +1,15 @@
+---
+title: "Genre_test Agent Constitution"
+doc_type: protocol
+area: agents
+status: canonical
+summary: "Canonical agent governance, QA, evidence, and merge workflow contract for Genre_test."
+tags:
+  - область/agents
+  - тип/protocol
+  - статус/canonical
+---
+
 # Genre_test Agent Constitution
 
 This repository is the canonical engineering source of truth for the AUDIO_MASTERING project.

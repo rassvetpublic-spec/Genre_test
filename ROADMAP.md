@@ -1,430 +1,217 @@
+---
+title: "Genre_test Roadmap"
+doc_type: status
+area: project
+status: active
+summary: "Release and architecture sequence from active v0.5 retrieval through the SUPERCOMBINE workstation and v1.0 integration."
+tags:
+  - область/project
+  - тип/status
+  - статус/active
+---
+
 # Genre_test Roadmap
 
 ## Product north star
 
-Genre_test is evolving from a genre/profile analyzer into a **local-first studio-finish supercombine for generative songs**.
-
-Long-term flow:
+Genre_test развивается в **local-first studio-finish workstation for generative songs**.
 
 ```text
 Generated mix / stems
   -> Analyze / Catalog / Search
   -> Technical QC + timestamped markers
-  -> Stem separation when needed
-  -> Generative-artifact restoration
-  -> Vocal repair
-  -> Stem repair/post-processing
-  -> Mix/master orchestration
-  -> Synchronized A/B/X candidate review
-  -> Metadata/tag audit and reversible batch fixes
-  -> Delivery package / studio-ready master
+  -> Repair
+  -> Stems / Vocal
+  -> Mix / Master
+  -> synchronized Compare
+  -> Metadata / Delivery
+  -> studio-ready export
 ```
 
-Target outcome: remove audible defects, unstable synthetic artifacts and weak mix/master characteristics of raw generated material while preserving evidence, source lineage and reproducible processing manifests.
+Long-term epic: **#49 SUPERCOMBINE**.
 
-**Boundary:** the project does not optimize audio to evade AI-origin/provenance detectors, strip provenance/watermarks for concealment, or treat detector-score reduction as a mastering objective.
+Boundary rules:
 
-Long-term epic: **#49**
-Execution TODO: [`docs/SUPERCOMBINE_TODO.md`](docs/SUPERCOMBINE_TODO.md)
-Geekatplay org audit: [`docs/GEEKATPLAY_ORG_AUDIT.md`](docs/GEEKATPLAY_ORG_AUDIT.md)
+- source audio immutable;
+- measured/model evidence separated from description/recommendation;
+- derived assets carry lineage/processing manifests;
+- optional heavy backends fail independently;
+- no detector-evasion, watermark stripping or provenance concealment objective.
 
-## Current development line
+## Current line — `0.5.0.dev0`
 
 **0.5.0.dev0 — active development; no packaged stable release is currently published**
 
-Genre_test currently provides the core local music profiling and regression system:
+Active epic: **#26 CLaMP 3 semantic retrieval**.
 
-`	ext
-Audio
-  -> MAEST Discogs519 fine-style evidence
-  -> AudioSet AST semantic evidence
-  -> BPM / key / native source metadata
-  -> calibrated evidence fusion
-  -> AudioProfile schema 4
-  -> Normal / SUNO / Distributor outputs
-  -> history / Validation / build comparison
-`
+Protected core analysis remains MAEST + AudioSet AST + BPM/key/native metadata -> deterministic `AudioProfile schema 4`. Retrieval is independent and optional.
 
-The former packaged release line is retired. Core analysis behavior remains a
-regression baseline while v0.5 retrieval development proceeds.
-
-## Engineering infrastructure (cross-cutting)
-
-### QA evidence track
-
-Genre_test has two intentionally separate MCP directions.
-
-#### Track Q — Engineering / QA evidence consumption
-
-A bounded read-only QA evidence track may develop independently of the product release sequence.
-
-Purpose:
+Selected retrieval family:
 
 ```text
-exact PR HEAD
-    -> deterministic evidence collection
-    -> immutable ReviewEvidencePack
-    -> manual or multi-model QA
-    -> deterministic validation
+Audio -> MERT -> CLaMP 3 SAAS
+Text  -> XLM-R -> CLaMP 3 SAAS
 ```
 
-Planned phases:
+Runtime decision: **selected isolated persistent Python 3.12 CLaMP 3 sidecar runtime (#27 complete)**.
 
-- **Q0** architecture / roadmap boundary;
-- **Q1** canonical exact-head `ReviewEvidencePackV1` contract;
-- **Q2** transport-independent Evidence Source abstraction;
-- **Q3** GitHub read-only evidence source;
-- **Q4** Rules Hub policy/provenance evidence source when its stable interface is available;
-- **Q5** deterministic local repository evidence;
-- **Q6** evidence-bound multi-model QA;
-- **Q7** replay / provenance / audit;
-- **Q8** optional bounded GitHub verdict publishing under a separate write-capability approval.
+**#27 is complete:** the selected v0.5 architecture is an isolated persistent Python 3.12 subprocess sidecar. Python 3.13/3.12 remain the main application policy, while the pinned CLaMP 3 runtime keeps its isolated Python 3.12 compatibility boundary.
 
-Core rules:
+Current foundation already includes versioned schemas, isolated sidecar, persistent embeddings/index, audio/text search, segment/representative search, CLI/export/benchmark tooling and model-free `mfcc-acoustic78` benchmark baseline.
 
-- LLMs do not independently collect live review evidence.
-- Evidence is collected first, frozen, provenance-recorded and hash-bound to the exact PR head.
-- The evidence contract is transport-independent; early implementations may use direct/local or GitHub interfaces before MCP adapters are available.
-- MCP sources are read-only for this track.
-- Track Q does not expose Genre_test product capabilities.
-- Track Q does not accelerate Analyze, Retrieval, Repair, Mastering, REAPER or Ozone implementation.
-- Models do not receive repository merge/release authority.
-- GitHub and current repository contracts remain the engineering source of truth.
+Remaining v0.5 gates are tracked by live Issues and `docs/CLAMP3_TODO.md`, including:
 
-#### Track P — Product MCP façade
+- real catalog coverage/cache acceptance (#30/#39);
+- real audio similarity/relevance acceptance (#31);
+- paired RU/EN text relevance acceptance (#32/#36);
+- segment subset cost/relevance acceptance (#33);
+- deterministic Core Sound (#43);
+- TechnicalProfile expansion where validated (#45);
+- optional zero-shot/tempo-map experiments (#37/#44);
+- Windows/portable/release graduation (#38/#40/#41);
+- Catalog/Search integration into the new Workstation (#34).
 
-The Genre_test product MCP façade remains planned for **v0.9**, after stable local service/API boundaries exist.
+## Pre-refactor boundary — current
 
-Track P is the future server-side interface over Genre_test product capabilities. It is independent from the earlier QA evidence-consumer track.
+The old plan to add new Catalog/Search presentation directly to the historical Tk GUI is superseded as an implementation target.
 
-## ACTIVE: v0.5
-Epic: **#26**
-Detailed roadmap: [`docs/CLAMP3_ROADMAP.md`](docs/CLAMP3_ROADMAP.md)
-Architecture: [`docs/CLAMP3_ARCHITECTURE.md`](docs/CLAMP3_ARCHITECTURE.md)
-Execution checklist: [`docs/CLAMP3_TODO.md`](docs/CLAMP3_TODO.md)
-Output scope: [`docs/CLAMP3_OUTPUT_SCOPE.md`](docs/CLAMP3_OUTPUT_SCOPE.md)
-Deferred ideas: [`docs/FAR_TODO.md`](docs/FAR_TODO.md)
-
-Selected direction: **CLaMP 3** for shared multilingual text↔music embeddings.
-
-Product target:
+Functional retrieval requirements remain; presentation ownership moves to the SUPERCOMBINE workstation.
 
 ```text
-Анализ | Каталог | Поиск | Validation | Проверка
+#184 pre-refactor docs/knowledge freeze
+        |
+        v
+#171 durable exact-head QA contract
+        |
+================ REFACTOR BOUNDARY ================
+        |
+        v
+#164 Workstation P1
 ```
 
-Core capabilities planned for v0.5:
+Existing Tk GUI and CLI remain supported compatibility surfaces during migration. After this boundary, new product features do not expand Tk solely to satisfy roadmap items.
 
-- versioned retrieval/model-output architecture;
-- selected isolated persistent Python 3.12 CLaMP 3 sidecar runtime (#27 complete);
-- MERT-compatible audio preprocessing;
-- track-level audio embeddings;
-- Russian/multilingual text embeddings;
-- persistent embedding cache;
-- incremental exact-cosine catalog index;
-- audio→audio similarity search;
-- Russian free-text→music search;
-- representative segment and custom segment retrieval;
-- filters using existing Genre_test profile metadata;
-- deterministic evidence-aware **Core Sound** summary (#43);
-- conservative **Tempo / Structure Map** after segment foundation (#44);
-- Catalog/Search GUI tabs;
-- CLI search/index commands;
-- retrieval relevance benchmark and regression gates;
-- optional controlled zero-shot descriptor experiments;
-- migration/indexing of the existing 10,436-track analyzed catalog;
-- Windows bootstrap/portable integration;
-- explicit third-party model provenance/license handling;
-- optional TechnicalProfile foundation from vetted Music Suite metrics (#45);
-- live Resource Monitor (#48).
+## Workstation migration sequence
 
-### v0.5 issue plan
+Canonical sequence from `docs/SUPERCOMBINE_UI_ARCHITECTURE.md`:
 
-P0 foundation:
+1. **P0 — DONE**: donor/provenance + architecture freeze (#160 / merged #161).
+2. **P1 — #164**: workstation shell, RU/EN, local application-service/API/job facade, minimal runtime HUD adapter.
+3. **P2 — #34**: existing Analyze/Catalog/Search capabilities wired into workstation; no duplicate retrieval backend.
+4. **P3 — Compare transport kernel**: common aligned transport, loop/playhead, candidate switch, loudness-match seam and Delta seam compatible with #54.
+5. **P4 — runtime HUD completion**: full presentation of canonical Resource Monitor/runtime state and future #55 seam.
+6. **P5 — Repair UI**: #50 candidates through common P3 transport.
+7. **P6 — Stems/Vocal UI**: #51/#52 through common P3 transport.
+8. **P7 — Master UI**: Genre_test mastering backend, optional Ozone/REAPER, common P3 transport.
+9. **P8 — Project/Vault/Delivery**: #53/#56 lineage, metadata and export integration.
+10. **v1.0**: one resumable project/session over the full chain.
 
-- **#27** CLaMP 3 runtime compatibility spike / isolation decision
-- **#28** retrieval schemas, backend protocol, embedding identity
-- **#29** real CLaMP 3 + MERT backend adapter
-- **#30** persistent embedding cache / incremental index
-- **#41** model licensing and provenance gate
+## Correctness gates before Workstation P2
 
-P1 product/search:
+Issue #94 is a hard gate: an explicit missing/invalid `--history` path must fail closed instead of appearing as a valid empty catalog.
 
-- **#31** audio-to-audio similarity search
-- **#32** Russian multilingual free-text search
-- **#33** segment embeddings / representative segment
-- **#43** deterministic Core Sound description
-- **#34** Catalog + Search GUI
-- **#35** retrieval CLI / export
-- **#36** relevance benchmark / regression
-- **#45** TechnicalProfile selective Music Suite integration
-- **#48** live Resource Monitor
+The future local API must map source/infrastructure errors into structured failures, never `200 OK / tracks: 0` for a failed prerequisite.
 
-P2 graduation/release:
+## v0.6 — Repair & Stem Lab
 
-- **#37** controlled zero-shot descriptor experiments
-- **#44** tempo map / structural change-point analysis
-- **#38** Windows bootstrap / portable retrieval runtime
-- **#39** index the existing 10,436-track catalog
-- **#40** documentation / migration / v0.5 release gate
+Primary product issues:
 
-### Critical runtime rule
+- #50 generative artifact remediation/restoration;
+- #51 vocal repair;
+- #52 stem separation/repair/recombination;
+- #63 Apollo restoration research where source eligibility/provenance permits.
 
-CLaMP 3 does **not** replace MAEST, AST, BPM/key DSP, AudioProfile, history, or Validation. Retrieval is optional and must fail independently.
+Shared rules:
 
-The official CLaMP 3 research environment differs materially from the released Genre_test core runtime. **#27 is complete:** the selected v0.5 architecture is an isolated persistent Python 3.12 subprocess sidecar; core-native CLaMP inference was intentionally not selected.
+- Safe / Probe / Refine;
+- immutable source + derived candidate identity;
+- objective before/after QC plus loudness-matched listening;
+- clean-control over-processing guard;
+- `FULL_MIX_WINS`, `REGENERATE_SOURCE` and `INCONCLUSIVE` are valid outcomes;
+- no repair wins from marker reduction alone.
 
-Target-machine inventory on 2026-08-26 confirms:
-
-```text
-Python 3.12 / 3.13 available
-RTX 5070 Ti, 16 GB
-compute capability 12.0
-Torch 2.12.1+cu130
-CUDA 13.0
-native sm_120 compiled
-```
-
-The selected sidecar uses the **modern Blackwell-capable Python 3.12 route**. The old upstream Python 3.10/CUDA 11.8 recipe remains reference evidence, not the production GPU path.
-
-### Critical license rule
-
-CLaMP 3 is published as MIT, but its documented audio pipeline uses `m-a-p/MERT-v1-95M`, whose current model card declares `CC-BY-NC-4.0`. The MERT-backed retrieval backend is treated as optional/experimental and not claimed commercially unrestricted until #41 is resolved. Third-party model weights are not bundled in Git or portable packages.
-
-### v0.5 output truth rule
-
-New richer text must preserve the distinction:
-
-```text
-MEASURED / MODEL EVIDENCE
-    -> RESOLVED ANALYSIS
-    -> DETERMINISTIC DESCRIPTION
-    -> OPTIONAL CREATIVE RECOMMENDATIONS (future)
-```
-
-For v0.5:
-
-- `Core Sound` is a deterministic summary of existing/versioned evidence, not new evidence;
-- CLaMP zero-shot scores remain raw similarities until calibrated;
-- `Production era` means perceived sonic era, not release year;
-- Tempo/Structure Map may identify conservative change points but does not automatically claim Verse/Chorus/Drop labels;
-- no specific plug-in/processor may be inferred as fact from rendered audio.
-
-### v0.5 exit criteria
-
-- core analysis/reference behavior remains green;
-- CLaMP/MERT identity pinned and reproducible;
-- retrieval absent => Analyze still works and reports Retrieval N/A;
-- repeated same-input embedding is stable within documented tolerance;
-- audio similarity and RU free-text search implemented;
-- persistent catalog index survives restart and version changes safely;
-- reviewed retrieval-quality corpus and metrics exist;
-- current ~10k catalog can be indexed/reused incrementally;
-- deterministic Core Sound output is evidence-traceable;
-- GUI and CLI both usable;
-- Windows install/update tested;
-- third-party license/provenance state explicit;
-- final MTD before release.
-
-## NEXT: v0.6 — Repair & Stem Lab
-
-Epic: **#49**
-
-Primary modules:
-
-- **#50 Generative artifact remediation** — detect and repair audible unstable/synthetic defects, clipping/discontinuities, harshness, phase/mono instability and transient damage; Safe/Probe/Refine with before/after metrics.
-- **#51 Vocal repair processor** — pitch stability diagnostics, de-essing/resonance repair, level consistency, optional denoise/dereverb/restoration backends, phrase-aware diagnostics later.
-- **#52 Stem repair/post-processing** — maintained source-separation backend evaluation plus per-stem cleanup, transient/low-end/phase repair and safe recombination.
-
-### Generative Audio Repair Lab foundation
-
-Before a repair backend can graduate, v0.6 uses two shared specifications:
-
-- [`docs/GENERATIVE_DEFECT_PROFILE.md`](docs/GENERATIVE_DEFECT_PROFILE.md) — versioned `GenerativeDefectProfileV1`, timestamped defect evidence, repair eligibility and before/after damage guards; independent from `AudioProfile`, analyzer-build `DRIFT`, mastering and AI-origin detection;
-- [`docs/GENERATIVE_AUDIO_REPAIR_BENCHMARK.md`](docs/GENERATIVE_AUDIO_REPAIR_BENCHMARK.md) — reviewed 50–100 real-SUNO-excerpt corpus (target v1: 80) with clean controls and locked test split for Apollo, A2SB, deterministic DSP and stem-assisted candidates.
-
-- [`docs/GENERATIVE_AUDIO_REPAIR_SOURCE_REGISTRY.md`](docs/GENERATIVE_AUDIO_REPAIR_SOURCE_REGISTRY.md) — ranked GitHub/Reddit evidence registry with project applicability, limitations and engineering conclusions;
-- [`docs/GENERATIVE_AUDIO_REPAIR_TOP10_AUDIT.md`](docs/GENERATIVE_AUDIO_REPAIR_TOP10_AUDIT.md) — top-10 upstream audit covering code/checkpoint terms, runtime fit, maintenance and graduation gates.
-
-The benchmark keeps Ozone/mastering outside the repair candidate matrix. Ozone/REAPER renders may later be compared by #54 through the same loudness-matched A/B/X contract.
-
-Required shared gates:
-
-- immutable source and private-local storage for non-redistributable audio;
-- hashes, annotations, backend/checkpoint/license/runtime identity and processing manifests;
-- separate ratings for artifact reduction and musical damage;
-- `FULL_MIX_WINS` and `REGENERATE_SOURCE` are valid outcomes;
-- no backend becomes Safe from marker reduction alone;
-- restoration robustness remains `SOURCE_RESTORATION`, never analyzer-version `DRIFT`.
-
-### Apollo restoration research
-
-- **#63 Apollo restoration backend and analysis robustness** — evaluate upstream Apollo as an optional local repair backend for lossy/codec-like artifacts; verify checkpoint provenance and licenses; run a real RTX 5070 Ti compatibility/performance spike; define source eligibility and Safe/Probe/Refine candidate matrices; measure repair quality; and add a separate `SOURCE_RESTORATION` robustness axis for MAEST, AST, BPM/key and CLaMP.
-- Apollo output is always a derived repair candidate, never source truth or a silent replacement for ordinary analysis input.
-- Timbrica is reference evidence for product/variant ideas; the target implementation must use pinned reproducible upstream code/checkpoints. Transfer from MP3 restoration to SUNO/neural-codec artifacts remains an experiment until project-owned fixtures confirm it.
-- Restoration robustness results must not be mixed with analyzer-version `DRIFT`.
-
-Supporting TODO:
-
-- lyrics transcription/alignment;
-- melody/pitch-event extraction;
-- stem-aware TechnicalProfile and marker maps;
-- stem-aware structure/geometry;
-- processing manifests and derived-asset lineage.
-
-No v0.6 feature may use AI-detector score reduction as a quality target.
-
-## Repository consolidation: Ozone mastering
-
-Issue **#100** makes `Genre_test` the single engineering source of truth for the AUDIO_MASTERING project and imports the active Ozone 12 v1.4.1 knowledge/config boundary under `docs/mastering/ozone12`, `config/mastering/ozone12`, `tools/mastering/ozone12` and `src/genre_test/mastering/ozone12`.
-
-The standalone `OZONE12_MASTERING_LAB` repository is now a frozen migration/history source, not a second destination for new architecture. **#101 is complete**: Ozone XML/preset behavior was consolidated under the Ozone boundary, while drum-attack, mono-loss, stereo and decoded-codec metrics became backend-neutral Genre_test technical/QC capabilities. The obsolete standalone P0/autocheck runtime is intentionally retired; the future REAPER/Ozone bridge will be designed natively for the versioned v0.7 `MasteringBackend` contract.
-
-This consolidation does **not** pull Ozone or REAPER into normal v0.5 analysis startup and does not accelerate the full mastering runtime into the current release milestone.
-
-## PLANNED: v0.7 — Studio Finish / mastering orchestration
-
-Genre_test should orchestrate and validate mastering candidates through its integrated Ozone 12 subsystem rather than maintain a separate mastering product or pretend a simplistic internal DSP chain replaces Ozone. Module order is semantically significant; the imported 16-slot map is a topology/order template, not a command to enable every module, and `BYPASS` remains a valid winner.
+## v0.7 — Studio Finish / mastering orchestration
 
 Planned:
 
-- versioned mastering request/manifest contract;
-- REAPER render-host bridge;
-- Ozone preset/XML integration boundary from the integrated `mastering/ozone12` subsystem;
-- Safe / Probe / Refine candidate orchestration;
-- preflight and post-render TechnicalProfile gates;
-- delivery normalization/compliance profiles;
-- codec-preview validation;
-- backend-neutral drum-attack retention, mono loss and decoded codec peak checks;
-- candidate rejection/regeneration on hard technical failures;
-- **#54 synchronized A/B/X comparison lab** for 2–12 repair/mix/master variants with common transport, loudness-match, blind comparison, markers and render manifests.
+- versioned `MasteringBackend` request/result/manifest contract;
+- REAPER render-host bridge for Ozone 12 Advanced;
+- existing `mastering/ozone12` XML/config/tooling boundary;
+- Safe / Probe / Refine mastering candidates;
+- pre/post TechnicalProfile gates;
+- backend-neutral drum-attack, mono-loss, stereo and decoded-codec checks;
+- delivery normalization/compliance profiles.
 
-## PLANNED: v0.8 — Metadata, catalog and delivery operations
+### Comparison split
 
-- **#53 Media tag auditor / reversible batch fix** — `ffprobe` + `mutagen` ingestion, normalized tags, analyzer cross-check for BPM/key/genre, dry-run diff, atomic writes, re-read validation and rollback.
-- **#56 Local music asset vault** — source/stem/render lineage, integrity verdicts, processing/model provenance, storage footprint, cleanup candidates, lexical/semantic lookup and explicit truth-source badges.
-- final delivery package with WAV 24-bit/48 kHz canonical master, checksums, analysis/technical reports, tags and processing lineage.
+Full #54 remains the v0.7 synchronized A/B/X Comparison Lab: blind sessions, annotations, ratings, 2–12 candidates, persistence and reviewer evidence.
 
-Metadata identity fields such as title/artist/album are never silently overwritten from model inference. Provenance-related metadata may be inventoried but the module is not designed to strip it for concealment.
+Only its **transport kernel** is pulled forward to Workstation P3 so Repair/Stems/Master never create private competing players.
 
-## PLANNED: v0.9 — ComfyUI, runtime and automation
+## v0.8 — Metadata / Vault / Delivery
 
-- **#46 Genre_test-owned ComfyUI bridge nodes** over stable local contracts;
-- **#55 shared GPU ModelRuntimeManager / VRAM scheduler** integrating Resource Monitor telemetry, model residency, acquire/release lifecycle, OOM policy and sidecar shutdown;
+- #53 media tag auditor and reversible batch fix;
+- #56 local asset vault with integrity, lineage, processing/model provenance and cleanup planning;
+- final delivery package with checksums/reports/metadata where appropriate.
+
+Identity metadata is never silently overwritten from model inference.
+
+## v0.9 — Runtime orchestration / ComfyUI / Product MCP
+
+- #46 thin Genre_test-owned ComfyUI bridge over stable local contracts;
+- #55 shared `ModelRuntimeManager` / VRAM scheduler;
 - stable local job API with progress/heartbeat/Safe Stop;
-- optional **Genre_test product MCP façade** over stable local APIs; this is Track P and is not accelerated by the earlier read-only QA evidence-consumer Track Q;
-- workflow validation before heavy execution.
+- **Track P Product MCP façade** over stable APIs.
 
-## TARGET: v1.0 — SUPERCOMBINE
+### Track Q — cross-cutting QA infrastructure
 
-One persistent project/session should support:
+Option C is already selected. Read-only Track Q engineering/QA evidence infrastructure may evolve outside release numbering without advancing product MCP scope.
+
+#155 `ReviewEvidencePackV1` is currently `PARKED_READY` during the refactor boundary train. #171 durable QA verdict normalization is handled first.
+
+## v1.0 — Integrated SUPERCOMBINE
+
+Target persistent workflow:
 
 ```text
 INGEST
  -> ANALYZE
- -> SEARCH/REFERENCE
+ -> SEARCH / REFERENCE
  -> QC
- -> STEMS (optional)
  -> REPAIR
- -> VOCAL/STEM POST
- -> MIX/MASTER
+ -> STEMS / VOCAL (optional)
+ -> MIX / MASTER
  -> A/B/X REVIEW
- -> TAG AUDIT
- -> DELIVERY
+ -> TAG / DELIVERY
 ```
 
-v1.0 principles:
+Graduation principles:
 
+- resumable project/session;
 - immutable source;
-- every derived asset has parent hash + processing manifest;
-- resumable sessions;
-- heavy models optional and independently diagnosable;
-- all destructive operations previewable and reversible;
-- automatic repair has confidence/unknown semantics;
-- final technical QC and human listening review;
-- Russian-first documentation;
-- real generated-song end-to-end fixtures;
-- explicit model/code licenses and provenance;
-- no anti-detector-evasion objective;
-- explicit MTD before release.
+- explicit derived lineage;
+- reproducible processing/model identities;
+- heavy models optional and diagnosable;
+- final objective QC + human review;
+- Russian-first user documentation;
+- real generative-song end-to-end fixtures;
+- explicit third-party provenance/terms;
+- no anti-detector-evasion objective.
 
-## GeekatplayStudio reuse directions
+## Knowledge and authoring layer
 
-Detailed audit: [`docs/GEEKATPLAY_ORG_AUDIT.md`](docs/GEEKATPLAY_ORG_AUDIT.md).
+At the refactor boundary the repository adopts the Obsidian-aware Markdown authoring contract in `docs/obsidian/MARKDOWN_AUTHORING_STANDARD.md`.
 
-Strong patterns selected for future adaptation:
+Historical unchanged Markdown is grandfathered by `MARKDOWN_LEGACY_BASELINE.json`; new or modified human-maintained Markdown must migrate to the controlled passport. This is a repository-authoring rule, not a separate product phase.
 
-- `music-suite`: technical metrics/markers, metadata merge, mastering orchestration/self-check, interactive review;
-- `song-geometry-mapper`: frame geometry, spectral flux, temporal/similarity edges, stem-aware structure concepts;
-- `Ai-Music-Analytic-Mastering-Nodes`: global heavy-model cache / explicit VRAM release concept — reference only until license clarified;
-- `ABCvers-Studio`: synchronized multi-candidate review UX;
-- `ComfyUI-Asset-Vault`: integrity/provenance/lineage, measured-vs-inferred UI, safe plans/checksums/quarantine and storage inventory;
-- `ComfyUI-LipSync-GAP` / `video-indexing-ai`: Whisper/transcription architecture reference only; choose a maintained licensed backend separately.
+## Source of execution truth
 
-## v0.4.x calibration work feeding later releases
+This roadmap defines sequence and ownership. Exact execution state is always:
 
-These remain valid but no longer block starting retrieval architecture:
+```text
+Genre_test/main
++ live GitHub Issues/PRs
++ assigned Issue contract
+```
 
-### Performance and ambiguity
-
-- decode audio once and share waveform between MAEST, DSP and AudioSet AST;
-- persistent semantic inference cache by `track_id + model_revision`;
-- optionally reuse ordinary analysis for byte-identical duplicates;
-- benchmark AST overhead and VRAM use;
-- calibrate semantic window count;
-- calibrate MAEST/AST family fusion on reviewed tracks;
-- expose fine-style ambiguity when Top-1/Top-2 margins are extremely small;
-- explicit ambiguity/confidence for short input;
-- independent BPM ground-truth fixtures.
-
-### Benchmark and resolver calibration
-
-- reviewed ground-truth table separate from run history;
-- broad-family confusion/error analysis;
-- selected fine-style confusion/error analysis;
-- classical resolver/calibration;
-- Validation severity calibration;
-- mode-convergence fixtures such as xLaunge.
-
-### Additional calibrated musical descriptors
-
-Only add descriptors with a reproducible model or validated estimator.
-
-Active experimental candidate set in #37:
-
-- mood/emotion;
-- character;
-- movement/groove;
-- energy bands;
-- small vocal presence/style vocabulary;
-- production era / sonic decade;
-- use-case descriptors.
-
-CLaMP zero-shot raw cosine similarity is not automatically a calibrated probability.
-
-### Product mappings
-
-- distributor taxonomy calibration;
-- SUNO Style of Music ordering/length rules;
-- configurable presentation mappings without changing stored evidence.
-
-## FAR TODO
-
-Useful but non-blocking ideas remain in [`docs/FAR_TODO.md`](docs/FAR_TODO.md). Items move out only after evidence source, license, schema, reviewed fixtures, precision/repeatability and failure semantics are defined.
-
-## Architecture rules
-
-- `Genre_test` is the single engineering source of truth for new AUDIO_MASTERING work; standalone Ozone lab material is migration/history evidence after #100;
-- Ozone 12 is an optional mastering backend and must not become a dependency of ordinary analysis/retrieval startup;
-- shared technical metrics are backend-neutral; Ozone XML/ParamID/ElementChain/preset/render logic stays under the Ozone mastering boundary;
-- Ozone module order is semantically significant, but topology slots do not imply activation;
-- obsolete TensorFlow-1/musicnn paths are not active product architecture;
-- additional models must be reproducible and versioned;
-- retrieval embeddings never silently overwrite analysis history;
-- different embedding backend identities are never mixed in one search matrix without an explicit migration;
-- third-party model licensing is tracked separately from Genre_test source licensing;
-- new model failure must not silently degrade existing stable outputs;
-- attractive natural-language output is never allowed to outrun the evidence that supports it;
-- source audio is immutable; repairs/masters are derived assets with lineage;
-- destructive metadata/storage actions require dry-run + explicit confirmation + rollback where feasible;
-- no feature is optimized to bypass AI-origin/provenance detection.
+Planning text never overrides a newer merged contract or live task state.
