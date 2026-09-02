@@ -15,7 +15,20 @@ from typing import Any, Callable, Iterable
 API_ROOT = "https://api.github.com"
 GRAPHQL_URL = "https://api.github.com/graphql"
 STATUS_CONTEXT = "qa-verdict-bridge"
-REQUEST_RE = re.compile(r"QA_REQUEST_HEAD:\s*`?([0-9a-f]{40})`?", re.IGNORECASE)
+CANONICAL_MARKER_RE = re.compile(r"QA_REQUEST_HEAD:", re.IGNORECASE)
+REQUEST_RE = re.compile(
+    r"QA_REQUEST_HEAD:\s*"
+    r"(?:`(?P<ticked>[0-9A-Za-z]+)`(?![0-9A-Za-z])|"
+    r"(?P<plain>[0-9A-Za-z]+)(?![0-9A-Za-z`]))",
+    re.IGNORECASE,
+)
+NATURAL_PHRASE_RE = re.compile(r"\bexact(?:\s+current)?\s+head\b", re.IGNORECASE)
+NATURAL_REQUEST_RE = re.compile(
+    r"\bexact(?:\s+current)?\s+head\b\s*(?:(?:is|=|:)\s*)?"
+    r"(?:`(?P<ticked>[0-9A-Za-z]+)`(?![0-9A-Za-z])|"
+    r"(?P<plain>[0-9A-Za-z]+)(?![0-9A-Za-z`]))",
+    re.IGNORECASE,
+)
 REVIEWED_RE = re.compile(r"\*\*Reviewed commit:\*\*\s*`([0-9a-f]{7,40})`", re.IGNORECASE)
 CLEAN_PHRASE = "Codex Review: Didn't find any major issues."
 CODEX_LOGINS = {"chatgpt-codex-connector", "chatgpt-codex-connector[bot]"}
@@ -67,11 +80,45 @@ def _is_codex(login: str) -> bool:
     return _normalized_login(login) in CODEX_LOGINS
 
 
+def _bound_candidates(
+    body: str,
+    *,
+    marker_re: re.Pattern[str],
+    request_re: re.Pattern[str],
+) -> set[str] | None:
+    markers = list(marker_re.finditer(body))
+    matches = list(request_re.finditer(body))
+    if len(matches) != len(markers):
+        return None
+
+    candidates: set[str] = set()
+    for match in matches:
+        token = (match.group("ticked") or match.group("plain") or "").lower()
+        if not HEX40_RE.fullmatch(token):
+            return None
+        candidates.add(token)
+    return candidates
+
+
 def _request_head(body: str) -> str | None:
     if "@codex" not in body.lower() or "review" not in body.lower():
         return None
-    match = REQUEST_RE.search(body)
-    return match.group(1).lower() if match else None
+
+    canonical = _bound_candidates(
+        body,
+        marker_re=CANONICAL_MARKER_RE,
+        request_re=REQUEST_RE,
+    )
+    natural = _bound_candidates(
+        body,
+        marker_re=NATURAL_PHRASE_RE,
+        request_re=NATURAL_REQUEST_RE,
+    )
+    if canonical is None or natural is None:
+        return None
+
+    candidates = canonical | natural
+    return next(iter(candidates)) if len(candidates) == 1 else None
 
 
 def _reviewed_prefix(body: str) -> str | None:
@@ -117,7 +164,7 @@ def evaluate_evidence(
         return Verdict(
             "pending",
             _marker("QA_BLOCKED", head_sha),
-            "no exact-head QA_REQUEST_HEAD comment is present yet",
+            "no recognized exact-head QA review request is present yet",
         )
 
     request = exact_requests[-1]
