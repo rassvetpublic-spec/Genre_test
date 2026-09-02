@@ -132,10 +132,12 @@ time.sleep(30)
 
 def test_context_manager_closes_operation_on_exception() -> None:
     process = None
-    with pytest.raises(RuntimeError, match="fixture"):
-        with ProcessOwner(terminate_timeout=0.1) as owner:
-            process = owner.spawn(python_command("import time; time.sleep(30)"))
-            raise RuntimeError("fixture")
+    with (
+        pytest.raises(RuntimeError, match="fixture"),
+        ProcessOwner(terminate_timeout=0.1) as owner,
+    ):
+        process = owner.spawn(python_command("import time; time.sleep(30)"))
+        raise RuntimeError("fixture")
     assert process is not None
     assert process.poll() is not None
 
