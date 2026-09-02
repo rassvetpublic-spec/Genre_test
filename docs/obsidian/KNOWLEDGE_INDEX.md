@@ -12,7 +12,7 @@ generation_direction: "JSON_TO_MARKDOWN"
 
 > Derived/rebuildable navigation view. Canonical project facts remain in their owning repository documents/state; this index never overrides them.
 
-Registered principal documents: **20**.
+Registered principal documents: **21**.
 
 Registration is now enforced for new or materially migrated human Markdown; unchanged grandfathered documents may remain outside the principal registry.
 
@@ -38,6 +38,7 @@ Registration is now enforced for new or materially migrated human Markdown; unch
 |---|---|---|---|
 | [[docs/DATABASE_RECOVERY|Genre_test Database Recovery]] | `runbook` | `canonical` | Канонический fail-closed workflow поиска, read-only аудита и атомарного repair SQLite с внешним access journal и provenance derived copies. |
 | [[ROADMAP|Genre_test Roadmap]] | `status` | `active` | Release и architecture sequence от active v0.5 retrieval через Workstation P1-P8 к integrated SUPERCOMBINE v1.0. |
+| [[docs/WORKSTATION_P1|Genre_test Workstation P1 Contract]] | `protocol` | `active` | P1 contract for the localhost-only Workstation shell, RU/EN foundation, lightweight local API and canonical Resource Monitor adapter. |
 | [[README|Genre_test — вход в проект]] | `guide` | `active` | Главная точка входа: active v0.5, refactor boundary, protected core, retrieval, SUPERCOMBINE, Ozone и Obsidian authoring. |
 | [[docs/obsidian/MARKDOWN_AUTHORING_STANDARD|Markdown Authoring Standard Genre_test]] | `protocol` | `canonical` | Post-boundary passport, structure, grandfathering и generated-path rules для human-maintained Markdown. |
 | [[docs/obsidian/PLUGIN_PROFILE.yaml|Plugin-soft профиль Obsidian Genre_test]] | `reference` | `active` | Phase 0 профиль core/recommended/optional Obsidian capabilities и запретов на plugin-owned authority. |
@@ -105,6 +106,9 @@ Registration is now enforced for new or materially migrated human Markdown; unch
 | [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] | `related` | [[README|Genre_test — вход в проект]] |
 | [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] | `related` | [[ROADMAP|Genre_test Roadmap]] |
 | [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] | `related` | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] |
+| [[docs/WORKSTATION_P1|Genre_test Workstation P1 Contract]] | `depends_on` | [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] |
+| [[docs/WORKSTATION_P1|Genre_test Workstation P1 Contract]] | `related` | [[README|Genre_test — вход в проект]] |
+| [[docs/WORKSTATION_P1|Genre_test Workstation P1 Contract]] | `related` | [[ROADMAP|Genre_test Roadmap]] |
 | [[docs/mastering/ozone12/README|Подсистема мастеринга Ozone 12]] | `related` | [[docs/mastering/ozone12/MIGRATION_FROM_OZONE12_MASTERING_LAB|docs/mastering/ozone12/MIGRATION_FROM_OZONE12_MASTERING_LAB.md]] |
 | [[docs/obsidian/CLI_POLICY|Политика Obsidian CLI Genre_test]] | `depends_on` | [[docs/obsidian/PROPERTY_SCHEMA|Схема Properties Genre_test]] |
 | [[docs/obsidian/CLI_POLICY|Политика Obsidian CLI Genre_test]] | `related` | [[docs/obsidian/PLUGIN_PROFILE.yaml|Plugin-soft профиль Obsidian Genre_test]] |

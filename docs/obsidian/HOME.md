@@ -43,6 +43,7 @@ canonical_owner: "docs/obsidian/KNOWLEDGE_REGISTRY.json"
 ### `project`
 
 - [[ROADMAP|Genre_test Roadmap]] (`active` / `status`)
+- [[docs/WORKSTATION_P1|Genre_test Workstation P1 Contract]] (`active` / `protocol`)
 - [[README|Genre_test — вход в проект]] (`active` / `guide`)
 - [[docs/obsidian/PLUGIN_PROFILE.yaml|Plugin-soft профиль Obsidian Genre_test]] (`active` / `reference`)
 - [[docs/obsidian/TAG_TAXONOMY|Taxonomy тегов Genre_test]] (`active` / `protocol`)
@@ -79,4 +80,4 @@ canonical_owner: "docs/obsidian/KNOWLEDGE_REGISTRY.json"
 
 ## Projection identity
 
-Source fingerprint: `ba1093ca5a3dc0980858e3d052002df65f99cbc23a8d3e51de18543e204a29b7`
+Source fingerprint: `10ee2eff3e27801e02acb9a2a25f1e6dfe6ed94273248f5ceb9a3f8c46a2a4da`
