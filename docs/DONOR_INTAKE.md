@@ -1,82 +1,86 @@
 ---
-title: "Genre_test Donor Intake Contract"
+title: "Donor Intake Policy"
 doc_type: protocol
 area: project
 status: canonical
-summary: "Canonical admission gate for donor technologies: product fit, provenance, authority boundaries, evidence class and acceptance before any port/adaptation."
+summary: "Canonical admission gate for external donor components, separating product fit, provenance and bounded technical reuse from excluded product workflows."
 tags:
   - область/project
   - тип/protocol
   - статус/canonical
 ---
 
-# Genre_test Donor Intake Contract
-
-Tracking origin: **#200**
+# Donor Intake Policy
 
 ## Purpose
 
-A donor repository, prototype, paper implementation or owner-supplied archive is an input to engineering review. It is never a roadmap owner and never becomes a second source of product/runtime truth merely because useful code or UX exists there.
+External projects may provide useful implementation patterns without becoming Genre_test products, runtimes or sources of truth. Every donor intake must classify both **what is useful** and **whether that thing belongs in the Genre_test product** before code migration starts.
 
-Every donor component must map to an existing in-scope Genre_test job/Issue before implementation.
+Canonical invariant:
 
-## Required admission record
-
-Use this minimum record for each donor component considered for production integration:
-
-```yaml
-donor_id: <stable donor identifier>
-donor_revision: <exact commit/hash/archive identity>
-donor_path: <exact file/module/component path>
-product_fit: IN_SCOPE | DONOR_ONLY | OUT_OF_SCOPE
-classification: PORT | ADAPT | REIMPLEMENT | EXPERIMENT | REJECT
-owner_issue: <Genre_test Issue>
-target_owner: <Genre_test canonical subsystem/contract>
-evidence_class: <source/runtime/research/UX evidence class>
-license_provenance: <code rights / model-weight rights / unknown>
-network_or_download_behavior: <explicit>
-runtime_isolation: <explicit>
-acceptance_gate: <tests/review/science gate>
+```text
+DONOR KNOWLEDGE != PRODUCT SCOPE
 ```
 
-Missing exact source identity prevents direct `PORT`/`ADAPT` claims. Changelog-only or prose-only behavior is a requirement/reference and must be `REIMPLEMENT` or `EXPERIMENT` until recoverable source is pinned.
+A donor repository can be valuable even when most of its product surface is excluded.
 
-## `product_fit` meanings
+## Required donor record
+
+Every material donor intake must record:
+
+```text
+source_repository: <URL>
+source_revision: <immutable commit/tag>
+source_path: <path or bounded subsystem>
+classification: PORT | ADAPT | REIMPLEMENT | REFERENCE
+product_fit: IN_SCOPE | DONOR_ONLY | OUT_OF_SCOPE
+target_owner: <Genre_test canonical service/contract/doc>
+rights_note: <code/model/data terms or explicit review requirement>
+```
+
+### `classification`
+
+- `PORT` — exact pinned source is eligible for direct migration and provenance is retained;
+- `ADAPT` — pinned implementation is materially transformed behind Genre_test-owned contracts;
+- `REIMPLEMENT` — behavior/requirement is reproduced without importing unrecoverable or unsuitable source;
+- `REFERENCE` — architecture/operations evidence only; no source migration.
+
+### `product_fit`
+
+- `IN_SCOPE` — capability directly belongs in the approved Genre_test product boundary;
+- `DONOR_ONLY` — a bounded technical primitive is useful for implementing an in-scope capability, but the donor product/workflow itself is not admitted;
+- `OUT_OF_SCOPE` — capability/workflow is rejected from Genre_test product implementation.
+
+`DONOR_ONLY` must never be used to smuggle an excluded workflow into navigation, release milestones or product ownership. It applies only to the explicitly bounded primitive being reused.
+
+## Current Genre_test product boundary
 
 ### `IN_SCOPE`
 
-The donor component directly implements or accelerates an already accepted Genre_test product capability:
-
-- music analysis/catalog/retrieval;
-- Technical QC;
-- generative-song/stem/vocal repair;
-- studio-finish/mastering and controlled comparison;
-- AI-origin/provenance detector research/evidence;
-- runtime/research/delivery infrastructure required by those capabilities.
-
-`IN_SCOPE` still requires provenance, architecture ownership and acceptance evidence.
+- music/audio analysis and Technical QC;
+- Catalog/Search/retrieval and similarity workflows;
+- controlled repair/restoration and stem workflows;
+- mastering/Ozone/REAPER integration owned inside Genre_test;
+- comparison/listening/evidence workflows;
+- detector robustness/evidence research that preserves known ground truth and reproducibility;
+- project asset lineage, delivery and workstation/runtime infrastructure needed by those workflows.
 
 ### `DONOR_ONLY`
 
-The originating product feature itself is outside Genre_test, but a bounded technical primitive may be useful for an in-scope capability.
+Examples are technical primitives whose donor-facing product is not adopted:
 
-Examples:
-
-- subprocess/process-tree containment from a speech production tool;
-- device/provider diagnostics;
-- phrase/activity alignment used only as evidence;
-- UX layout patterns;
-- controlled synthetic fixture generation for research.
-
-Only the bounded primitive is admitted. The donor product workflow is not.
+- process-tree containment and timeout cleanup;
+- explicit requested/actual provider evidence and no-silent-fallback routing;
+- doctor/deep-doctor diagnostics;
+- sidecar heartbeat/liveness patterns;
+- bounded UI/interaction patterns with pinned provenance;
+- maintained separation implementations used as candidates/baselines under Genre_test contracts.
 
 ### `OUT_OF_SCOPE`
 
-The component maps to a product family Genre_test explicitly does not implement:
-
-- dubbing pipeline;
-- audiobook production pipeline;
-- general-purpose TTS studio;
+- dubbing product/workflow;
+- audiobook production product/workflow;
+- general-purpose TTS product;
 - general-purpose voice-cloning product;
 - film/video localization workflow.
 
@@ -108,9 +112,9 @@ A detector score is not mastering-quality truth. Ordinary repair/mastering must 
 
 ## VoiceStudio boundary
 
-Issue #199 may admit runtime/operations primitives from VoiceStudio, such as process containment, capability truth, doctor/deep-doctor patterns and heartbeat/liveness.
+Issue #199 may admit only bounded runtime/operations primitives from VoiceStudio as `DONOR_ONLY`, such as process containment, capability truth, doctor/deep-doctor patterns and heartbeat/liveness.
 
-VoiceStudio dubbing, audiobook, general TTS and voice-cloning product workflows remain `OUT_OF_SCOPE` or `DONOR_ONLY` as appropriate and must not become Genre_test navigation or release milestones.
+VoiceStudio dubbing, audiobook, general TTS and voice-cloning **product workflows are unconditionally `OUT_OF_SCOPE`**. They must not be classified `DONOR_ONLY`, become Genre_test navigation, or enter release milestones. Only the separately named bounded technical primitives may carry `DONOR_ONLY`.
 
 ## Acceptance
 
