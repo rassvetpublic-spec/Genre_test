@@ -113,6 +113,27 @@ time.sleep(30)
     _wait_not_running(child_pid)
 
 
+@pytest.mark.skipif(os.name != "posix", reason="POSIX root-exits-first contract")
+def test_posix_close_cleans_group_after_root_exits() -> None:
+    parent_code = r'''
+import subprocess
+import sys
+child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+print(child.pid, flush=True)
+'''
+    owner = ProcessOwner(terminate_timeout=0.2)
+    process = owner.spawn(python_command(parent_code), stdout=subprocess.PIPE, text=True)
+    assert process.stdout is not None
+    child_pid = int(process.stdout.readline().strip())
+    assert owner.wait(timeout=5).returncode == 0
+    assert process.poll() == 0
+    assert _pid_is_running(child_pid)
+
+    owner.close()
+
+    _wait_not_running(child_pid)
+
+
 @pytest.mark.skipif(os.name != "posix", reason="POSIX escalation contract")
 def test_posix_close_escalates_when_sigterm_is_ignored() -> None:
     code = r'''
@@ -130,6 +151,39 @@ time.sleep(30)
     assert process.poll() is not None
 
 
+@pytest.mark.skipif(os.name != "posix", reason="POSIX descendant escalation contract")
+def test_posix_escalates_for_descendant_after_root_exits() -> None:
+    parent_code = r'''
+import subprocess
+import sys
+child_code = """
+import signal
+import time
+signal.signal(signal.SIGTERM, signal.SIG_IGN)
+print('ready', flush=True)
+time.sleep(30)
+"""
+child = subprocess.Popen(
+    [sys.executable, "-c", child_code],
+    stdout=subprocess.PIPE,
+    text=True,
+)
+assert child.stdout is not None
+assert child.stdout.readline().strip() == "ready"
+print(child.pid, flush=True)
+'''
+    owner = ProcessOwner(terminate_timeout=0.05)
+    process = owner.spawn(python_command(parent_code), stdout=subprocess.PIPE, text=True)
+    assert process.stdout is not None
+    child_pid = int(process.stdout.readline().strip())
+    assert owner.wait(timeout=5).returncode == 0
+    assert _pid_is_running(child_pid)
+
+    owner.close()
+
+    _wait_not_running(child_pid)
+
+
 def test_context_manager_closes_operation_on_exception() -> None:
     process = None
     with (
@@ -142,7 +196,7 @@ def test_context_manager_closes_operation_on_exception() -> None:
     assert process.poll() is not None
 
 
-def test_windows_contract_source_contains_kill_on_close_and_gate() -> None:
+def test_windows_contract_source_contains_kill_on_close_and_retained_gate() -> None:
     source = Path(__file__).parents[1] / "src" / "genre_test" / "process_owner.py"
     text = source.read_text(encoding="utf-8")
     assert "0x00002000" in text
@@ -151,3 +205,7 @@ def test_windows_contract_source_contains_kill_on_close_and_gate() -> None:
     assert "_WINDOWS_BOOTSTRAP" in text
     assert "WaitForSingleObject" in text
     assert "SetEvent" in text
+    assert "self._windows_gate" in text
+    assert "assigned = False" in text
+    assert "if not keep_gate" in text
+    assert "if assigned and job is not None" in text
