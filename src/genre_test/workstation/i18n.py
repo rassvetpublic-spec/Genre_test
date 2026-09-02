@@ -19,18 +19,30 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "nav.settings": "Settings",
         "status.local": "Local workstation",
         "status.ready": "Shell ready",
+        "status.deferred": "Deferred",
         "status.na": "N/A",
         "panel.project.title": "Project",
-        "panel.project.body": "Source and derived-asset navigation arrives through canonical project services.",
+        "panel.project.body": (
+            "Source and derived-asset navigation arrives through canonical project services."
+        ),
+        "panel.deferred.body": (
+            "This execution surface is deferred to its owning Workstation phase."
+        ),
         "panel.runtime.title": "Runtime",
         "panel.runtime.cpu": "CPU",
         "panel.runtime.ram": "RAM",
         "panel.runtime.gpu": "GPU",
         "panel.runtime.vram": "VRAM",
         "panel.runtime.temperature": "Temperature",
+        "panel.runtime.backend": "Backend",
+        "panel.runtime.model": "Model",
+        "panel.runtime.job": "Job",
         "panel.runtime.refresh": "Refresh runtime",
         "panel.capabilities.title": "Capabilities",
-        "panel.capabilities.body": "P1 exposes the shell and typed seams. Domain surfaces stay deferred until their owning phases.",
+        "panel.capabilities.body": (
+            "P1 exposes the shell and typed seams. Domain surfaces stay deferred until "
+            "their owning phases."
+        ),
         "settings.language": "Language",
         "settings.language.ru": "Russian",
         "settings.language.en": "English",
@@ -53,18 +65,31 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "nav.settings": "Настройки",
         "status.local": "Локальная рабочая станция",
         "status.ready": "Оболочка готова",
+        "status.deferred": "Отложено",
         "status.na": "Н/Д",
         "panel.project.title": "Проект",
-        "panel.project.body": "Навигация по источнику и производным ассетам подключается через канонические сервисы проекта.",
+        "panel.project.body": (
+            "Навигация по источнику и производным ассетам подключается через "
+            "канонические сервисы проекта."
+        ),
+        "panel.deferred.body": (
+            "Этот исполнительный экран отложен до своей фазы Workstation."
+        ),
         "panel.runtime.title": "Ресурсы",
         "panel.runtime.cpu": "ЦП",
         "panel.runtime.ram": "ОЗУ",
         "panel.runtime.gpu": "ГП",
         "panel.runtime.vram": "Видеопамять",
         "panel.runtime.temperature": "Температура",
+        "panel.runtime.backend": "Бэкенд",
+        "panel.runtime.model": "Модель",
+        "panel.runtime.job": "Задача",
         "panel.runtime.refresh": "Обновить ресурсы",
         "panel.capabilities.title": "Возможности",
-        "panel.capabilities.body": "P1 даёт оболочку и типизированные точки подключения. Предметные экраны остаются за своими фазами.",
+        "panel.capabilities.body": (
+            "P1 даёт оболочку и типизированные точки подключения. Предметные экраны "
+            "остаются за своими фазами."
+        ),
         "settings.language": "Язык",
         "settings.language.ru": "Русский",
         "settings.language.en": "Английский",
