@@ -1,0 +1,49 @@
+filters:
+  and:
+    - 'file.folder == "docs/obsidian/registry_views"'
+    - 'canonical_path != null'
+properties:
+  canonical_path:
+    displayName: Canonical path
+  title:
+    displayName: Title
+  area:
+    displayName: Area
+  doc_type:
+    displayName: Type
+  status:
+    displayName: Status
+  summary:
+    displayName: Summary
+views:
+  - type: table
+    name: By area
+    order:
+      - canonical_path
+      - title
+      - doc_type
+      - status
+      - summary
+    groupBy:
+      property: area
+      direction: ASC
+  - type: table
+    name: By type
+    order:
+      - canonical_path
+      - title
+      - area
+      - status
+    groupBy:
+      property: doc_type
+      direction: ASC
+  - type: table
+    name: By status
+    order:
+      - canonical_path
+      - title
+      - area
+      - doc_type
+    groupBy:
+      property: status
+      direction: ASC
