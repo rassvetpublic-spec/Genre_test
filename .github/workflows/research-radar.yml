@@ -3,8 +3,11 @@ name: Research Radar contract
 on:
   pull_request:
     paths:
+      - '*.md'
       - 'docs/**'
+      - 'tools/check_markdown_authoring.py'
       - 'tools/research_radar_sync.py'
+      - 'tests/test_markdown_authoring.py'
       - 'tests/test_research_radar_contract.py'
       - '.github/workflows/research-radar.yml'
 
@@ -18,10 +21,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Validate Obsidian Markdown authoring boundary
+        run: python tools/check_markdown_authoring.py
       - name: Validate JSON and generated Markdown projection
         run: python tools/research_radar_sync.py --check
-      - name: Compile generator
-        run: python -m py_compile tools/research_radar_sync.py
+      - name: Compile knowledge-contract tools
+        run: python -m py_compile tools/check_markdown_authoring.py tools/research_radar_sync.py

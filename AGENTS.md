@@ -1,3 +1,15 @@
+---
+title: "Genre_test Agent Constitution"
+doc_type: protocol
+area: agents
+status: canonical
+summary: "Canonical agent governance, QA, evidence, and merge workflow contract for Genre_test."
+tags:
+  - область/agents
+  - тип/protocol
+  - статус/canonical
+---
+
 # Genre_test Agent Constitution
 
 This repository is the canonical engineering source of truth for the AUDIO_MASTERING project.
@@ -86,6 +98,14 @@ The specialized role set is intentionally limited to seven agents:
 
 The implementation agent must not be the sole reviewer of its own work. No agent may expand its own authority by editing governance outside an approved governance task.
 
+### Deterministic QA evidence normalization
+
+The repository-owned `qa-verdict-bridge` defined in `docs/QA_VERDICT_BRIDGE.md` may normalize only its approved independent exact-head GitHub Codex clean-review signal into the commit status context `qa-verdict-bridge`.
+
+A `qa-verdict-bridge=success` status counts as normalized `QA_APPROVED <40-char-head-sha>` evidence only for the exact commit on which that status is present. It does not grant review authority to `RELEASE_MANAGER`, does not create `READY-MTD`, does not survive a head change, and does not normalize or replace `AUDIO_SCIENCE`.
+
+The explicit independent exact-head `QA_APPROVED <sha>` path remains valid. The bridge is an evidence adapter, not an additional agent role.
+
 ## Claim and duplication discipline
 
 GitHub Issues are the task contracts. Before production implementation starts, the task must be `CLAIMED` after checking for overlapping active Issues, branches, and PRs.
@@ -153,7 +173,7 @@ Before declaring `READY-MTD <sha>`:
 
 1. Re-read the Issue/task contract and acceptance criteria.
 2. Confirm the current PR head SHA and invalidate older verdicts if it changed.
-3. Confirm QA approval applies to that exact SHA.
+3. Confirm QA approval applies to that exact SHA, either through an accepted explicit independent `QA_APPROVED <sha>` marker or an exact-head `qa-verdict-bridge=success` status produced by the repository adapter.
 4. For audio-triggered work, confirm Audio Science approval applies to that exact SHA.
 5. Review the diff for accidental scope growth and generated/private artifacts.
 6. Confirm relevant focused tests plus repository CI gates are green for that exact SHA.

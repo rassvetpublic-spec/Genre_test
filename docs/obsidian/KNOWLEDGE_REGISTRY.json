@@ -10,7 +10,7 @@
       "doc_type": "guide",
       "area": "project",
       "status": "active",
-      "summary": "Краткая точка входа в Genre_test: текущая версия, защищённый анализ, runtime, запуск и основные subsystem-направления.",
+      "summary": "Главная точка входа: active v0.5, pre-refactor boundary, protected core, retrieval, SUPERCOMBINE, Ozone и Obsidian authoring.",
       "tags": [
         "область/project",
         "тип/guide",
@@ -21,14 +21,17 @@
       ],
       "terms": [
         "AudioProfile",
-        "MAEST",
-        "AudioSet AST",
-        "CLaMP 3"
+        "CLaMP 3",
+        "SUPERCOMBINE",
+        "refactor boundary"
       ],
       "related": [
         "docs/ACTIVE_CURRENT.md",
+        "ROADMAP.md",
         "docs/CLAMP3_ARCHITECTURE.md",
+        "docs/SUPERCOMBINE_UI_ARCHITECTURE.md",
         "docs/mastering/ozone12/README.md",
+        "docs/obsidian/MARKDOWN_AUTHORING_STANDARD.md",
         "docs/research/RESEARCH_RADAR.md"
       ]
     },
@@ -61,7 +64,7 @@
       "doc_type": "status",
       "area": "project",
       "status": "active",
-      "summary": "Текущий development snapshot проекта, активный milestone, защищённые baseline и subsystem-состояние; live GitHub state остаётся обязательной проверкой.",
+      "summary": "Current snapshot на pre-refactor boundary: immediate train #184 -> #171 -> #164, protected baselines и subsystem ownership.",
       "tags": [
         "область/project",
         "тип/status",
@@ -70,11 +73,14 @@
       "terms": [
         "0.5.0.dev0",
         "CLaMP 3",
-        "SUPERCOMBINE"
+        "SUPERCOMBINE",
+        "PRE-REFACTOR FREEZE"
       ],
       "related": [
         "README.md",
-        "docs/REPOSITORY_COLD_START.md"
+        "ROADMAP.md",
+        "docs/REPOSITORY_COLD_START.md",
+        "docs/SUPERCOMBINE_UI_ARCHITECTURE.md"
       ]
     },
     {
@@ -83,7 +89,7 @@
       "doc_type": "runbook",
       "area": "agents",
       "status": "canonical",
-      "summary": "Порядок восстановления project state из main и live GitHub без зависимости от истории чатов.",
+      "summary": "Порядок восстановления project state, refactor-boundary state и task admission из main/live GitHub без зависимости от чатов.",
       "tags": [
         "область/agents",
         "тип/runbook",
@@ -92,14 +98,66 @@
       "terms": [
         "cold start",
         "source of truth",
-        "task admission"
+        "task admission",
+        "refactor boundary"
       ],
       "depends_on": [
         "AGENTS.md"
       ],
       "related": [
         "docs/ACTIVE_CURRENT.md",
-        "docs/ARCHITECTURE.md"
+        "docs/ARCHITECTURE.md",
+        "docs/SUPERCOMBINE_UI_ARCHITECTURE.md",
+        "docs/obsidian/MARKDOWN_AUTHORING_STANDARD.md"
+      ]
+    },
+    {
+      "path": "ROADMAP.md",
+      "title": "Genre_test Roadmap",
+      "doc_type": "status",
+      "area": "project",
+      "status": "active",
+      "summary": "Release и architecture sequence от active v0.5 retrieval через Workstation P1-P8 к integrated SUPERCOMBINE v1.0.",
+      "tags": [
+        "область/project",
+        "тип/status",
+        "статус/active"
+      ],
+      "terms": [
+        "v0.5",
+        "v0.6",
+        "v0.7",
+        "v1.0",
+        "SUPERCOMBINE"
+      ],
+      "related": [
+        "docs/ACTIVE_CURRENT.md",
+        "docs/SUPERCOMBINE_UI_ARCHITECTURE.md",
+        "docs/CLAMP3_ARCHITECTURE.md"
+      ]
+    },
+    {
+      "path": "docs/SUPERCOMBINE_UI_ARCHITECTURE.md",
+      "title": "SUPERCOMBINE Workstation UI Architecture",
+      "doc_type": "architecture",
+      "area": "project",
+      "status": "canonical",
+      "summary": "Owner-approved post-boundary Workstation architecture, donor policy, service/API layering and P1-P8 implementation order.",
+      "tags": [
+        "область/project",
+        "тип/architecture",
+        "статус/canonical"
+      ],
+      "terms": [
+        "Workstation",
+        "Shimmer",
+        "application service",
+        "A/B/X"
+      ],
+      "related": [
+        "README.md",
+        "ROADMAP.md",
+        "docs/ACTIVE_CURRENT.md"
       ]
     },
     {
@@ -189,6 +247,33 @@
       ],
       "related": [
         "docs/mastering/ozone12/MIGRATION_FROM_OZONE12_MASTERING_LAB.md"
+      ]
+    },
+    {
+      "path": "docs/obsidian/MARKDOWN_AUTHORING_STANDARD.md",
+      "title": "Markdown Authoring Standard Genre_test",
+      "doc_type": "protocol",
+      "area": "project",
+      "status": "canonical",
+      "summary": "Post-boundary passport, structure, grandfathering и generated-path rules для human-maintained Markdown.",
+      "tags": [
+        "область/project",
+        "тип/protocol",
+        "статус/canonical"
+      ],
+      "terms": [
+        "frontmatter",
+        "grandfathered Markdown",
+        "Git blob",
+        "Obsidian"
+      ],
+      "depends_on": [
+        "docs/obsidian/PROPERTY_SCHEMA.md",
+        "docs/obsidian/TAG_TAXONOMY.md"
+      ],
+      "related": [
+        "README.md",
+        "docs/REPOSITORY_COLD_START.md"
       ]
     },
     {
