@@ -3,7 +3,7 @@
   "schema_version": 1,
   "authority_scope": "derived_projection_only",
   "generation_direction": "REPOSITORY_TO_DERIVED_JSON",
-  "source_fingerprint": "10ee2eff3e27801e02acb9a2a25f1e6dfe6ed94273248f5ceb9a3f8c46a2a4da",
+  "source_fingerprint": "aa03af13434f3b4591ffd81368e5bc42d7e14aea1e76a6949c77212ea726610c",
   "canonical_inputs": {
     "knowledge_registry": "docs/obsidian/KNOWLEDGE_REGISTRY.json",
     "markdown_boundary": "docs/obsidian/MARKDOWN_LEGACY_BASELINE.json",
@@ -304,7 +304,7 @@
       "path": "docs/QA_VERDICT_BRIDGE.md",
       "ownership_class": "canonical_document",
       "registration_state": "registered",
-      "blob_sha": "196210f24cbc5077d068344ddbfdc2c2c16b79cb",
+      "blob_sha": "82b5ea5304718c26f0ba3f5e4bda6d9b5d8ed5a0",
       "area": "agents",
       "doc_type": "protocol",
       "status": "canonical"
