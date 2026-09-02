@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Genre_test Workstation</title>
+  <link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Workstation navigation">
+      <div class="brand">
+        <strong>Genre_test</strong>
+        <span>Workstation</span>
+      </div>
+      <nav id="navigation" class="navigation">
+        <button type="button" data-view="project" class="nav-item is-active">Project</button>
+        <button type="button" data-view="analyze" class="nav-item">Analyze</button>
+        <button type="button" data-view="catalog" class="nav-item">Catalog</button>
+        <button type="button" data-view="search" class="nav-item">Search</button>
+        <button type="button" data-view="repair" class="nav-item">Repair</button>
+        <button type="button" data-view="stems" class="nav-item">Stems</button>
+        <button type="button" data-view="master" class="nav-item">Master</button>
+        <button type="button" data-view="compare" class="nav-item">Compare</button>
+        <button type="button" data-view="delivery" class="nav-item">Delivery</button>
+        <button type="button" data-view="settings" class="nav-item">Settings</button>
+      </nav>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <h1 id="app-title">Genre_test Workstation</h1>
+          <p id="app-subtitle">Local-first studio workspace</p>
+        </div>
+        <div class="topbar-actions">
+          <span id="connection-state" class="status-pill">Local workstation</span>
+          <label class="language-control">
+            <span id="language-label">Language</span>
+            <select id="language-select" aria-label="Language">
+              <option value="ru">Русский</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+        </div>
+      </header>
+
+      <section class="content-grid">
+        <article class="panel primary-panel">
+          <div class="panel-heading">
+            <div>
+              <span id="surface-phase" class="eyebrow">P1</span>
+              <h2 id="surface-title">Project</h2>
+            </div>
+            <span id="surface-state" class="status-pill">Shell ready</span>
+          </div>
+          <p id="surface-body">
+            Source and derived-asset navigation arrives through canonical project services.
+          </p>
+          <div id="deferred-notice" class="deferred-notice" hidden>
+            This execution surface is deferred to its owning Workstation phase.
+          </div>
+        </article>
+
+        <article class="panel runtime-panel">
+          <div class="panel-heading">
+            <h2 id="runtime-title">Runtime</h2>
+            <button id="runtime-refresh" type="button" class="secondary-button">Refresh runtime</button>
+          </div>
+          <dl class="metrics">
+            <div><dt id="cpu-label">CPU</dt><dd id="cpu-value">N/A</dd></div>
+            <div><dt id="ram-label">RAM</dt><dd id="ram-value">N/A</dd></div>
+            <div><dt id="gpu-label">GPU</dt><dd id="gpu-value">N/A</dd></div>
+            <div><dt id="vram-label">VRAM</dt><dd id="vram-value">N/A</dd></div>
+            <div><dt id="temperature-label">Temperature</dt><dd id="temperature-value">N/A</dd></div>
+            <div><dt>Backend</dt><dd id="backend-value">N/A</dd></div>
+            <div><dt>Model</dt><dd id="model-value">N/A</dd></div>
+            <div><dt>Job</dt><dd id="job-value">N/A</dd></div>
+          </dl>
+          <p id="runtime-error" class="error-text" hidden></p>
+        </article>
+
+        <article class="panel capabilities-panel">
+          <h2 id="capabilities-title">Capabilities</h2>
+          <p id="capabilities-body">
+            P1 exposes the shell and typed seams. Domain surfaces stay deferred until their owning phases.
+          </p>
+          <ul id="capability-list" class="capability-list"></ul>
+        </article>
+      </section>
+
+      <footer class="footer">
+        <span id="api-label">Workstation API</span>
+        <code id="api-version">workstation-v1</code>
+      </footer>
+    </main>
+  </div>
+  <script src="/assets/app.js" defer></script>
+</body>
+</html>
