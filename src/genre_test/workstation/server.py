@@ -221,6 +221,16 @@ def _handler(service: WorkstationService) -> type[BaseHTTPRequestHandler]:
                         503,
                     )
                 return
+            if path == "/api/v1/retrieval/status":
+                try:
+                    self._json(service.retrieval_status())
+                except (ImportError, OSError, RuntimeError, ValueError) as exc:
+                    self._error(
+                        "retrieval_status_unavailable",
+                        f"Retrieval status unavailable: {type(exc).__name__}",
+                        503,
+                    )
+                return
             if path == "/api/v1/settings":
                 self._json(service.settings())
                 return
