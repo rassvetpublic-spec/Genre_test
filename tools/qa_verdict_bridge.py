@@ -16,6 +16,10 @@ API_ROOT = "https://api.github.com"
 GRAPHQL_URL = "https://api.github.com/graphql"
 STATUS_CONTEXT = "qa-verdict-bridge"
 REQUEST_RE = re.compile(r"QA_REQUEST_HEAD:\s*`?([0-9a-f]{40})`?", re.IGNORECASE)
+NATURAL_REQUEST_RE = re.compile(
+    r"\bexact(?:\s+current)?\s+head\s*(?:(?:is|=|:)\s*)?`?([0-9a-f]{40})`?",
+    re.IGNORECASE,
+)
 REVIEWED_RE = re.compile(r"\*\*Reviewed commit:\*\*\s*`([0-9a-f]{7,40})`", re.IGNORECASE)
 CLEAN_PHRASE = "Codex Review: Didn't find any major issues."
 CODEX_LOGINS = {"chatgpt-codex-connector", "chatgpt-codex-connector[bot]"}
@@ -70,8 +74,16 @@ def _is_codex(login: str) -> bool:
 def _request_head(body: str) -> str | None:
     if "@codex" not in body.lower() or "review" not in body.lower():
         return None
-    match = REQUEST_RE.search(body)
-    return match.group(1).lower() if match else None
+
+    canonical = [item.lower() for item in REQUEST_RE.findall(body)]
+    natural = [item.lower() for item in NATURAL_REQUEST_RE.findall(body)]
+    if canonical:
+        candidates = set(canonical)
+        candidates.update(natural)
+        return next(iter(candidates)) if len(candidates) == 1 else None
+    if len(natural) == 1:
+        return natural[0]
+    return None
 
 
 def _reviewed_prefix(body: str) -> str | None:
@@ -117,7 +129,7 @@ def evaluate_evidence(
         return Verdict(
             "pending",
             _marker("QA_BLOCKED", head_sha),
-            "no exact-head QA_REQUEST_HEAD comment is present yet",
+            "no recognized exact-head QA review request is present yet",
         )
 
     request = exact_requests[-1]
