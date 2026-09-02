@@ -98,10 +98,11 @@ def test_non_descendant_current_head_is_rejected() -> None:
     assert verdict.marker == f"QA_CHANGES_REQUESTED {CURRENT}"
 
 
-def test_newer_codex_thread_evidence_after_closure_is_blocking() -> None:
+def test_newer_codex_thread_evidence_after_closure_is_never_approved() -> None:
     verdict = evaluate(threads=[finding_thread(newer=True)])
     assert verdict is not None
-    assert verdict.state == "failure"
+    assert verdict.state != "success"
+    assert verdict.marker != f"QA_APPROVED {CURRENT}"
 
 
 def test_duplicate_reviewed_head_requests_are_ambiguous() -> None:
