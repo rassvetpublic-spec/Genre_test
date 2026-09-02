@@ -1,0 +1,87 @@
+name: Product boundary integrate temporary
+
+on:
+  push:
+    branches:
+      - refactor/product-boundary-200
+
+permissions:
+  contents: write
+
+concurrency:
+  group: product-boundary-integrate-temp
+  cancel-in-progress: false
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: refactor/product-boundary-200
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Integrate current main
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin main
+          git merge --no-edit origin/main
+      - name: Register product-boundary knowledge owner
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path('docs/obsidian/KNOWLEDGE_REGISTRY.json')
+          data = json.loads(path.read_text(encoding='utf-8'))
+          by_path = {item['path']: item for item in data['entries']}
+          donor = {
+              'path': 'docs/DONOR_INTAKE.md',
+              'title': 'Genre_test Donor Intake Contract',
+              'doc_type': 'protocol',
+              'area': 'project',
+              'status': 'canonical',
+              'summary': 'Canonical admission gate for donor technologies: product fit, provenance, authority boundaries, evidence class and acceptance before port/adaptation.',
+              'tags': ['область/project', 'тип/protocol', 'статус/canonical'],
+              'terms': ['product_fit', 'IN_SCOPE', 'DONOR_ONLY', 'OUT_OF_SCOPE', 'PORT', 'ADAPT', 'REIMPLEMENT'],
+              'related': ['README.md', 'ROADMAP.md', 'docs/SUPERCOMBINE_UI_ARCHITECTURE.md'],
+          }
+          if donor['path'] not in by_path:
+              data['entries'].append(donor)
+              by_path[donor['path']] = donor
+          readme = by_path.get('README.md')
+          if readme:
+              readme['summary'] = 'Главная точка входа: active v0.5, product boundary, protected core, retrieval, SUPERCOMBINE, Ozone и Obsidian authoring.'
+              related = list(readme.get('related', []))
+              if donor['path'] not in related:
+                  related.append(donor['path'])
+              readme['related'] = related
+              terms = list(readme.get('terms', []))
+              for term in ['product boundary', 'donor intake']:
+                  if term not in terms:
+                      terms.append(term)
+              readme['terms'] = terms
+          roadmap = by_path.get('ROADMAP.md')
+          if roadmap:
+              roadmap['summary'] = 'Release and architecture sequence from active v0.5 retrieval through SUPERCOMBINE, detector evidence research and integrated v1.0.'
+              related = list(roadmap.get('related', []))
+              if donor['path'] not in related:
+                  related.append(donor['path'])
+              roadmap['related'] = related
+          path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+          python tools/obsidian_knowledge_sync.py --write
+          python tools/check_markdown_authoring.py
+          python tools/obsidian_knowledge_sync.py --check
+          python -m pip install pytest
+          python -m pytest -q tests/test_obsidian_knowledge_sync.py tests/test_obsidian_p2_qa_findings.py
+      - name: Commit integration
+        run: |
+          git add README.md ROADMAP.md docs/DONOR_INTAKE.md docs/obsidian
+          if ! git diff --cached --quiet; then
+            git commit -m 'docs: register product boundary in Obsidian knowledge layer'
+          fi
+          git push origin HEAD:refactor/product-boundary-200
