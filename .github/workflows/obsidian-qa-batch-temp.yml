@@ -24,6 +24,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Prepare focused test runner
+        run: python -m pip install pytest
       - name: Apply QA findings batch
         run: |
           python tools/_apply_obsidian_p2_qa_batch.py
