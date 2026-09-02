@@ -3,11 +3,11 @@ from __future__ import annotations
 import pytest
 
 from genre_test.detector_evidence import (
-    EVIDENCE_SCHEMA,
-    EVIDENCE_SCHEMA_VERSION,
     DetectorEvidenceError,
     DetectorEvidenceSample,
     DetectorResult,
+    EVIDENCE_SCHEMA,
+    EVIDENCE_SCHEMA_VERSION,
     ProcessingStep,
 )
 
