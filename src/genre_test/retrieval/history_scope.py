@@ -7,10 +7,16 @@ import os
 import sqlite3
 import sys
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
+
+from ..db_access_journal import (
+    create_database_provenance,
+    default_journal_path,
+    record_database_access,
+)
 
 DuplicatePolicy = Literal["error", "latest"]
 _SCOPE_META_TABLE = "retrieval_history_scope_meta"
@@ -29,6 +35,7 @@ class ScopeBuildReport:
     selected_tracks: int
     integrity_check: str
     source_unchanged: bool
+    journal: dict[str, object] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
@@ -67,8 +74,6 @@ def _source_fingerprint(path: Path) -> str:
         if wal.is_file() and wal.stat().st_size > 0:
             candidates.append(wal)
     except OSError:
-        # A WAL appearing/disappearing while fingerprinting is a real race; let the
-        # subsequent hash/open fail closed instead of treating it as stable input.
         candidates.append(wal)
 
     for candidate in candidates:
@@ -127,6 +132,9 @@ def _validate_scope_inputs(
     analysis_mode: str,
     duplicate_policy: DuplicatePolicy,
 ) -> None:
+    journal = default_journal_path().expanduser().resolve(strict=False)
+    if source.resolve(strict=False) == journal or output.resolve(strict=False) == journal:
+        raise ValueError("database access journal cannot be a scope-build source or output")
     if not source.is_file():
         raise FileNotFoundError(f"source history not found: {source}")
     if source.resolve() == output.resolve():
@@ -352,11 +360,24 @@ def build_history_scope(
             f"INSERT INTO {_quote_identifier(_SCOPE_META_TABLE)} (key, value) VALUES (?, ?)",
             sorted(metadata.items()),
         )
+        create_database_provenance(
+            destination,
+            source_fingerprint=source_fingerprint_before,
+            schema_version="retrieval-scope-1",
+        )
         destination.commit()
         integrity_check = str(destination.execute("PRAGMA integrity_check").fetchone()[0])
         if integrity_check.casefold() != "ok":
             raise RuntimeError(f"scoped catalog integrity_check failed: {integrity_check}")
-    except Exception:
+    except Exception as exc:
+        record_database_access(
+            target_path=source,
+            target_fingerprint=source_fingerprint_before,
+            operation="scope-build",
+            access_mode="readonly",
+            success=False,
+            details=f"{type(exc).__name__}: {exc}",
+        )
         if destination is not None:
             destination.close()
             destination = None
@@ -375,12 +396,49 @@ def build_history_scope(
     source_unchanged = source_fingerprint_after == source_fingerprint_before
     if not source_unchanged:
         temporary.unlink(missing_ok=True)
+        record_database_access(
+            target_path=source,
+            target_fingerprint=source_fingerprint_before,
+            operation="scope-build",
+            access_mode="readonly",
+            success=False,
+            details="source fingerprint changed before scoped snapshot publication",
+        )
         raise RuntimeError("source history changed while scoped snapshot was being built")
 
     if output.exists() and not force:
         temporary.unlink(missing_ok=True)
         raise FileExistsError(f"output appeared during build: {output}")
     os.replace(temporary, output)
+
+    source_journal = record_database_access(
+        target_path=source,
+        target_fingerprint=source_fingerprint_before,
+        operation="scope-build",
+        access_mode="readonly",
+        success=True,
+        details=f"derived_scope={output}",
+    )
+    try:
+        output_fingerprint = _source_fingerprint(output)
+    except (OSError, ValueError) as exc:
+        output_journal: dict[str, object] = {
+            "recorded": False,
+            "journal_path": str(default_journal_path()),
+            "error": (
+                "output fingerprint unavailable after successful atomic publication: "
+                f"{type(exc).__name__}: {exc}"
+            ),
+        }
+    else:
+        output_journal = record_database_access(
+            target_path=output,
+            target_fingerprint=output_fingerprint,
+            operation="scope-build",
+            access_mode="readwrite",
+            success=True,
+            details=f"source_fingerprint={source_fingerprint_before}",
+        ).to_dict()
 
     return ScopeBuildReport(
         source=str(source),
@@ -394,6 +452,10 @@ def build_history_scope(
         selected_tracks=len(ordered_track_ids),
         integrity_check=integrity_check,
         source_unchanged=source_unchanged,
+        journal={
+            "source": source_journal.to_dict(),
+            "output": output_journal,
+        },
     )
 
 
