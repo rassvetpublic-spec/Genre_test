@@ -47,13 +47,48 @@ def _unavailable(
     )
 
 
+def _validate_existing_store(store_path: Path, expected_schema_version: int) -> None:
+    """Validate an existing retrieval store without creating or migrating it."""
+
+    uri = f"{store_path.resolve().as_uri()}?mode=ro"
+    with sqlite3.connect(uri, uri=True, timeout=5) as connection:
+        table_rows = connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        ).fetchall()
+        tables = {str(row[0]) for row in table_rows}
+        required_tables = {
+            "retrieval_meta",
+            "embedding_models",
+            "embeddings",
+            "search_queries",
+        }
+        if not required_tables.issubset(tables):
+            raise ValueError("retrieval store schema is incomplete")
+
+        row = connection.execute(
+            "SELECT value FROM retrieval_meta WHERE key = 'schema_version'"
+        ).fetchone()
+        if row is None:
+            raise ValueError("retrieval store schema version is missing")
+        try:
+            schema_version = int(row[0])
+        except (TypeError, ValueError) as exc:
+            raise ValueError("retrieval store schema version is invalid") from exc
+        if schema_version != expected_schema_version:
+            raise ValueError(
+                "retrieval store schema version is incompatible: "
+                f"{schema_version} != {expected_schema_version}"
+            )
+
+
 def collect_retrieval_status() -> dict[str, Any]:
     """Read canonical retrieval state without starting the CLaMP sidecar.
 
     Imports stay inside this call so importing/starting the Workstation shell remains
-    independent from optional retrieval modules. Missing state files are reported as
-    ``N/A`` before ``RetrievalStore`` is constructed, preventing a status request from
-    creating an empty database that could masquerade as a valid empty index.
+    independent from optional retrieval modules. Missing or invalid state files are
+    reported as ``N/A`` before ``RetrievalStore`` is constructed, preventing a status
+    request from creating or migrating a database that could masquerade as a valid
+    empty index.
     """
 
     runtime_meta = importlib.import_module("genre_test.runtime_meta")
@@ -104,6 +139,7 @@ def collect_retrieval_status() -> dict[str, Any]:
         ).to_dict()
 
     try:
+        _validate_existing_store(store_path, int(storage.SCHEMA_VERSION))
         store = storage.RetrievalStore(store_path)
         index = retrieval_service.index_status(
             store=store,
@@ -123,7 +159,12 @@ def collect_retrieval_status() -> dict[str, Any]:
 
     degraded = any(
         int(index_payload.get(key, 0) or 0) > 0
-        for key in ("current_missing", "stale_embeddings", "corrupt_embeddings")
+        for key in (
+            "current_missing",
+            "stale_embeddings",
+            "corrupt_embeddings",
+            "missing_paths",
+        )
     )
     return WorkstationRetrievalStatus(
         status="WARN" if degraded else "OK",
