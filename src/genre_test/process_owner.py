@@ -4,6 +4,7 @@ import os
 import signal
 import subprocess
 import sys
+import time
 import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -219,8 +220,8 @@ class ProcessOwner:
     POSIX launches a new session and owns its process group. Windows launches a
     Python bootstrap that waits on a named event, assigns that bootstrap to a Job
     Object with ``JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE``, then releases the event.
-    The requested command therefore cannot create descendants before Job
-    containment is active.
+    The parent retains its gate handle for the owned operation lifetime so the
+    event name cannot disappear before the bootstrap opens it.
     """
 
     def __init__(self, *, terminate_timeout: float = 3.0) -> None:
@@ -229,6 +230,7 @@ class ProcessOwner:
         self.terminate_timeout = float(terminate_timeout)
         self._process: subprocess.Popen[Any] | None = None
         self._windows_job: _WindowsJob | None = None
+        self._windows_gate: _WindowsLaunchGate | None = None
         self._closed = False
 
     @property
@@ -300,6 +302,8 @@ class ProcessOwner:
         gate = _WindowsLaunchGate()
         job: _WindowsJob | None = None
         process: subprocess.Popen[Any] | None = None
+        assigned = False
+        keep_gate = False
         try:
             job = _WindowsJob()
             child_env = dict(os.environ if env is None else env)
@@ -310,36 +314,49 @@ class ProcessOwner:
             launch_argv = [sys.executable, "-c", _WINDOWS_BOOTSTRAP, *argv]
             process = subprocess.Popen(launch_argv, **kwargs)
             job.assign(process)
+            assigned = True
             self._windows_job = job
+            self._windows_gate = gate
             gate.release()
+            keep_gate = True
             return process
         except OSError as exc:
             if process is not None:
                 self._terminate_unowned_root(process)
             if job is not None:
                 job.close()
+            self._windows_job = None
+            self._windows_gate = None
             raise ProcessOwnerError(
                 f"failed to start owned process: {type(exc).__name__}"
             ) from exc
         except BaseException:
             if process is not None:
-                if job is not None:
+                if assigned and job is not None:
                     try:
                         job.terminate(1)
                     except ProcessOwnerError:
                         self._terminate_unowned_root(process)
                 else:
+                    # Before successful Job assignment the root is not contained;
+                    # terminating an empty Job cannot prove cleanup.
                     self._terminate_unowned_root(process)
             if job is not None:
                 job.close()
             self._windows_job = None
+            self._windows_gate = None
             raise
         finally:
-            gate.close()
+            if not keep_gate:
+                gate.close()
 
     def wait(self, timeout: float | None = None) -> ProcessExit:
         process = self._require_process()
         returncode = process.wait(timeout=timeout)
+        if os.name == "nt":
+            # The bootstrap cannot have completed without opening/releasing the gate,
+            # so the parent's retained handle is no longer needed after root exit.
+            self._close_windows_gate()
         return ProcessExit(pid=process.pid, returncode=returncode)
 
     def close(self) -> None:
@@ -347,35 +364,71 @@ class ProcessOwner:
             return
         self._closed = True
         process = self._process
-        if process is None:
-            return
         try:
-            if process.poll() is None:
+            if process is not None:
                 if os.name == "nt":
-                    self._terminate_windows_tree(process)
+                    if process.poll() is None:
+                        self._terminate_windows_tree(process)
                 else:
+                    # The root may already have exited while descendants remain in
+                    # the owned process group; group cleanup is independent of root liveness.
                     self._terminate_posix_tree(process)
         finally:
+            self._close_windows_gate()
             self._close_windows_job()
 
+    @staticmethod
+    def _posix_group_exists(process_group_id: int) -> bool:
+        try:
+            os.killpg(process_group_id, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        return True
+
+    def _wait_posix_group_exit(
+        self,
+        process: subprocess.Popen[Any],
+        process_group_id: int,
+        timeout: float,
+    ) -> bool:
+        deadline = time.monotonic() + max(0.0, timeout)
+        while True:
+            process.poll()
+            if not self._posix_group_exists(process_group_id):
+                return True
+            if time.monotonic() >= deadline:
+                return False
+            time.sleep(min(0.05, max(0.0, deadline - time.monotonic())))
+
     def _terminate_posix_tree(self, process: subprocess.Popen[Any]) -> None:
+        process_group_id = process.pid
         try:
-            os.killpg(process.pid, signal.SIGTERM)
+            os.killpg(process_group_id, signal.SIGTERM)
         except ProcessLookupError:
+            process.poll()
             return
-        try:
-            process.wait(timeout=self.terminate_timeout)
+
+        if self._wait_posix_group_exit(
+            process,
+            process_group_id,
+            self.terminate_timeout,
+        ):
             return
-        except subprocess.TimeoutExpired:
-            pass
+
         try:
-            os.killpg(process.pid, signal.SIGKILL)
+            os.killpg(process_group_id, signal.SIGKILL)
         except ProcessLookupError:
+            process.poll()
             return
-        try:
-            process.wait(timeout=max(1.0, self.terminate_timeout))
-        except subprocess.TimeoutExpired as exc:
-            raise ProcessOwnerError("owned POSIX process group did not terminate") from exc
+
+        if not self._wait_posix_group_exit(
+            process,
+            process_group_id,
+            max(1.0, self.terminate_timeout),
+        ):
+            raise ProcessOwnerError("owned POSIX process group did not terminate")
 
     def _terminate_windows_tree(self, process: subprocess.Popen[Any]) -> None:
         job = self._windows_job
@@ -387,6 +440,12 @@ class ProcessOwner:
             process.wait(timeout=max(1.0, self.terminate_timeout))
         except subprocess.TimeoutExpired as exc:
             raise ProcessOwnerError("owned Windows Job Object did not terminate") from exc
+
+    def _close_windows_gate(self) -> None:
+        gate = self._windows_gate
+        self._windows_gate = None
+        if gate is not None:
+            gate.close()
 
     def _close_windows_job(self) -> None:
         job = self._windows_job
