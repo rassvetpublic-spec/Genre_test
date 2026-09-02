@@ -15,7 +15,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Regenerate repository projections
-        run: python tools/obsidian_knowledge_sync.py
+        run: python tools/obsidian_knowledge_sync.py --write
       - name: Print deterministic projection diff
         run: |
           git diff -- docs/obsidian/REPOSITORY_INVENTORY.json docs/obsidian/HOME.md docs/obsidian/KNOWLEDGE_ANALYTICS.md
