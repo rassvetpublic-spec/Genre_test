@@ -5,11 +5,11 @@ import json
 import subprocess
 import sys
 import threading
+from collections.abc import Iterator
 from contextlib import contextmanager
 from importlib import resources
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Iterator
 
 import pytest
 
