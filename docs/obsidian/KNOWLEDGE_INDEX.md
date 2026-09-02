@@ -12,9 +12,9 @@ generation_direction: "JSON_TO_MARKDOWN"
 
 > Derived/rebuildable navigation view. Canonical project facts remain in their owning repository documents/state; this index never overrides them.
 
-Registered principal documents: **16**.
+Registered principal documents: **20**.
 
-Coverage is intentionally partial in Phase 1. Unregistered files are not implied to be unimportant, deprecated, or non-canonical.
+Registration is now enforced for new or materially migrated human Markdown; unchanged grandfathered documents may remain outside the principal registry.
 
 ## Areas
 
@@ -23,7 +23,8 @@ Coverage is intentionally partial in Phase 1. Unregistered files are not implied
 | Document | Type | Status | Summary |
 |---|---|---|---|
 | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] | `runbook` | `canonical` | Порядок восстановления project state, refactor-boundary state и task admission из main/live GitHub без зависимости от чатов. |
-| [[AGENTS|Конституция агентов Genre_test]] | `protocol` | `canonical` | Канонический governance-контракт ролей, authority, claim discipline, exact-head review и standing automatic MTD. |
+| [[docs/QA_VERDICT_BRIDGE|QA Verdict Bridge]] | `protocol` | `canonical` | Fail-closed normalization contract for independent GitHub Codex review evidence into deterministic qa-verdict-bridge status. |
+| [[AGENTS|Конституция агентов Genre_test]] | `protocol` | `canonical` | Канонический governance-контракт ролей, authority, claim discipline, review evidence и standing automatic MTD. |
 
 ### `mastering`
 
@@ -35,14 +36,15 @@ Coverage is intentionally partial in Phase 1. Unregistered files are not implied
 
 | Document | Type | Status | Summary |
 |---|---|---|---|
+| [[docs/DATABASE_RECOVERY|Genre_test Database Recovery]] | `runbook` | `canonical` | Канонический fail-closed workflow поиска, read-only аудита и атомарного repair SQLite с внешним access journal и provenance derived copies. |
 | [[ROADMAP|Genre_test Roadmap]] | `status` | `active` | Release и architecture sequence от active v0.5 retrieval через Workstation P1-P8 к integrated SUPERCOMBINE v1.0. |
-| [[README|Genre_test — вход в проект]] | `guide` | `active` | Главная точка входа: active v0.5, pre-refactor boundary, protected core, retrieval, SUPERCOMBINE, Ozone и Obsidian authoring. |
+| [[README|Genre_test — вход в проект]] | `guide` | `active` | Главная точка входа: active v0.5, refactor boundary, protected core, retrieval, SUPERCOMBINE, Ozone и Obsidian authoring. |
 | [[docs/obsidian/MARKDOWN_AUTHORING_STANDARD|Markdown Authoring Standard Genre_test]] | `protocol` | `canonical` | Post-boundary passport, structure, grandfathering и generated-path rules для human-maintained Markdown. |
 | [[docs/obsidian/PLUGIN_PROFILE.yaml|Plugin-soft профиль Obsidian Genre_test]] | `reference` | `active` | Phase 0 профиль core/recommended/optional Obsidian capabilities и запретов на plugin-owned authority. |
 | [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] | `architecture` | `canonical` | Owner-approved post-boundary Workstation architecture, donor policy, service/API layering and P1-P8 implementation order. |
 | [[docs/obsidian/TAG_TAXONOMY|Taxonomy тегов Genre_test]] | `protocol` | `active` | Controlled taxonomy, разделяющая document tags, technical terms, local keywords и Research Radar semantics. |
 | [[docs/obsidian/RELATION_SCHEMA|Typed relation schema Genre_test]] | `protocol` | `active` | Typed relation vocabulary для human-maintained knowledge без создания второго relation/state owner. |
-| [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] | `status` | `active` | Current snapshot на pre-refactor boundary: immediate train #184 -> #171 -> #164, protected baselines и subsystem ownership. |
+| [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] | `status` | `active` | Current repository snapshot after the refactor boundary, with protected baselines, subsystem ownership and Workstation/SUPERCOMBINE as the forward product surface. |
 | [[docs/obsidian/CLI_POLICY|Политика Obsidian CLI Genre_test]] | `runbook` | `active` | Правила безопасного optional local использования Obsidian CLI без превращения GUI/CLI в CI или state authority. |
 | [[docs/obsidian/PROPERTY_SCHEMA|Схема Properties Genre_test]] | `protocol` | `active` | Phase 0 contract для human metadata, generated projections и ownership boundary Obsidian knowledge layer. |
 
@@ -57,7 +59,14 @@ Coverage is intentionally partial in Phase 1. Unregistered files are not implied
 
 | Document | Type | Status | Summary |
 |---|---|---|---|
+| [[docs/RETRIEVAL_HISTORY_SOURCE_CONTRACT|Retrieval Explicit History Source Contract]] | `protocol` | `canonical` | Fail-closed validation and structured error mapping for explicitly selected retrieval analysis-history SQLite sources. |
 | [[docs/CLAMP3_ARCHITECTURE|Архитектура retrieval CLaMP 3]] | `architecture` | `canonical` | Текущая v0.5 архитектура CLaMP 3 retrieval как optional persistent isolated sidecar без замены защищённого Core Analyze. |
+
+### `runtime`
+
+| Document | Type | Status | Summary |
+|---|---|---|---|
+| [[docs/DATABASE_ACCESS_PROVENANCE|Database Access Provenance]] | `protocol` | `canonical` | External provenance contract for Genre_test SQLite reads, repairs, scoped builds, and derived database identity without mutating audited source databases. |
 
 ## Typed relations
 
@@ -65,6 +74,7 @@ Coverage is intentionally partial in Phase 1. Unregistered files are not implied
 |---|---|---|
 | [[AGENTS|Конституция агентов Genre_test]] | `related` | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] |
 | [[AGENTS|Конституция агентов Genre_test]] | `related` | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] |
+| [[AGENTS|Конституция агентов Genre_test]] | `related` | [[docs/QA_VERDICT_BRIDGE|QA Verdict Bridge]] |
 | [[README|Genre_test — вход в проект]] | `related` | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] |
 | [[README|Genre_test — вход в проект]] | `related` | [[ROADMAP|Genre_test Roadmap]] |
 | [[README|Genre_test — вход в проект]] | `related` | [[docs/CLAMP3_ARCHITECTURE|Архитектура retrieval CLaMP 3]] |
@@ -81,11 +91,17 @@ Coverage is intentionally partial in Phase 1. Unregistered files are not implied
 | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] | `related` | [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] |
 | [[docs/CLAMP3_ARCHITECTURE|Архитектура retrieval CLaMP 3]] | `related` | [[docs/CLAMP3_RUNTIME|docs/CLAMP3_RUNTIME.md]] |
 | [[docs/CLAMP3_ARCHITECTURE|Архитектура retrieval CLaMP 3]] | `related` | [[docs/THIRD_PARTY_MODELS|docs/THIRD_PARTY_MODELS.md]] |
+| [[docs/CLAMP3_ARCHITECTURE|Архитектура retrieval CLaMP 3]] | `related` | [[docs/RETRIEVAL_HISTORY_SOURCE_CONTRACT|Retrieval Explicit History Source Contract]] |
+| [[docs/DATABASE_ACCESS_PROVENANCE|Database Access Provenance]] | `related` | [[docs/DATABASE_RECOVERY|Genre_test Database Recovery]] |
+| [[docs/DATABASE_ACCESS_PROVENANCE|Database Access Provenance]] | `related` | [[docs/RETRIEVAL_HISTORY_SCOPE|docs/RETRIEVAL_HISTORY_SCOPE.md]] |
+| [[docs/DATABASE_RECOVERY|Genre_test Database Recovery]] | `related` | [[docs/DATABASE_ACCESS_PROVENANCE|Database Access Provenance]] |
+| [[docs/QA_VERDICT_BRIDGE|QA Verdict Bridge]] | `depends_on` | [[AGENTS|Конституция агентов Genre_test]] |
 | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] | `depends_on` | [[AGENTS|Конституция агентов Genre_test]] |
 | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] | `related` | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] |
 | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] | `related` | [[docs/ARCHITECTURE|docs/ARCHITECTURE.md]] |
 | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] | `related` | [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] |
 | [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] | `related` | [[docs/obsidian/MARKDOWN_AUTHORING_STANDARD|Markdown Authoring Standard Genre_test]] |
+| [[docs/RETRIEVAL_HISTORY_SOURCE_CONTRACT|Retrieval Explicit History Source Contract]] | `depends_on` | [[docs/CLAMP3_ARCHITECTURE|Архитектура retrieval CLaMP 3]] |
 | [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] | `related` | [[README|Genre_test — вход в проект]] |
 | [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] | `related` | [[ROADMAP|Genre_test Roadmap]] |
 | [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] | `related` | [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] |
@@ -112,10 +128,8 @@ Coverage is intentionally partial in Phase 1. Unregistered files are not implied
 - Registry authority: `knowledge_navigation_metadata_only` only.
 - Generation direction: `JSON_TO_MARKDOWN` only.
 - Research Radar mutable state remains canonical under `docs/research/data/*.json` and is not copied here.
-- `docs/research/obsidian/**` and `docs/development/research_radar/**` remain generated Research Radar projections/facades.
-- Source documents remain authoritative according to `AGENTS.md`, `docs/ACTIVE_CURRENT.md`, subsystem contracts and live GitHub state.
-- Obsidian, Graph, Bases, plugins, search and this index are views/interfaces, not project-state owners.
+- Obsidian HOME, Bases, analytics, Graph and this index are derived views, not project-state owners.
 
 ## Validation
 
-Run `python tools/obsidian_knowledge_sync.py --check` to validate the registry and detect generated-index drift.
+Run `python tools/obsidian_knowledge_sync.py --check` to validate all Obsidian repository projections and registration drift.
