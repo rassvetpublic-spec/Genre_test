@@ -123,6 +123,64 @@ def test_invalid_history_fails_closed_before_store_creation(tmp_path: Path, monk
     assert not (state / "retrieval.sqlite3").exists()
 
 
+def test_invalid_existing_store_fails_closed_without_schema_creation(
+    tmp_path: Path, monkeypatch
+) -> None:
+    state = tmp_path / "state"
+    state.mkdir(parents=True)
+    monkeypatch.setenv("GENRE_TEST_DATA_DIR", str(state))
+    _disable_legacy_history(monkeypatch)
+    _create_minimal_history(state / "history.sqlite3")
+    store_path = state / "retrieval.sqlite3"
+    store_path.write_bytes(b"")
+
+    payload = collect_retrieval_status()
+
+    assert payload["status"] == "N/A"
+    assert payload["available"] is False
+    assert payload["code"] == "retrieval_status_unavailable"
+    assert payload["index"] is None
+    assert store_path.stat().st_size == 0
+    with sqlite3.connect(store_path) as connection:
+        tables = connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        ).fetchall()
+    assert tables == []
+
+
+def test_missing_catalog_paths_degrade_status_to_warn(tmp_path: Path, monkeypatch) -> None:
+    from genre_test.retrieval import service as retrieval_service
+    from genre_test.retrieval.storage import RetrievalStore
+
+    state = tmp_path / "state"
+    monkeypatch.setenv("GENRE_TEST_DATA_DIR", str(state))
+    _disable_legacy_history(monkeypatch)
+    _create_minimal_history(state / "history.sqlite3")
+    RetrievalStore(state / "retrieval.sqlite3")
+
+    class FakeIndexStatus:
+        @staticmethod
+        def to_dict() -> dict[str, int]:
+            return {
+                "current_missing": 0,
+                "stale_embeddings": 0,
+                "corrupt_embeddings": 0,
+                "missing_paths": 1,
+            }
+
+    monkeypatch.setattr(
+        retrieval_service,
+        "index_status",
+        lambda **_kwargs: FakeIndexStatus(),
+    )
+
+    payload = collect_retrieval_status()
+
+    assert payload["status"] == "WARN"
+    assert payload["available"] is True
+    assert payload["index"] == FakeIndexStatus.to_dict()
+
+
 def test_capability_contract_exposes_status_but_keeps_catalog_search_deferred() -> None:
     items = WorkstationService().capabilities()["items"]
     assert isinstance(items, list)
