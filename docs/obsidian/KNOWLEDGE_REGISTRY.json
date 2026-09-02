@@ -11,10 +11,29 @@
       "area": "project",
       "status": "active",
       "summary": "Главная точка входа: active v0.5, refactor boundary, protected core, retrieval, SUPERCOMBINE, Ozone и Obsidian authoring.",
-      "tags": ["область/project", "тип/guide", "статус/active"],
-      "aliases": ["Genre_test"],
-      "terms": ["AudioProfile", "CLaMP 3", "SUPERCOMBINE", "refactor boundary"],
-      "related": ["docs/ACTIVE_CURRENT.md", "ROADMAP.md", "docs/CLAMP3_ARCHITECTURE.md", "docs/SUPERCOMBINE_UI_ARCHITECTURE.md", "docs/mastering/ozone12/README.md", "docs/obsidian/MARKDOWN_AUTHORING_STANDARD.md", "docs/research/RESEARCH_RADAR.md"]
+      "tags": [
+        "область/project",
+        "тип/guide",
+        "статус/active"
+      ],
+      "aliases": [
+        "Genre_test"
+      ],
+      "terms": [
+        "AudioProfile",
+        "CLaMP 3",
+        "SUPERCOMBINE",
+        "refactor boundary"
+      ],
+      "related": [
+        "docs/ACTIVE_CURRENT.md",
+        "ROADMAP.md",
+        "docs/CLAMP3_ARCHITECTURE.md",
+        "docs/SUPERCOMBINE_UI_ARCHITECTURE.md",
+        "docs/mastering/ozone12/README.md",
+        "docs/obsidian/MARKDOWN_AUTHORING_STANDARD.md",
+        "docs/research/RESEARCH_RADAR.md"
+      ]
     },
     {
       "path": "AGENTS.md",
@@ -23,9 +42,22 @@
       "area": "agents",
       "status": "canonical",
       "summary": "Канонический governance-контракт ролей, authority, claim discipline, review evidence и standing automatic MTD.",
-      "tags": ["область/agents", "тип/protocol", "статус/canonical"],
-      "terms": ["READY-MTD", "QA_REVIEWER", "AUDIO_SCIENCE", "RELEASE_MANAGER"],
-      "related": ["docs/REPOSITORY_COLD_START.md", "docs/ACTIVE_CURRENT.md", "docs/QA_VERDICT_BRIDGE.md"]
+      "tags": [
+        "область/agents",
+        "тип/protocol",
+        "статус/canonical"
+      ],
+      "terms": [
+        "READY-MTD",
+        "QA_REVIEWER",
+        "AUDIO_SCIENCE",
+        "RELEASE_MANAGER"
+      ],
+      "related": [
+        "docs/REPOSITORY_COLD_START.md",
+        "docs/ACTIVE_CURRENT.md",
+        "docs/QA_VERDICT_BRIDGE.md"
+      ]
     },
     {
       "path": "docs/QA_VERDICT_BRIDGE.md",
@@ -34,9 +66,20 @@
       "area": "agents",
       "status": "canonical",
       "summary": "Fail-closed normalization contract for independent GitHub Codex review evidence into deterministic qa-verdict-bridge status.",
-      "tags": ["область/agents", "тип/protocol", "статус/canonical"],
-      "terms": ["qa-verdict-bridge", "QA_APPROVED", "QA_CHANGES_REQUESTED", "QA_BLOCKED"],
-      "depends_on": ["AGENTS.md"]
+      "tags": [
+        "область/agents",
+        "тип/protocol",
+        "статус/canonical"
+      ],
+      "terms": [
+        "qa-verdict-bridge",
+        "QA_APPROVED",
+        "QA_CHANGES_REQUESTED",
+        "QA_BLOCKED"
+      ],
+      "depends_on": [
+        "AGENTS.md"
+      ]
     },
     {
       "path": "docs/ACTIVE_CURRENT.md",
@@ -45,9 +88,23 @@
       "area": "project",
       "status": "active",
       "summary": "Current repository snapshot after the refactor boundary, with protected baselines, subsystem ownership and Workstation/SUPERCOMBINE as the forward product surface.",
-      "tags": ["область/project", "тип/status", "статус/active"],
-      "terms": ["0.5.0.dev0", "CLaMP 3", "SUPERCOMBINE", "PRE-REFACTOR FREEZE"],
-      "related": ["README.md", "ROADMAP.md", "docs/REPOSITORY_COLD_START.md", "docs/SUPERCOMBINE_UI_ARCHITECTURE.md"]
+      "tags": [
+        "область/project",
+        "тип/status",
+        "статус/active"
+      ],
+      "terms": [
+        "0.5.0.dev0",
+        "CLaMP 3",
+        "SUPERCOMBINE",
+        "PRE-REFACTOR FREEZE"
+      ],
+      "related": [
+        "README.md",
+        "ROADMAP.md",
+        "docs/REPOSITORY_COLD_START.md",
+        "docs/SUPERCOMBINE_UI_ARCHITECTURE.md"
+      ]
     },
     {
       "path": "docs/REPOSITORY_COLD_START.md",
@@ -56,10 +113,26 @@
       "area": "agents",
       "status": "canonical",
       "summary": "Порядок восстановления project state, refactor-boundary state и task admission из main/live GitHub без зависимости от чатов.",
-      "tags": ["область/agents", "тип/runbook", "статус/canonical"],
-      "terms": ["cold start", "source of truth", "task admission", "refactor boundary"],
-      "depends_on": ["AGENTS.md"],
-      "related": ["docs/ACTIVE_CURRENT.md", "docs/ARCHITECTURE.md", "docs/SUPERCOMBINE_UI_ARCHITECTURE.md", "docs/obsidian/MARKDOWN_AUTHORING_STANDARD.md"]
+      "tags": [
+        "область/agents",
+        "тип/runbook",
+        "статус/canonical"
+      ],
+      "terms": [
+        "cold start",
+        "source of truth",
+        "task admission",
+        "refactor boundary"
+      ],
+      "depends_on": [
+        "AGENTS.md"
+      ],
+      "related": [
+        "docs/ACTIVE_CURRENT.md",
+        "docs/ARCHITECTURE.md",
+        "docs/SUPERCOMBINE_UI_ARCHITECTURE.md",
+        "docs/obsidian/MARKDOWN_AUTHORING_STANDARD.md"
+      ]
     },
     {
       "path": "ROADMAP.md",
@@ -68,9 +141,23 @@
       "area": "project",
       "status": "active",
       "summary": "Release и architecture sequence от active v0.5 retrieval через Workstation P1-P8 к integrated SUPERCOMBINE v1.0.",
-      "tags": ["область/project", "тип/status", "статус/active"],
-      "terms": ["v0.5", "v0.6", "v0.7", "v1.0", "SUPERCOMBINE"],
-      "related": ["docs/ACTIVE_CURRENT.md", "docs/SUPERCOMBINE_UI_ARCHITECTURE.md", "docs/CLAMP3_ARCHITECTURE.md"]
+      "tags": [
+        "область/project",
+        "тип/status",
+        "статус/active"
+      ],
+      "terms": [
+        "v0.5",
+        "v0.6",
+        "v0.7",
+        "v1.0",
+        "SUPERCOMBINE"
+      ],
+      "related": [
+        "docs/ACTIVE_CURRENT.md",
+        "docs/SUPERCOMBINE_UI_ARCHITECTURE.md",
+        "docs/CLAMP3_ARCHITECTURE.md"
+      ]
     },
     {
       "path": "docs/SUPERCOMBINE_UI_ARCHITECTURE.md",
@@ -79,9 +166,22 @@
       "area": "project",
       "status": "canonical",
       "summary": "Owner-approved post-boundary Workstation architecture, donor policy, service/API layering and P1-P8 implementation order.",
-      "tags": ["область/project", "тип/architecture", "статус/canonical"],
-      "terms": ["Workstation", "Shimmer", "application service", "A/B/X"],
-      "related": ["README.md", "ROADMAP.md", "docs/ACTIVE_CURRENT.md"]
+      "tags": [
+        "область/project",
+        "тип/architecture",
+        "статус/canonical"
+      ],
+      "terms": [
+        "Workstation",
+        "Shimmer",
+        "application service",
+        "A/B/X"
+      ],
+      "related": [
+        "README.md",
+        "ROADMAP.md",
+        "docs/ACTIVE_CURRENT.md"
+      ]
     },
     {
       "path": "docs/CLAMP3_ARCHITECTURE.md",
@@ -90,9 +190,23 @@
       "area": "retrieval",
       "status": "canonical",
       "summary": "Текущая v0.5 архитектура CLaMP 3 retrieval как optional persistent isolated sidecar без замены защищённого Core Analyze.",
-      "tags": ["область/retrieval", "тип/architecture", "статус/canonical"],
-      "terms": ["CLaMP 3", "MERT", "XLM-R", "embedding", "cosine similarity"],
-      "related": ["docs/CLAMP3_RUNTIME.md", "docs/THIRD_PARTY_MODELS.md", "docs/RETRIEVAL_HISTORY_SOURCE_CONTRACT.md"]
+      "tags": [
+        "область/retrieval",
+        "тип/architecture",
+        "статус/canonical"
+      ],
+      "terms": [
+        "CLaMP 3",
+        "MERT",
+        "XLM-R",
+        "embedding",
+        "cosine similarity"
+      ],
+      "related": [
+        "docs/CLAMP3_RUNTIME.md",
+        "docs/THIRD_PARTY_MODELS.md",
+        "docs/RETRIEVAL_HISTORY_SOURCE_CONTRACT.md"
+      ]
     },
     {
       "path": "docs/RETRIEVAL_HISTORY_SOURCE_CONTRACT.md",
@@ -101,9 +215,20 @@
       "area": "retrieval",
       "status": "canonical",
       "summary": "Fail-closed validation and structured error mapping for explicitly selected retrieval analysis-history SQLite sources.",
-      "tags": ["область/retrieval", "тип/protocol", "статус/canonical"],
-      "terms": ["--history", "history_source_error", "SQLite", "EXIT_SOURCE_ERROR"],
-      "depends_on": ["docs/CLAMP3_ARCHITECTURE.md"]
+      "tags": [
+        "область/retrieval",
+        "тип/protocol",
+        "статус/canonical"
+      ],
+      "terms": [
+        "--history",
+        "history_source_error",
+        "SQLite",
+        "EXIT_SOURCE_ERROR"
+      ],
+      "depends_on": [
+        "docs/CLAMP3_ARCHITECTURE.md"
+      ]
     },
     {
       "path": "docs/DATABASE_RECOVERY.md",
@@ -112,9 +237,20 @@
       "area": "project",
       "status": "canonical",
       "summary": "Канонический fail-closed workflow поиска, read-only аудита и атомарного repair SQLite с внешним access journal и provenance derived copies.",
-      "tags": ["область/project", "тип/runbook", "статус/canonical"],
-      "terms": ["SQLite", "quick_check", "integrity_check", "repair"],
-      "related": ["docs/DATABASE_ACCESS_PROVENANCE.md"]
+      "tags": [
+        "область/project",
+        "тип/runbook",
+        "статус/canonical"
+      ],
+      "terms": [
+        "SQLite",
+        "quick_check",
+        "integrity_check",
+        "repair"
+      ],
+      "related": [
+        "docs/DATABASE_ACCESS_PROVENANCE.md"
+      ]
     },
     {
       "path": "docs/DATABASE_ACCESS_PROVENANCE.md",
@@ -123,9 +259,21 @@
       "area": "runtime",
       "status": "canonical",
       "summary": "External provenance contract for Genre_test SQLite reads, repairs, scoped builds, and derived database identity without mutating audited source databases.",
-      "tags": ["область/runtime", "тип/protocol", "статус/canonical"],
-      "terms": ["SQLite", "database_access.sqlite3", "build fingerprint", "provenance"],
-      "related": ["docs/DATABASE_RECOVERY.md", "docs/RETRIEVAL_HISTORY_SCOPE.md"]
+      "tags": [
+        "область/runtime",
+        "тип/protocol",
+        "статус/canonical"
+      ],
+      "terms": [
+        "SQLite",
+        "database_access.sqlite3",
+        "build fingerprint",
+        "provenance"
+      ],
+      "related": [
+        "docs/DATABASE_RECOVERY.md",
+        "docs/RETRIEVAL_HISTORY_SCOPE.md"
+      ]
     },
     {
       "path": "docs/research/RESEARCH_OPERATING_RULES.md",
@@ -134,9 +282,19 @@
       "area": "research",
       "status": "canonical",
       "summary": "Канонический operating contract для внешнего research: repository-first evidence, test-or-block и воспроизводимость.",
-      "tags": ["область/research", "тип/protocol", "статус/canonical"],
-      "terms": ["research evidence", "test-or-block", "robustness"],
-      "related": ["docs/research/RESEARCH_RADAR.md"]
+      "tags": [
+        "область/research",
+        "тип/protocol",
+        "статус/canonical"
+      ],
+      "terms": [
+        "research evidence",
+        "test-or-block",
+        "robustness"
+      ],
+      "related": [
+        "docs/research/RESEARCH_RADAR.md"
+      ]
     },
     {
       "path": "docs/research/RESEARCH_RADAR.md",
@@ -145,9 +303,20 @@
       "area": "research",
       "status": "canonical",
       "summary": "Каноническая periodic research procedure, которая читает Radar JSON state и строит generated Markdown projection односторонне.",
-      "tags": ["область/research", "тип/runbook", "статус/canonical"],
-      "terms": ["Research Radar", "JSON_TO_MARKDOWN", "SOURCE_REGISTRY"],
-      "depends_on": ["AGENTS.md", "docs/research/RESEARCH_OPERATING_RULES.md"]
+      "tags": [
+        "область/research",
+        "тип/runbook",
+        "статус/canonical"
+      ],
+      "terms": [
+        "Research Radar",
+        "JSON_TO_MARKDOWN",
+        "SOURCE_REGISTRY"
+      ],
+      "depends_on": [
+        "AGENTS.md",
+        "docs/research/RESEARCH_OPERATING_RULES.md"
+      ]
     },
     {
       "path": "docs/mastering/ozone12/README.md",
@@ -156,9 +325,20 @@
       "area": "mastering",
       "status": "canonical",
       "summary": "Каноническая граница Ozone 12 внутри Genre_test: ownership shared QC против Ozone-specific XML/render logic и REAPER render host.",
-      "tags": ["область/mastering", "тип/architecture", "статус/canonical"],
-      "terms": ["Ozone 12 Advanced", "REAPER", "ElementChain", "True Peak"],
-      "related": ["docs/mastering/ozone12/MIGRATION_FROM_OZONE12_MASTERING_LAB.md"]
+      "tags": [
+        "область/mastering",
+        "тип/architecture",
+        "статус/canonical"
+      ],
+      "terms": [
+        "Ozone 12 Advanced",
+        "REAPER",
+        "ElementChain",
+        "True Peak"
+      ],
+      "related": [
+        "docs/mastering/ozone12/MIGRATION_FROM_OZONE12_MASTERING_LAB.md"
+      ]
     },
     {
       "path": "docs/obsidian/MARKDOWN_AUTHORING_STANDARD.md",
@@ -167,10 +347,25 @@
       "area": "project",
       "status": "canonical",
       "summary": "Post-boundary passport, structure, grandfathering и generated-path rules для human-maintained Markdown.",
-      "tags": ["область/project", "тип/protocol", "статус/canonical"],
-      "terms": ["frontmatter", "grandfathered Markdown", "Git blob", "Obsidian"],
-      "depends_on": ["docs/obsidian/PROPERTY_SCHEMA.md", "docs/obsidian/TAG_TAXONOMY.md"],
-      "related": ["README.md", "docs/REPOSITORY_COLD_START.md"]
+      "tags": [
+        "область/project",
+        "тип/protocol",
+        "статус/canonical"
+      ],
+      "terms": [
+        "frontmatter",
+        "grandfathered Markdown",
+        "Git blob",
+        "Obsidian"
+      ],
+      "depends_on": [
+        "docs/obsidian/PROPERTY_SCHEMA.md",
+        "docs/obsidian/TAG_TAXONOMY.md"
+      ],
+      "related": [
+        "README.md",
+        "docs/REPOSITORY_COLD_START.md"
+      ]
     },
     {
       "path": "docs/obsidian/PROPERTY_SCHEMA.md",
@@ -179,9 +374,21 @@
       "area": "project",
       "status": "active",
       "summary": "Phase 0 contract для human metadata, generated projections и ownership boundary Obsidian knowledge layer.",
-      "tags": ["область/project", "тип/protocol", "статус/active"],
-      "terms": ["Obsidian Properties", "derived_index", "canonical owner"],
-      "related": ["docs/obsidian/TAG_TAXONOMY.md", "docs/obsidian/RELATION_SCHEMA.md", "docs/obsidian/PLUGIN_PROFILE.yaml"]
+      "tags": [
+        "область/project",
+        "тип/protocol",
+        "статус/active"
+      ],
+      "terms": [
+        "Obsidian Properties",
+        "derived_index",
+        "canonical owner"
+      ],
+      "related": [
+        "docs/obsidian/TAG_TAXONOMY.md",
+        "docs/obsidian/RELATION_SCHEMA.md",
+        "docs/obsidian/PLUGIN_PROFILE.yaml"
+      ]
     },
     {
       "path": "docs/obsidian/TAG_TAXONOMY.md",
@@ -190,9 +397,20 @@
       "area": "project",
       "status": "active",
       "summary": "Controlled taxonomy, разделяющая document tags, technical terms, local keywords и Research Radar semantics.",
-      "tags": ["область/project", "тип/protocol", "статус/active"],
-      "terms": ["tags", "terms", "keywords", "taxonomy"],
-      "depends_on": ["docs/obsidian/PROPERTY_SCHEMA.md"]
+      "tags": [
+        "область/project",
+        "тип/protocol",
+        "статус/active"
+      ],
+      "terms": [
+        "tags",
+        "terms",
+        "keywords",
+        "taxonomy"
+      ],
+      "depends_on": [
+        "docs/obsidian/PROPERTY_SCHEMA.md"
+      ]
     },
     {
       "path": "docs/obsidian/RELATION_SCHEMA.md",
@@ -201,9 +419,21 @@
       "area": "project",
       "status": "active",
       "summary": "Typed relation vocabulary для human-maintained knowledge без создания второго relation/state owner.",
-      "tags": ["область/project", "тип/protocol", "статус/active"],
-      "terms": ["parent", "depends_on", "implementation_of", "supersedes", "evidence_for"],
-      "depends_on": ["docs/obsidian/PROPERTY_SCHEMA.md"]
+      "tags": [
+        "область/project",
+        "тип/protocol",
+        "статус/active"
+      ],
+      "terms": [
+        "parent",
+        "depends_on",
+        "implementation_of",
+        "supersedes",
+        "evidence_for"
+      ],
+      "depends_on": [
+        "docs/obsidian/PROPERTY_SCHEMA.md"
+      ]
     },
     {
       "path": "docs/obsidian/PLUGIN_PROFILE.yaml",
@@ -212,9 +442,22 @@
       "area": "project",
       "status": "active",
       "summary": "Phase 0 профиль core/recommended/optional Obsidian capabilities и запретов на plugin-owned authority.",
-      "tags": ["область/project", "тип/reference", "статус/active"],
-      "terms": ["Bases", "Omnisearch", "Breadcrumbs", "Notebook Navigator", "Smart Connections"],
-      "related": ["docs/obsidian/PROPERTY_SCHEMA.md", "docs/obsidian/CLI_POLICY.md"]
+      "tags": [
+        "область/project",
+        "тип/reference",
+        "статус/active"
+      ],
+      "terms": [
+        "Bases",
+        "Omnisearch",
+        "Breadcrumbs",
+        "Notebook Navigator",
+        "Smart Connections"
+      ],
+      "related": [
+        "docs/obsidian/PROPERTY_SCHEMA.md",
+        "docs/obsidian/CLI_POLICY.md"
+      ]
     },
     {
       "path": "docs/obsidian/CLI_POLICY.md",
@@ -223,10 +466,50 @@
       "area": "project",
       "status": "active",
       "summary": "Правила безопасного optional local использования Obsidian CLI без превращения GUI/CLI в CI или state authority.",
-      "tags": ["область/project", "тип/runbook", "статус/active"],
-      "terms": ["Obsidian CLI", "SAFE_WRITE", "DANGEROUS", "Git"],
-      "depends_on": ["docs/obsidian/PROPERTY_SCHEMA.md"],
-      "related": ["docs/obsidian/PLUGIN_PROFILE.yaml"]
+      "tags": [
+        "область/project",
+        "тип/runbook",
+        "статус/active"
+      ],
+      "terms": [
+        "Obsidian CLI",
+        "SAFE_WRITE",
+        "DANGEROUS",
+        "Git"
+      ],
+      "depends_on": [
+        "docs/obsidian/PROPERTY_SCHEMA.md"
+      ],
+      "related": [
+        "docs/obsidian/PLUGIN_PROFILE.yaml"
+      ]
+    },
+    {
+      "path": "docs/WORKSTATION_P1.md",
+      "title": "Genre_test Workstation P1 Contract",
+      "doc_type": "protocol",
+      "area": "project",
+      "status": "active",
+      "summary": "P1 contract for the localhost-only Workstation shell, RU/EN foundation, lightweight local API and canonical Resource Monitor adapter.",
+      "tags": [
+        "область/project",
+        "тип/protocol",
+        "статус/active"
+      ],
+      "terms": [
+        "Workstation",
+        "localhost",
+        "RU/EN",
+        "Resource Monitor",
+        "job facade"
+      ],
+      "depends_on": [
+        "docs/SUPERCOMBINE_UI_ARCHITECTURE.md"
+      ],
+      "related": [
+        "README.md",
+        "ROADMAP.md"
+      ]
     }
   ]
 }

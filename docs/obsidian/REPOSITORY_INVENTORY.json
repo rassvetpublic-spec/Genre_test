@@ -3,7 +3,7 @@
   "schema_version": 1,
   "authority_scope": "derived_projection_only",
   "generation_direction": "REPOSITORY_TO_DERIVED_JSON",
-  "source_fingerprint": "ba1093ca5a3dc0980858e3d052002df65f99cbc23a8d3e51de18543e204a29b7",
+  "source_fingerprint": "10ee2eff3e27801e02acb9a2a25f1e6dfe6ed94273248f5ceb9a3f8c46a2a4da",
   "canonical_inputs": {
     "knowledge_registry": "docs/obsidian/KNOWLEDGE_REGISTRY.json",
     "markdown_boundary": "docs/obsidian/MARKDOWN_LEGACY_BASELINE.json",
@@ -19,18 +19,18 @@
     "audio/renders/model weights/caches"
   ],
   "counts": {
-    "canonical_document": 92,
+    "canonical_document": 93,
     "canonical_machine_state": 6,
     "derived_index": 4,
-    "generated_projection": 42,
+    "generated_projection": 43,
     "visualization": 3
   },
   "registration_counts": {
     "exempt": 22,
-    "generated_view": 23,
+    "generated_view": 24,
     "grandfathered": 72,
     "not_applicable": 11,
-    "registered": 19
+    "registered": 20
   },
   "entries": [
     {
@@ -439,6 +439,15 @@
       "blob_sha": "3f2cd761ab7bdce0413112f8e4a23dd11595c6fe"
     },
     {
+      "path": "docs/WORKSTATION_P1.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "registered",
+      "blob_sha": "8b04a162ae7ee99b8dff50289c8964b7abd58e99",
+      "area": "project",
+      "doc_type": "protocol",
+      "status": "active"
+    },
+    {
       "path": "docs/development/research_radar/KEYWORD_MAP.md",
       "ownership_class": "generated_projection",
       "registration_state": "exempt",
@@ -634,7 +643,7 @@
       "path": "docs/obsidian/KNOWLEDGE_REGISTRY.json",
       "ownership_class": "canonical_machine_state",
       "registration_state": "not_applicable",
-      "blob_sha": "fa2da54c3fa368ba6cf1012d67a6eb387f96f910"
+      "blob_sha": "53426803a2f5e1125acdfca5b297628fef7d1af8"
     },
     {
       "path": "docs/obsidian/MARKDOWN_AUTHORING_STANDARD.md",
@@ -767,6 +776,12 @@
     },
     {
       "path": "docs/obsidian/registry_views/8ad5925f79220617b168.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/9d83f9173bafcdcc9a5c.md",
       "ownership_class": "generated_projection",
       "registration_state": "generated_view",
       "blob_sha": null
