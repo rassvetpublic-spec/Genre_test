@@ -29,12 +29,23 @@ independent review evidence
 
 ## Request binding
 
-A bridge-eligible review request is a PR conversation comment containing both:
+A bridge-eligible review request is a PR conversation comment containing `@codex` and `review` and binding exactly one **distinct full 40-character current-head SHA** using either the canonical marker:
 
 ```text
 @codex review
 QA_REQUEST_HEAD: <40-char-current-pr-head-sha>
 ```
+
+or the explicit natural form:
+
+```text
+@codex review
+exact current head <40-char-current-pr-head-sha>
+```
+
+The natural form accepts `exact head` or `exact current head`, optionally followed by `is`, `=`, or `:`, and the SHA may be wrapped in matching backticks. Repeating the same exact SHA in one request is allowed and deduplicated.
+
+Binding is fail-closed. A request is ineligible when any canonical or natural exact-head binding in that comment is malformed, abbreviated, alphanumerically contaminated, missing its bound token, or names a second distinct SHA. A generic commit mention does not bind QA evidence. A valid canonical marker does not override a malformed or competing natural exact-head candidate in the same comment.
 
 The bound SHA must still equal the current PR head when the bridge evaluates evidence. A head change invalidates prior status because every status is written to one commit only.
 
@@ -71,15 +82,16 @@ The prefix must resolve through GitHub to one exact 40-character commit SHA, and
 
 `success` is allowed only when all required evidence is present and unambiguous:
 
-1. an exact current-head request exists;
-2. a strictly subsequent configured Codex response exists using mutation-aware ordering;
-3. the response contains the recognized clean phrase and reviewed-commit marker;
-4. the reviewed prefix resolves to the exact current head;
-5. the PR author is not the configured Codex reviewer identity;
-6. no unresolved review thread remains;
-7. no newer top-level Codex evidence or review-thread evidence supersedes the clean signal;
-8. required GitHub API evidence is complete and parseable;
-9. paginated review-thread evidence is either fully retrieved or rejected as incomplete rather than silently truncated.
+1. an exact current-head request exists under the canonical or explicit natural binding syntax above;
+2. every exact-head binding in that request is well-formed and all bindings resolve to one distinct full SHA;
+3. a strictly subsequent configured Codex response exists using mutation-aware ordering;
+4. the response contains the recognized clean phrase and reviewed-commit marker;
+5. the reviewed prefix resolves to the exact current head;
+6. the PR author is not the configured Codex reviewer identity;
+7. no unresolved review thread remains;
+8. no newer top-level Codex evidence or review-thread evidence supersedes the clean signal;
+9. required GitHub API evidence is complete and parseable;
+10. paginated review-thread evidence is either fully retrieved or rejected as incomplete rather than silently truncated.
 
 Missing review completion stays `pending`. Actionable review evidence becomes `failure`. Ambiguous or incomplete evidence becomes `error`. No ambiguous state is converted into approval.
 
