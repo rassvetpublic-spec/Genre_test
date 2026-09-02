@@ -22,13 +22,19 @@ if not defined PYEXE (
   exit /b 2
 )
 
+%PYEXE% tools\check_markdown_authoring.py
+set "RC=%ERRORLEVEL%"
+if not "%RC%"=="0" (
+  echo Markdown authoring check FAILED with code %RC%.
+  exit /b %RC%
+)
+
 %PYEXE% tools\obsidian_knowledge_sync.py --check
 set "RC=%ERRORLEVEL%"
-
 if not "%RC%"=="0" (
   echo Obsidian knowledge check FAILED with code %RC%.
   exit /b %RC%
 )
 
-echo Obsidian knowledge check PASS.
+echo Obsidian + Markdown authoring checks PASS.
 exit /b 0
