@@ -20,9 +20,9 @@ canonical_owner: "docs/obsidian/KNOWLEDGE_REGISTRY.json"
 
 ## Core entry points
 
-- [[README|Genre_test — вход в проект]] — Главная точка входа: active v0.5, pre-refactor boundary, protected core, retrieval, SUPERCOMBINE, Ozone и Obsidian authoring.
-- [[AGENTS|Конституция агентов Genre_test]] — Канонический governance-контракт ролей, authority, claim discipline, exact-head review и standing automatic MTD.
-- [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] — Current snapshot на pre-refactor boundary: immediate train #184 -> #171 -> #164, protected baselines и subsystem ownership.
+- [[README|Genre_test — вход в проект]] — Главная точка входа: active v0.5, refactor boundary, protected core, retrieval, SUPERCOMBINE, Ozone и Obsidian authoring.
+- [[AGENTS|Конституция агентов Genre_test]] — Канонический governance-контракт ролей, authority, claim discipline, review evidence и standing automatic MTD.
+- [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] — Current repository snapshot after the refactor boundary, with protected baselines, subsystem ownership and Workstation/SUPERCOMBINE as the forward product surface.
 - [[ROADMAP|Genre_test Roadmap]] — Release и architecture sequence от active v0.5 retrieval через Workstation P1-P8 к integrated SUPERCOMBINE v1.0.
 - [[docs/REPOSITORY_COLD_START|Cold-start восстановление контекста Genre_test]] — Порядок восстановления project state, refactor-boundary state и task admission из main/live GitHub без зависимости от чатов.
 - [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] — Owner-approved post-boundary Workstation architecture, donor policy, service/API layering and P1-P8 implementation order.
@@ -50,6 +50,7 @@ canonical_owner: "docs/obsidian/KNOWLEDGE_REGISTRY.json"
 - [[docs/ACTIVE_CURRENT|Активное состояние Genre_test]] (`active` / `status`)
 - [[docs/obsidian/CLI_POLICY|Политика Obsidian CLI Genre_test]] (`active` / `runbook`)
 - [[docs/obsidian/PROPERTY_SCHEMA|Схема Properties Genre_test]] (`active` / `protocol`)
+- [[docs/DATABASE_RECOVERY|Genre_test Database Recovery]] (`canonical` / `runbook`)
 - [[docs/obsidian/MARKDOWN_AUTHORING_STANDARD|Markdown Authoring Standard Genre_test]] (`canonical` / `protocol`)
 - [[docs/SUPERCOMBINE_UI_ARCHITECTURE|SUPERCOMBINE Workstation UI Architecture]] (`canonical` / `architecture`)
 
@@ -60,7 +61,12 @@ canonical_owner: "docs/obsidian/KNOWLEDGE_REGISTRY.json"
 
 ### `retrieval`
 
+- [[docs/RETRIEVAL_HISTORY_SOURCE_CONTRACT|Retrieval Explicit History Source Contract]] (`canonical` / `protocol`)
 - [[docs/CLAMP3_ARCHITECTURE|Архитектура retrieval CLaMP 3]] (`canonical` / `architecture`)
+
+### `runtime`
+
+- [[docs/DATABASE_ACCESS_PROVENANCE|Database Access Provenance]] (`canonical` / `protocol`)
 
 ## Derived views
 
@@ -73,4 +79,4 @@ canonical_owner: "docs/obsidian/KNOWLEDGE_REGISTRY.json"
 
 ## Projection identity
 
-Source fingerprint: `3aa5f6a79c5b310c2052601edf75c97102e59785c2baa444ded822ae5a8f7d72`
+Source fingerprint: `d23e1b548d1e40002956666b46fbe98fcf8a01e7cc4c8fb61a1922c91fba8398`

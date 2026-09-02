@@ -3,7 +3,7 @@
   "schema_version": 1,
   "authority_scope": "derived_projection_only",
   "generation_direction": "REPOSITORY_TO_DERIVED_JSON",
-  "source_fingerprint": "3aa5f6a79c5b310c2052601edf75c97102e59785c2baa444ded822ae5a8f7d72",
+  "source_fingerprint": "d23e1b548d1e40002956666b46fbe98fcf8a01e7cc4c8fb61a1922c91fba8398",
   "canonical_inputs": {
     "knowledge_registry": "docs/obsidian/KNOWLEDGE_REGISTRY.json",
     "markdown_boundary": "docs/obsidian/MARKDOWN_LEGACY_BASELINE.json",
@@ -15,7 +15,7 @@
     "audio/renders/model weights/caches"
   ],
   "counts": {
-    "canonical_document": 90,
+    "canonical_document": 92,
     "canonical_machine_state": 5,
     "derived_index": 4,
     "generated_projection": 22,
@@ -23,9 +23,9 @@
   },
   "registration_counts": {
     "exempt": 22,
-    "grandfathered": 73,
+    "grandfathered": 72,
     "not_applicable": 13,
-    "registered": 16
+    "registered": 19
   },
   "entries": [
     {
@@ -152,10 +152,22 @@
       "blob_sha": "479bf2e673c1b4157b6c67a4d61c332392257e96"
     },
     {
+      "path": "docs/DATABASE_ACCESS_PROVENANCE.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "registered",
+      "blob_sha": "4ce70f40ac570c555f6f48605e1e944812723e8e",
+      "area": "runtime",
+      "doc_type": "protocol",
+      "status": "canonical"
+    },
+    {
       "path": "docs/DATABASE_RECOVERY.md",
       "ownership_class": "canonical_document",
-      "registration_state": "grandfathered",
-      "blob_sha": "91b737458721080ef4d8c2eb5adac34aec78f3dd"
+      "registration_state": "registered",
+      "blob_sha": "ca814b80b73006136d57310302939b0fc9170bfb",
+      "area": "project",
+      "doc_type": "runbook",
+      "status": "canonical"
     },
     {
       "path": "docs/DATABASE_RECOVERY_TODO.md",
@@ -318,6 +330,15 @@
       "ownership_class": "canonical_document",
       "registration_state": "grandfathered",
       "blob_sha": "ff51e3e6fee94df3f9e46b71842782a78a8b61c9"
+    },
+    {
+      "path": "docs/RETRIEVAL_HISTORY_SOURCE_CONTRACT.md",
+      "ownership_class": "canonical_document",
+      "registration_state": "registered",
+      "blob_sha": "cb505a340c7c202114a8d1591a9561ce2745698e",
+      "area": "retrieval",
+      "doc_type": "protocol",
+      "status": "canonical"
     },
     {
       "path": "docs/RULES_HUB_INTEROPERABILITY.md",
@@ -608,7 +629,7 @@
       "path": "docs/obsidian/KNOWLEDGE_REGISTRY.json",
       "ownership_class": "canonical_machine_state",
       "registration_state": "not_applicable",
-      "blob_sha": "b28f9d9237643bb5f12c0f6ea9a2482417b1234f"
+      "blob_sha": "fa2da54c3fa368ba6cf1012d67a6eb387f96f910"
     },
     {
       "path": "docs/obsidian/MARKDOWN_AUTHORING_STANDARD.md",
