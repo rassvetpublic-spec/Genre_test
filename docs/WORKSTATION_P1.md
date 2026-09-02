@@ -12,8 +12,8 @@ tags:
 
 # Genre_test Workstation P1
 
-Tracking: **#164**  
-Architecture owner: `docs/SUPERCOMBINE_UI_ARCHITECTURE.md`  
+Tracking: **#164**
+Architecture owner: `docs/SUPERCOMBINE_UI_ARCHITECTURE.md`
 Donor provenance: `docs/SHIMMER_EXTERNAL_REFERENCE.md`
 
 ## Scope
