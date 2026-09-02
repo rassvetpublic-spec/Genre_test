@@ -58,6 +58,7 @@ jobs:
           python tools/check_markdown_authoring.py
           python tools/obsidian_knowledge_sync.py --check
           python -m pip install pytest
+          python -m pip install -e . --no-deps
           python -m pytest -q tests/test_workstation_entrypoint.py tests/test_workstation_p1.py tests/test_obsidian_p2_qa_findings.py
       - name: Commit integration
         run: |
