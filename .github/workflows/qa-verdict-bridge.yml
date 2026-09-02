@@ -59,7 +59,7 @@ jobs:
           ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
 
-      - name: Evaluate exact-head review evidence
+      - name: Evaluate exact-head clean-review evidence
         env:
           GITHUB_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
@@ -70,4 +70,16 @@ jobs:
           --repository "$REPOSITORY"
           --pr "$PR_NUMBER"
           --mode evaluate
+          --target-url "$TARGET_URL"
+
+      - name: Evaluate one-pass findings closure evidence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: >-
+          python tools/qa_findings_closure.py
+          --repository "$REPOSITORY"
+          --pr "$PR_NUMBER"
           --target-url "$TARGET_URL"
