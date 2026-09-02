@@ -11,7 +11,6 @@ from genre_test.detector_evidence import (
     ProcessingStep,
 )
 
-
 VERDICT_SEMANTICS = {
     "rule": "fixture",
     "meaning": "fixture verdict semantics",
