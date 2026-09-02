@@ -14,6 +14,7 @@ EVIDENCE_SCHEMA = "genre-test-detector-evidence-sample-v1"
 EVIDENCE_SCHEMA_VERSION = 1
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_FRACTIONAL_SECOND_RE = re.compile(r"T\d{2}:\d{2}:\d{2}[.,](\d+)")
 _GROUND_TRUTH_CONFIDENCE = frozenset({"known", "high", "medium", "low", "unknown"})
 _REPRODUCTION_STATUS = frozenset({"single", "reproduced", "not_reproduced", "pending"})
 _PROCESSING_KEYS = frozenset({"operation", "tool_id", "tool_version", "parameters", "note"})
@@ -61,9 +62,16 @@ class DetectorEvidenceError(ValueError):
     """Raised when detector evidence cannot satisfy the versioned contract."""
 
 
+def _reject_surrogates(value: str, *, field_name: str) -> str:
+    if any(0xD800 <= ord(character) <= 0xDFFF for character in value):
+        raise DetectorEvidenceError(f"{field_name} must not contain Unicode surrogate code points")
+    return value
+
+
 def _required_text(value: Any, *, field_name: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise DetectorEvidenceError(f"{field_name} must be a non-empty string")
+    _reject_surrogates(value, field_name=field_name)
     if "\x00" in value:
         raise DetectorEvidenceError(f"{field_name} must not contain NUL")
     return value.strip()
@@ -84,6 +92,11 @@ def _sha256(value: Any, *, field_name: str) -> str:
 
 def _utc_timestamp(value: Any, *, field_name: str) -> str:
     raw = _required_text(value, field_name=field_name)
+    fraction = _FRACTIONAL_SECOND_RE.search(raw)
+    if fraction is not None and len(fraction.group(1)) > 6:
+        raise DetectorEvidenceError(
+            f"{field_name} fractional seconds must use at most 6 digits"
+        )
     candidate = raw[:-1] + "+00:00" if raw.endswith("Z") else raw
     try:
         parsed = datetime.fromisoformat(candidate)
@@ -100,6 +113,7 @@ def _record(value: Any, *, field_name: str) -> Mapping[str, Any]:
     for key in value:
         if not isinstance(key, str) or not key:
             raise DetectorEvidenceError(f"{field_name} object keys must be non-empty strings")
+        _reject_surrogates(key, field_name=f"{field_name} object key")
     return value
 
 
@@ -126,8 +140,10 @@ def _required_key(record: Mapping[str, Any], key: str, *, field_name: str) -> An
 def _freeze_json(value: Any, *, field_name: str) -> Any:
     """Validate JSON and recursively detach/freeze mappings and sequences."""
 
-    if value is None or isinstance(value, (str, bool, int)):
+    if value is None or isinstance(value, (bool, int)):
         return value
+    if isinstance(value, str):
+        return _reject_surrogates(value, field_name=field_name)
     if isinstance(value, float):
         if not math.isfinite(value):
             raise DetectorEvidenceError(f"{field_name} contains a non-finite number")
@@ -181,16 +197,12 @@ def _bounded_frozen_object(
     return frozen
 
 
-def _finite_float(value: Any, *, field_name: str) -> float:
-    if isinstance(value, bool):
-        raise DetectorEvidenceError(f"{field_name} must be a finite number")
-    try:
-        normalized = float(value)
-    except (TypeError, ValueError) as exc:
-        raise DetectorEvidenceError(f"{field_name} must be a finite number") from exc
-    if not math.isfinite(normalized):
+def _finite_number(value: Any, *, field_name: str) -> int | float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise DetectorEvidenceError(f"{field_name} must be a finite JSON number")
+    if isinstance(value, float) and not math.isfinite(value):
         raise DetectorEvidenceError(f"{field_name} must be finite")
-    return normalized
+    return value
 
 
 @dataclass(frozen=True)
@@ -244,8 +256,8 @@ class DetectorResult:
     verdict: str
     verdict_semantics: Mapping[str, Any]
     raw_response: Mapping[str, Any]
-    score: float | None = None
-    confidence: float | None = None
+    score: int | float | None = None
+    confidence: int | float | None = None
     service_id: str | None = None
     service_version: str | None = None
     model_id: str | None = None
@@ -269,9 +281,13 @@ class DetectorResult:
             self, "raw_response", _freeze_object(self.raw_response, field_name="detector.raw_response")
         )
         if self.score is not None:
-            object.__setattr__(self, "score", _finite_float(self.score, field_name="detector.score"))
+            object.__setattr__(
+                self,
+                "score",
+                _finite_number(self.score, field_name="detector.score"),
+            )
         if self.confidence is not None:
-            confidence = _finite_float(self.confidence, field_name="detector.confidence")
+            confidence = _finite_number(self.confidence, field_name="detector.confidence")
             if not 0.0 <= confidence <= 1.0:
                 raise DetectorEvidenceError("detector.confidence must be between 0 and 1")
             object.__setattr__(self, "confidence", confidence)
@@ -436,8 +452,12 @@ class DetectorEvidenceSample:
             raise DetectorEvidenceError(
                 "reproduction_status must be one of: " + ", ".join(sorted(_REPRODUCTION_STATUS))
             )
-        if status == "reproduced" and self.reproduction_count < 2:
-            raise DetectorEvidenceError("reproduced evidence requires reproduction_count >= 2")
+        if status == "single" and self.reproduction_count != 1:
+            raise DetectorEvidenceError("single evidence requires reproduction_count == 1")
+        if status in {"reproduced", "not_reproduced"} and self.reproduction_count < 2:
+            raise DetectorEvidenceError(
+                f"{status} evidence requires reproduction_count >= 2"
+            )
         object.__setattr__(self, "reproduction_status", status)
 
         attachments = tuple(self.attachments)
@@ -494,8 +514,13 @@ class DetectorEvidenceSample:
         _reject_unknown_keys(record, allowed=_SAMPLE_KEYS, field_name="evidence sample")
         if _required_key(record, "schema", field_name="evidence sample") != EVIDENCE_SCHEMA:
             raise DetectorEvidenceError(f"schema must be {EVIDENCE_SCHEMA!r}")
-        if _required_key(record, "schema_version", field_name="evidence sample") != EVIDENCE_SCHEMA_VERSION:
-            raise DetectorEvidenceError(f"schema_version must be {EVIDENCE_SCHEMA_VERSION}")
+        schema_version = _required_key(record, "schema_version", field_name="evidence sample")
+        if (
+            isinstance(schema_version, bool)
+            or not isinstance(schema_version, int)
+            or schema_version != EVIDENCE_SCHEMA_VERSION
+        ):
+            raise DetectorEvidenceError(f"schema_version must be integer {EVIDENCE_SCHEMA_VERSION}")
 
         history_raw = _array(
             _required_key(record, "processing_history", field_name="evidence sample"),
