@@ -79,4 +79,4 @@ canonical_owner: "docs/obsidian/KNOWLEDGE_REGISTRY.json"
 
 ## Projection identity
 
-Source fingerprint: `d23e1b548d1e40002956666b46fbe98fcf8a01e7cc4c8fb61a1922c91fba8398`
+Source fingerprint: `ba1093ca5a3dc0980858e3d052002df65f99cbc23a8d3e51de18543e204a29b7`

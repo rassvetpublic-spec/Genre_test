@@ -1,10 +1,10 @@
 filters:
   and:
-    - 'file.ext == "md"'
-    - 'doc_type != null'
+    - 'file.folder == "docs/obsidian/registry_views"'
+    - 'canonical_path != null'
 properties:
-  file.name:
-    displayName: File
+  canonical_path:
+    displayName: Canonical path
   title:
     displayName: Title
   area:
@@ -19,6 +19,7 @@ views:
   - type: table
     name: By area
     order:
+      - canonical_path
       - title
       - doc_type
       - status
@@ -29,6 +30,7 @@ views:
   - type: table
     name: By type
     order:
+      - canonical_path
       - title
       - area
       - status
@@ -38,6 +40,7 @@ views:
   - type: table
     name: By status
     order:
+      - canonical_path
       - title
       - area
       - doc_type

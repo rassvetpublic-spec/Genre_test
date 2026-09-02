@@ -1,13 +1,13 @@
 filters:
   and:
-    - 'file.ext == "md"'
+    - 'file.folder == "docs/obsidian/registry_views"'
     - or:
         - 'terms != null'
         - 'keywords_ru != null'
         - 'keywords_en != null'
 properties:
-  file.name:
-    displayName: File
+  canonical_path:
+    displayName: Canonical path
   title:
     displayName: Title
   area:
@@ -22,6 +22,7 @@ views:
   - type: table
     name: Terms and keywords
     order:
+      - canonical_path
       - title
       - area
       - terms

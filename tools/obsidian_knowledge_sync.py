@@ -86,6 +86,11 @@ DEFAULT_ANALYTICS = Path("docs/obsidian/KNOWLEDGE_ANALYTICS.md")
 DEFAULT_KNOWLEDGE_BASE = Path("docs/obsidian/KNOWLEDGE.base")
 DEFAULT_RELATIONS_BASE = Path("docs/obsidian/RELATIONS.base")
 DEFAULT_TERMS_BASE = Path("docs/obsidian/TERMS.base")
+REGISTRY_VIEW_DIR = Path("docs/obsidian/registry_views")
+REGISTRY_VIEW_PREFIX = REGISTRY_VIEW_DIR.as_posix() + "/"
+SPECIALIZED_MACHINE_STATE_PATHS = {
+    "docs/research/AI_AUDIO_TOOL_TEST_REGISTRY.json",
+}
 
 REGISTRY_SELF_PATH = DEFAULT_REGISTRY.as_posix()
 GENERATED_INDEX_PATH = DEFAULT_OUTPUT.as_posix()
@@ -452,18 +457,18 @@ def _boundary_exempt(path: str, boundary: dict[str, Any]) -> bool:
 
 def registration_state(
     path: str,
-    blob_sha: str,
+    blob_sha: str | None,
     boundary: dict[str, Any],
     registered_paths: set[str],
 ) -> str:
-    if path in GLOBAL_GENERATED_MARKDOWN:
+    if path in GLOBAL_GENERATED_MARKDOWN or path.startswith(REGISTRY_VIEW_PREFIX):
         return "generated_view"
     if not _in_authoring_scope(path) or _boundary_exempt(path, boundary):
         return "exempt"
     baseline = boundary["baseline_blobs"]
     if path in registered_paths:
         return "registered"
-    if baseline.get(path) == blob_sha:
+    if blob_sha is not None and baseline.get(path) == blob_sha:
         return "grandfathered"
     return "registration_required"
 
@@ -477,6 +482,10 @@ def _is_inventory_relevant(path: str, registered_paths: set[str]) -> bool:
         return True
     if path.startswith(RADAR_MACHINE_PREFIX) and path.endswith(".json"):
         return True
+    if path in SPECIALIZED_MACHINE_STATE_PATHS:
+        return True
+    if path.startswith(REGISTRY_VIEW_PREFIX):
+        return path.endswith(".md")
     if any(path.startswith(prefix) for prefix in RADAR_GENERATED_PREFIXES):
         return path.endswith((".md", ".json", ".yaml", ".yml"))
     return False
@@ -485,8 +494,10 @@ def _is_inventory_relevant(path: str, registered_paths: set[str]) -> bool:
 def _ownership_class(path: str) -> str:
     if path in {REGISTRY_SELF_PATH, BASELINE_PATH} or (
         path.startswith(RADAR_MACHINE_PREFIX) and path.endswith(".json")
-    ):
+    ) or path in SPECIALIZED_MACHINE_STATE_PATHS:
         return "canonical_machine_state"
+    if path.startswith(REGISTRY_VIEW_PREFIX):
+        return "generated_projection"
     if path in {
         DEFAULT_OUTPUT.as_posix(),
         DEFAULT_HOME.as_posix(),
@@ -527,21 +538,24 @@ def build_inventory(
     tracked_blobs: dict[str, str],
     entries: list[dict[str, Any]],
     boundary: dict[str, Any],
+    *,
+    generated_paths: set[str] | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
     by_path = {entry["path"]: entry for entry in entries}
     registered_paths = set(by_path)
+    generated = set(GLOBAL_GENERATED_OUTPUTS) | set(generated_paths or ())
     paths = {
         path for path in tracked_blobs if _is_inventory_relevant(path, registered_paths)
-    } | GLOBAL_GENERATED_OUTPUTS
+    } | generated
     records: list[dict[str, Any]] = []
     missing_registration: list[str] = []
     for path in sorted(paths):
         ownership_class = _ownership_class(path)
         if ownership_class not in OWNERSHIP_CLASSES:
             raise RegistryError(f"unsupported ownership class for {path}: {ownership_class}")
-        blob_sha = None if path in GLOBAL_GENERATED_OUTPUTS else tracked_blobs.get(path)
+        blob_sha = None if path in generated else tracked_blobs.get(path)
         state = "not_applicable"
-        if path.endswith(".md") and blob_sha is not None:
+        if path.endswith(".md"):
             state = registration_state(path, blob_sha, boundary, registered_paths)
             if state == "registration_required":
                 missing_registration.append(path)
@@ -573,6 +587,8 @@ def build_inventory(
             "knowledge_registry": REGISTRY_SELF_PATH,
             "markdown_boundary": BASELINE_PATH,
             "research_machine_state_prefix": RADAR_MACHINE_PREFIX,
+            "specialized_machine_state_paths": sorted(SPECIALIZED_MACHINE_STATE_PATHS),
+            "registry_view_prefix": REGISTRY_VIEW_PREFIX,
         },
         "excluded_from_authority": [
             "GitHub live Issue/PR/check state",
@@ -812,19 +828,79 @@ def render_analytics(
     return "\n".join(lines)
 
 
+
+def _yaml_scalar(value: str) -> str:
+    return json.dumps(value, ensure_ascii=False)
+
+
+def registry_view_path(canonical_path: str) -> str:
+    token = hashlib.sha256(canonical_path.encode("utf-8")).hexdigest()[:20]
+    return f"{REGISTRY_VIEW_PREFIX}{token}.md"
+
+
+def render_registry_view(entry: dict[str, Any]) -> str:
+    lines = [
+        "---",
+        f"title: {_yaml_scalar(entry['title'])}",
+        f"doc_type: {_yaml_scalar(entry['doc_type'])}",
+        f"area: {_yaml_scalar(entry['area'])}",
+        f"status: {_yaml_scalar(entry['status'])}",
+        f"summary: {_yaml_scalar(entry['summary'])}",
+        "tags:",
+    ]
+    for tag in entry["tags"]:
+        lines.append(f"  - {_yaml_scalar(tag)}")
+    lines.extend(
+        [
+            "generated: true",
+            f"canonical_owner: {_yaml_scalar(REGISTRY_SELF_PATH)}",
+            f"canonical_path: {_yaml_scalar(entry['path'])}",
+        ]
+    )
+    for key in sorted(OPTIONAL_LIST_KEYS | RELATION_KEYS):
+        values = entry.get(key, [])
+        if not values:
+            continue
+        lines.append(f"{key}:")
+        for value in values:
+            lines.append(f"  - {_yaml_scalar(value)}")
+    if "reader_level" in entry:
+        lines.append(f"reader_level: {_yaml_scalar(entry['reader_level'])}")
+    if "language" in entry:
+        lines.append(f"language: {_yaml_scalar(entry['language'])}")
+    lines.extend(
+        [
+            "---",
+            "",
+            "<!-- GENERATED FROM docs/obsidian/KNOWLEDGE_REGISTRY.json; DO NOT EDIT BY HAND -->",
+            "",
+            f"# {entry['title']}",
+            "",
+            f"Canonical document: {_wiki_link(entry['path'], entry['title'])}",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def render_registry_views(entries: list[dict[str, Any]]) -> dict[str, str]:
+    return {
+        registry_view_path(entry["path"]): render_registry_view(entry)
+        for entry in sorted(entries, key=lambda item: item["path"])
+    }
+
 def render_knowledge_base() -> str:
-    return """filters:\n  and:\n    - 'file.ext == "md"'\n    - 'doc_type != null'\nproperties:\n  file.name:\n    displayName: File\n  title:\n    displayName: Title\n  area:\n    displayName: Area\n  doc_type:\n    displayName: Type\n  status:\n    displayName: Status\n  summary:\n    displayName: Summary\nviews:\n  - type: table\n    name: By area\n    order:\n      - title\n      - doc_type\n      - status\n      - summary\n    groupBy:\n      property: area\n      direction: ASC\n  - type: table\n    name: By type\n    order:\n      - title\n      - area\n      - status\n    groupBy:\n      property: doc_type\n      direction: ASC\n  - type: table\n    name: By status\n    order:\n      - title\n      - area\n      - doc_type\n    groupBy:\n      property: status\n      direction: ASC\n"""
+    return """filters:\n  and:\n    - 'file.folder == \"docs/obsidian/registry_views\"'\n    - 'canonical_path != null'\nproperties:\n  canonical_path:\n    displayName: Canonical path\n  title:\n    displayName: Title\n  area:\n    displayName: Area\n  doc_type:\n    displayName: Type\n  status:\n    displayName: Status\n  summary:\n    displayName: Summary\nviews:\n  - type: table\n    name: By area\n    order:\n      - canonical_path\n      - title\n      - doc_type\n      - status\n      - summary\n    groupBy:\n      property: area\n      direction: ASC\n  - type: table\n    name: By type\n    order:\n      - canonical_path\n      - title\n      - area\n      - status\n    groupBy:\n      property: doc_type\n      direction: ASC\n  - type: table\n    name: By status\n    order:\n      - canonical_path\n      - title\n      - area\n      - doc_type\n    groupBy:\n      property: status\n      direction: ASC\n"""
 
 
 def render_relations_base() -> str:
     relation_filter = "\n".join(f"        - '{key} != null'" for key in sorted(RELATION_KEYS))
     order = "\n".join(f"      - {key}" for key in sorted(RELATION_KEYS))
-    return f"""filters:\n  and:\n    - 'file.ext == "md"'\n    - or:\n{relation_filter}\nproperties:\n  file.name:\n    displayName: File\n  title:\n    displayName: Title\n  area:\n    displayName: Area\n  doc_type:\n    displayName: Type\nviews:\n  - type: table\n    name: Typed relations\n    order:\n      - title\n      - area\n      - doc_type\n{order}\n    groupBy:\n      property: area\n      direction: ASC\n"""
+    return f"""filters:\n  and:\n    - 'file.folder == \"docs/obsidian/registry_views\"'\n    - or:\n{relation_filter}\nproperties:\n  canonical_path:\n    displayName: Canonical path\n  title:\n    displayName: Title\n  area:\n    displayName: Area\n  doc_type:\n    displayName: Type\nviews:\n  - type: table\n    name: Typed relations\n    order:\n      - canonical_path\n      - title\n      - area\n      - doc_type\n{order}\n    groupBy:\n      property: area\n      direction: ASC\n"""
 
 
 def render_terms_base() -> str:
-    return """filters:\n  and:\n    - 'file.ext == "md"'\n    - or:\n        - 'terms != null'\n        - 'keywords_ru != null'\n        - 'keywords_en != null'\nproperties:\n  file.name:\n    displayName: File\n  title:\n    displayName: Title\n  area:\n    displayName: Area\n  terms:\n    displayName: Terms\n  keywords_ru:\n    displayName: Keywords RU\n  keywords_en:\n    displayName: Keywords EN\nviews:\n  - type: table\n    name: Terms and keywords\n    order:\n      - title\n      - area\n      - terms\n      - keywords_ru\n      - keywords_en\n    groupBy:\n      property: area\n      direction: ASC\n"""
-
+    return """filters:\n  and:\n    - 'file.folder == \"docs/obsidian/registry_views\"'\n    - or:\n        - 'terms != null'\n        - 'keywords_ru != null'\n        - 'keywords_en != null'\nproperties:\n  canonical_path:\n    displayName: Canonical path\n  title:\n    displayName: Title\n  area:\n    displayName: Area\n  terms:\n    displayName: Terms\n  keywords_ru:\n    displayName: Keywords RU\n  keywords_en:\n    displayName: Keywords EN\nviews:\n  - type: table\n    name: Terms and keywords\n    order:\n      - canonical_path\n      - title\n      - area\n      - terms\n      - keywords_ru\n      - keywords_en\n    groupBy:\n      property: area\n      direction: ASC\n"""
 
 def build_projections(
     repo_root: Path,
@@ -837,7 +913,10 @@ def build_projections(
     entries = validate_registry(data, repo_root)
     boundary = load_authoring_boundary(boundary_path)
     blobs = tracked_blobs if tracked_blobs is not None else tracked_worktree_blobs(repo_root)
-    inventory, missing_registration = build_inventory(blobs, entries, boundary)
+    registry_views = render_registry_views(entries)
+    inventory, missing_registration = build_inventory(
+        blobs, entries, boundary, generated_paths=set(registry_views)
+    )
     if missing_registration:
         raise RegistryError(
             "registration-required Markdown is absent from KNOWLEDGE_REGISTRY.json: "
@@ -851,6 +930,7 @@ def build_projections(
         DEFAULT_KNOWLEDGE_BASE.as_posix(): render_knowledge_base(),
         DEFAULT_RELATIONS_BASE.as_posix(): render_relations_base(),
         DEFAULT_TERMS_BASE.as_posix(): render_terms_base(),
+        **registry_views,
     }
     return data, entries, outputs, missing_registration
 
@@ -886,6 +966,13 @@ def check_all(repo_root: Path) -> tuple[bool, str]:
             continue
         if current != expected:
             stale.append(f"stale:{relative}")
+    view_dir = _fixed_repo_path(repo_root, REGISTRY_VIEW_DIR, field="registry view directory")
+    expected_views = {path for path in outputs if path.startswith(REGISTRY_VIEW_PREFIX)}
+    if view_dir.is_dir():
+        for candidate in sorted(view_dir.glob("*.md")):
+            relative = candidate.relative_to(repo_root).as_posix()
+            if relative not in expected_views:
+                stale.append(f"extra:{relative}")
     if stale:
         return False, "Obsidian projection drift: " + ", ".join(stale)
     return True, "Obsidian registry, inventory, HOME, analytics, Bases and registration gate are current"
@@ -895,6 +982,14 @@ def write_all(repo_root: Path) -> None:
     registry_path = _fixed_repo_path(repo_root, DEFAULT_REGISTRY, field="registry")
     boundary_path = _fixed_repo_path(repo_root, DEFAULT_BASELINE, field="Markdown boundary")
     _, _, outputs, _ = build_projections(repo_root, registry_path, boundary_path)
+    view_dir = _fixed_repo_path(repo_root, REGISTRY_VIEW_DIR, field="registry view directory")
+    expected_views = {path for path in outputs if path.startswith(REGISTRY_VIEW_PREFIX)}
+    if view_dir.is_dir():
+        for candidate in sorted(view_dir.glob("*.md")):
+            relative = candidate.relative_to(repo_root).as_posix()
+            if relative not in expected_views:
+                safe = _fixed_repo_path(repo_root, Path(relative), field=f"stale registry view {relative}")
+                safe.unlink()
     for relative, content in outputs.items():
         path = _fixed_repo_path(repo_root, Path(relative), field=f"generated output {relative}")
         _atomic_write_text(path, content)

@@ -3,11 +3,15 @@
   "schema_version": 1,
   "authority_scope": "derived_projection_only",
   "generation_direction": "REPOSITORY_TO_DERIVED_JSON",
-  "source_fingerprint": "d23e1b548d1e40002956666b46fbe98fcf8a01e7cc4c8fb61a1922c91fba8398",
+  "source_fingerprint": "ba1093ca5a3dc0980858e3d052002df65f99cbc23a8d3e51de18543e204a29b7",
   "canonical_inputs": {
     "knowledge_registry": "docs/obsidian/KNOWLEDGE_REGISTRY.json",
     "markdown_boundary": "docs/obsidian/MARKDOWN_LEGACY_BASELINE.json",
-    "research_machine_state_prefix": "docs/research/data/"
+    "research_machine_state_prefix": "docs/research/data/",
+    "specialized_machine_state_paths": [
+      "docs/research/AI_AUDIO_TOOL_TEST_REGISTRY.json"
+    ],
+    "registry_view_prefix": "docs/obsidian/registry_views/"
   },
   "excluded_from_authority": [
     "GitHub live Issue/PR/check state",
@@ -16,15 +20,16 @@
   ],
   "counts": {
     "canonical_document": 92,
-    "canonical_machine_state": 5,
+    "canonical_machine_state": 6,
     "derived_index": 4,
-    "generated_projection": 22,
+    "generated_projection": 42,
     "visualization": 3
   },
   "registration_counts": {
     "exempt": 22,
+    "generated_view": 23,
     "grandfathered": 72,
-    "not_applicable": 13,
+    "not_applicable": 11,
     "registered": 19
   },
   "entries": [
@@ -598,7 +603,7 @@
     {
       "path": "docs/obsidian/HOME.md",
       "ownership_class": "derived_index",
-      "registration_state": "not_applicable",
+      "registration_state": "generated_view",
       "blob_sha": null
     },
     {
@@ -616,13 +621,13 @@
     {
       "path": "docs/obsidian/KNOWLEDGE_ANALYTICS.md",
       "ownership_class": "derived_index",
-      "registration_state": "not_applicable",
+      "registration_state": "generated_view",
       "blob_sha": null
     },
     {
       "path": "docs/obsidian/KNOWLEDGE_INDEX.md",
       "ownership_class": "derived_index",
-      "registration_state": "not_applicable",
+      "registration_state": "generated_view",
       "blob_sha": null
     },
     {
@@ -699,6 +704,132 @@
       "ownership_class": "visualization",
       "registration_state": "not_applicable",
       "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/083a19af4fc913c2ed4a.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/0c03adac4cde263af119.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/12083b263f49f12feb5e.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/1c3deca15f12e3e4e4f6.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/237997b99035db9d4694.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/316fd8877ffe79d1a8cd.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/35da4ce0506753db5437.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/5f460715a5b2383014f7.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/683343bdf93f55ed3cad.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/824fa15373618183d32c.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/8ad5925f79220617b168.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/9da0e0848c525dac6fe2.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/a54ff182c7e8acf56acf.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/a774ff112ca6614f7c5a.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/b335630551682c19a781.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/b336572cdb9bcd7b8b19.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/beb21a0c450de7371ab2.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/c0d95b6192f0ec8689b3.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/c32f7c2b669a1333854e.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/obsidian/registry_views/e2329edadf954740d288.md",
+      "ownership_class": "generated_projection",
+      "registration_state": "generated_view",
+      "blob_sha": null
+    },
+    {
+      "path": "docs/research/AI_AUDIO_TOOL_TEST_REGISTRY.json",
+      "ownership_class": "canonical_machine_state",
+      "registration_state": "not_applicable",
+      "blob_sha": "aebd8e4a1e0501a74414a3b572d004e1d02f146b"
     },
     {
       "path": "docs/research/OEKSOUND_BENCHMARK_REFERENCES.md",

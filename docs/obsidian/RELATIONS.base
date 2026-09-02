@@ -1,6 +1,6 @@
 filters:
   and:
-    - 'file.ext == "md"'
+    - 'file.folder == "docs/obsidian/registry_views"'
     - or:
         - 'depends_on != null'
         - 'evidence_for != null'
@@ -11,8 +11,8 @@ filters:
         - 'superseded_by != null'
         - 'supersedes != null'
 properties:
-  file.name:
-    displayName: File
+  canonical_path:
+    displayName: Canonical path
   title:
     displayName: Title
   area:
@@ -23,6 +23,7 @@ views:
   - type: table
     name: Typed relations
     order:
+      - canonical_path
       - title
       - area
       - doc_type
