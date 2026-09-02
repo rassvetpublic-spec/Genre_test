@@ -1,0 +1,21 @@
+name: Projection regeneration diagnostic
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  projection-diff:
+    if: github.event.pull_request.number == 209
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Regenerate repository projections
+        run: python tools/obsidian_knowledge_sync.py
+      - name: Print deterministic projection diff
+        run: |
+          git diff -- docs/obsidian/REPOSITORY_INVENTORY.json docs/obsidian/HOME.md docs/obsidian/KNOWLEDGE_ANALYTICS.md
