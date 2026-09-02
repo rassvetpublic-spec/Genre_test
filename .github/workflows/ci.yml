@@ -59,6 +59,9 @@ jobs:
       - name: Validate Obsidian Markdown authoring boundary
         run: python3 tools/check_markdown_authoring.py
 
+      - name: Validate Obsidian repository projections
+        run: python3 tools/obsidian_knowledge_sync.py --check
+
   test312:
     name: test (3.12)
     if: always() && github.event_name == 'pull_request'
