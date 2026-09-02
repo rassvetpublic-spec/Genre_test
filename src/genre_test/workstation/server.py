@@ -195,7 +195,7 @@ def _handler(service: WorkstationService) -> type[BaseHTTPRequestHandler]:
                 return
             self._error("not_found", "Endpoint not found", HTTPStatus.NOT_FOUND)
 
-        def do_GET(self) -> None:  # noqa: N802
+        def do_GET(self) -> None:
             if not self._validate_authority():
                 return
             parsed = urlsplit(self.path)
@@ -244,7 +244,7 @@ def _handler(service: WorkstationService) -> type[BaseHTTPRequestHandler]:
                 return
             self._error("not_found", "Endpoint not found", 404)
 
-        def do_POST(self) -> None:  # noqa: N802
+        def do_POST(self) -> None:
             if not self._validate_authority():
                 return
             parsed = urlsplit(self.path)
@@ -278,7 +278,7 @@ def _handler(service: WorkstationService) -> type[BaseHTTPRequestHandler]:
                 return
             self._error("not_found", "Endpoint not found", 404)
 
-        def do_PUT(self) -> None:  # noqa: N802
+        def do_PUT(self) -> None:
             if not self._validate_authority():
                 return
             if urlsplit(self.path).path != "/api/v1/settings/language":
@@ -300,13 +300,13 @@ def _handler(service: WorkstationService) -> type[BaseHTTPRequestHandler]:
                 return
             self._json(settings)
 
-        def do_PATCH(self) -> None:  # noqa: N802
+        def do_PATCH(self) -> None:
             self._unsupported_method()
 
-        def do_DELETE(self) -> None:  # noqa: N802
+        def do_DELETE(self) -> None:
             self._unsupported_method()
 
-        def do_OPTIONS(self) -> None:  # noqa: N802
+        def do_OPTIONS(self) -> None:
             self._unsupported_method()
 
     return WorkstationHandler
