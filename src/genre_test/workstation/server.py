@@ -74,12 +74,19 @@ def _handler(service: WorkstationService) -> type[BaseHTTPRequestHandler]:
             self.end_headers()
 
         def _json(self, payload: Any, status: int = HTTPStatus.OK) -> None:
-            body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+            body = json.dumps(
+                payload,
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ).encode("utf-8")
             self._headers(int(status), "application/json; charset=utf-8", len(body))
             self.wfile.write(body)
 
         def _error(self, code: str, message: str, status: int) -> None:
-            self._json(ApiError(code=code, message=message, status=status).to_dict(), status)
+            self._json(
+                ApiError(code=code, message=message, status=status).to_dict(),
+                status,
+            )
 
         def _read_json(self) -> dict[str, Any] | None:
             raw_length = self.headers.get("Content-Length")
@@ -94,17 +101,30 @@ def _handler(service: WorkstationService) -> type[BaseHTTPRequestHandler]:
             if length < 0 or length > MAX_JSON_BODY:
                 self._error("request_too_large", "JSON request body is too large", 413)
                 return None
-            content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+            content_type = (
+                self.headers.get("Content-Type", "")
+                .split(";", 1)[0]
+                .strip()
+                .lower()
+            )
             if content_type != "application/json":
                 self._error("unsupported_media_type", "application/json is required", 415)
                 return None
             try:
                 payload = json.loads(self.rfile.read(length).decode("utf-8"))
             except (UnicodeDecodeError, json.JSONDecodeError):
-                self._error("invalid_json", "Request body must be valid UTF-8 JSON", 400)
+                self._error(
+                    "invalid_json",
+                    "Request body must be valid UTF-8 JSON",
+                    400,
+                )
                 return None
             if not isinstance(payload, dict):
-                self._error("invalid_json_shape", "JSON request body must be an object", 400)
+                self._error(
+                    "invalid_json_shape",
+                    "JSON request body must be an object",
+                    400,
+                )
                 return None
             return payload
 
@@ -116,13 +136,18 @@ def _handler(service: WorkstationService) -> type[BaseHTTPRequestHandler]:
             try:
                 body = _static_bytes(name)
             except (FileNotFoundError, OSError):
-                self._error("static_asset_missing", f"Workstation asset is unavailable: {name}", 500)
+                self._error(
+                    "static_asset_missing",
+                    f"Workstation asset is unavailable: {name}",
+                    500,
+                )
                 return True
-            self._headers(200, content_type or mimetypes.guess_type(name)[0] or "application/octet-stream", len(body))
+            guessed = mimetypes.guess_type(name)[0] or "application/octet-stream"
+            self._headers(200, content_type or guessed, len(body))
             self.wfile.write(body)
             return True
 
-        def do_GET(self) -> None:  # noqa: N802
+        def do_GET(self) -> None:
             parsed = urlsplit(self.path)
             path = parsed.path
             if self._serve_static(path):
@@ -140,7 +165,11 @@ def _handler(service: WorkstationService) -> type[BaseHTTPRequestHandler]:
                 try:
                     self._json(service.runtime())
                 except (ImportError, OSError, RuntimeError) as exc:
-                    self._error("runtime_unavailable", f"Runtime telemetry unavailable: {type(exc).__name__}", 503)
+                    self._error(
+                        "runtime_unavailable",
+                        f"Runtime telemetry unavailable: {type(exc).__name__}",
+                        503,
+                    )
                 return
             if path == "/api/v1/settings":
                 self._json(service.settings())
@@ -165,7 +194,7 @@ def _handler(service: WorkstationService) -> type[BaseHTTPRequestHandler]:
                 return
             self._error("not_found", "Endpoint not found", 404)
 
-        def do_POST(self) -> None:  # noqa: N802
+        def do_POST(self) -> None:
             parsed = urlsplit(self.path)
             if parsed.path == "/api/v1/jobs":
                 payload = self._read_json()
@@ -177,8 +206,15 @@ def _handler(service: WorkstationService) -> type[BaseHTTPRequestHandler]:
                     return
                 self._json(service.create_contract_job(kind), 201)
                 return
-            if parsed.path.startswith("/api/v1/jobs/") and parsed.path.endswith("/cancel"):
-                job_id = parsed.path.removeprefix("/api/v1/jobs/").removesuffix("/cancel").strip("/")
+            if (
+                parsed.path.startswith("/api/v1/jobs/")
+                and parsed.path.endswith("/cancel")
+            ):
+                job_id = (
+                    parsed.path.removeprefix("/api/v1/jobs/")
+                    .removesuffix("/cancel")
+                    .strip("/")
+                )
                 if not job_id or "/" in job_id:
                     self._error("not_found", "Endpoint not found", 404)
                     return
@@ -190,7 +226,7 @@ def _handler(service: WorkstationService) -> type[BaseHTTPRequestHandler]:
                 return
             self._error("not_found", "Endpoint not found", 404)
 
-        def do_PUT(self) -> None:  # noqa: N802
+        def do_PUT(self) -> None:
             if urlsplit(self.path).path != "/api/v1/settings/language":
                 self._error("not_found", "Endpoint not found", 404)
                 return
@@ -205,7 +241,8 @@ def _handler(service: WorkstationService) -> type[BaseHTTPRequestHandler]:
                 settings = service.set_language(language)
             except (OSError, ValueError) as exc:
                 status = 400 if isinstance(exc, ValueError) else 500
-                self._error("invalid_language" if status == 400 else "settings_write_failed", str(exc), status)
+                code = "invalid_language" if status == 400 else "settings_write_failed"
+                self._error(code, str(exc), status)
                 return
             self._json(settings)
 
@@ -244,7 +281,9 @@ def create_server(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Start the Genre_test local workstation P1 shell.")
+    parser = argparse.ArgumentParser(
+        description="Start the Genre_test local workstation P1 shell."
+    )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--quiet", action="store_true")
