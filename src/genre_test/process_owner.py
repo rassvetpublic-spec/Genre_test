@@ -8,7 +8,7 @@ import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO, Any
+from typing import IO, Any, Self
 
 _GATE_ENV = "GENRE_TEST_PROCESS_OWNER_GATE"
 _WINDOWS_BOOTSTRAP = r'''
@@ -412,7 +412,7 @@ class ProcessOwner:
             raise ProcessOwnerError("ProcessOwner has not started an operation")
         return self._process
 
-    def __enter__(self) -> ProcessOwner:
+    def __enter__(self) -> Self:
         if self._closed:
             raise ProcessOwnerError("cannot enter a closed ProcessOwner")
         return self
