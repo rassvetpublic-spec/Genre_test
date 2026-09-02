@@ -25,6 +25,9 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "panel.project.body": (
             "Source and derived-asset navigation arrives through canonical project services."
         ),
+        "panel.settings.body": (
+            "Workstation P1 settings are active here. Language changes are stored locally."
+        ),
         "panel.deferred.body": (
             "This execution surface is deferred to its owning Workstation phase."
         ),
@@ -43,6 +46,25 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "P1 exposes the shell and typed seams. Domain surfaces stay deferred until "
             "their owning phases."
         ),
+        "capability.workstation_shell": "Workstation shell",
+        "capability.runtime_hud": "Runtime HUD",
+        "capability.analysis": "Analysis",
+        "capability.catalog": "Catalog",
+        "capability.search": "Search",
+        "capability.compare_transport": "Compare transport",
+        "capability.repair": "Repair",
+        "capability.stems": "Stems",
+        "capability.mastering": "Mastering",
+        "capability.delivery": "Delivery",
+        "capability.state.available": "Available",
+        "capability.state.unavailable": "Unavailable",
+        "capability.state.deferred": "Deferred",
+        "capability.reason.workstation_p2": "Workstation P2",
+        "capability.reason.workstation_p3": "Workstation P3",
+        "capability.reason.workstation_p5": "Workstation P5",
+        "capability.reason.workstation_p6": "Workstation P6",
+        "capability.reason.workstation_p7": "Workstation P7",
+        "capability.reason.workstation_p8": "Workstation P8",
         "settings.language": "Language",
         "settings.language.ru": "Russian",
         "settings.language.en": "English",
@@ -72,6 +94,9 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "Навигация по источнику и производным ассетам подключается через "
             "канонические сервисы проекта."
         ),
+        "panel.settings.body": (
+            "Настройки Workstation P1 активны. Выбранный язык сохраняется локально."
+        ),
         "panel.deferred.body": (
             "Этот исполнительный экран отложен до своей фазы Workstation."
         ),
@@ -90,10 +115,29 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "P1 даёт оболочку и типизированные точки подключения. Предметные экраны "
             "остаются за своими фазами."
         ),
+        "capability.workstation_shell": "Оболочка Workstation",
+        "capability.runtime_hud": "Монитор ресурсов",
+        "capability.analysis": "Анализ",
+        "capability.catalog": "Каталог",
+        "capability.search": "Поиск",
+        "capability.compare_transport": "Транспорт сравнения",
+        "capability.repair": "Ремонт",
+        "capability.stems": "Стемы",
+        "capability.mastering": "Мастеринг",
+        "capability.delivery": "Доставка",
+        "capability.state.available": "Доступно",
+        "capability.state.unavailable": "Недоступно",
+        "capability.state.deferred": "Отложено",
+        "capability.reason.workstation_p2": "Фаза Workstation P2",
+        "capability.reason.workstation_p3": "Фаза Workstation P3",
+        "capability.reason.workstation_p5": "Фаза Workstation P5",
+        "capability.reason.workstation_p6": "Фаза Workstation P6",
+        "capability.reason.workstation_p7": "Фаза Workstation P7",
+        "capability.reason.workstation_p8": "Фаза Workstation P8",
         "settings.language": "Язык",
         "settings.language.ru": "Русский",
         "settings.language.en": "Английский",
-        "footer.api": "Workstation API",
+        "footer.api": "API Workstation",
         "error.runtime": "Телеметрия ресурсов недоступна",
         "error.request": "Ошибка запроса",
     },
