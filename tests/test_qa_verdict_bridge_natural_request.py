@@ -86,3 +86,43 @@ def test_generic_full_commit_mention_is_not_an_exact_head_request() -> None:
     verdict = _evaluate(request)
     assert verdict.state == "pending"
     assert verdict.marker == f"QA_BLOCKED {HEAD}"
+
+
+def test_trailing_alphanumeric_contamination_is_blocked() -> None:
+    request = _natural_request(
+        f"@codex review\nPlease verify exact current head `{HEAD}b`."
+    )
+    verdict = _evaluate(request)
+    assert verdict.state == "pending"
+    assert verdict.marker == f"QA_BLOCKED {HEAD}"
+
+
+def test_valid_full_sha_plus_abbreviated_candidate_is_blocked() -> None:
+    request = _natural_request(
+        "@codex review\n"
+        f"Verify exact current head `{HEAD}`; also check exact head `{HEAD[:10]}`."
+    )
+    verdict = _evaluate(request)
+    assert verdict.state == "pending"
+    assert verdict.marker == f"QA_BLOCKED {HEAD}"
+
+
+def test_repeated_same_full_sha_is_deduplicated() -> None:
+    request = _natural_request(
+        "@codex review\n"
+        f"Verify exact current head `{HEAD}`; confirm exact head `{HEAD}`."
+    )
+    verdict = _evaluate(request)
+    assert verdict.state == "success"
+    assert verdict.marker == f"QA_APPROVED {HEAD}"
+
+
+def test_canonical_binding_plus_malformed_natural_binding_is_blocked() -> None:
+    request = _natural_request(
+        "@codex review\n"
+        f"QA_REQUEST_HEAD: {HEAD}\n"
+        f"Please also verify exact current head `{HEAD[:10]}`."
+    )
+    verdict = _evaluate(request)
+    assert verdict.state == "pending"
+    assert verdict.marker == f"QA_BLOCKED {HEAD}"
