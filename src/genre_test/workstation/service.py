@@ -56,9 +56,10 @@ class WorkstationService:
         capabilities = [
             BackendCapability("workstation_shell", "available"),
             BackendCapability("runtime_hud", "available"),
+            BackendCapability("retrieval_status", "available"),
             BackendCapability("analysis", "deferred", "Workstation P2"),
-            BackendCapability("catalog", "deferred", "Workstation P2"),
-            BackendCapability("search", "deferred", "Workstation P2"),
+            BackendCapability("catalog", "deferred", "Workstation P2.2"),
+            BackendCapability("search", "deferred", "Workstation P2.2"),
             BackendCapability("compare_transport", "deferred", "Workstation P3"),
             BackendCapability("repair", "deferred", "Workstation P5"),
             BackendCapability("stems", "deferred", "Workstation P6"),
@@ -70,6 +71,10 @@ class WorkstationService:
     def runtime(self) -> dict[str, object]:
         module = importlib.import_module("genre_test.workstation.runtime_adapter")
         return {"ok": True, "runtime": module.collect_runtime_hud()}
+
+    def retrieval_status(self) -> dict[str, object]:
+        module = importlib.import_module("genre_test.workstation.retrieval_adapter")
+        return module.collect_retrieval_status()
 
     def settings(self) -> dict[str, object]:
         return self.settings_store.load().to_dict()
