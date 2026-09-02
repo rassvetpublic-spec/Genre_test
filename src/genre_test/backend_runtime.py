@@ -111,7 +111,7 @@ class BackendCapabilities:
 
 @dataclass(frozen=True)
 class ExecutionEvidence:
-    """Requested-vs-actual execution truth for one acquired backend operation."""
+    """Requested-vs-actual execution truth for one backend operation."""
 
     requested_provider: ProviderId
     actual_provider: ProviderId
@@ -182,6 +182,26 @@ class ExecutionEvidence:
 
 
 @dataclass(frozen=True)
+class BackendRunResult:
+    """One backend result inseparably paired with post-execution truth.
+
+    Acquisition evidence may describe the provider/device selected before inference,
+    but it cannot prove that an engine did not fall back during execution. Every
+    heavy-backend `run()` therefore returns this envelope with fresh evidence that
+    describes the execution which produced `result`.
+    """
+
+    result: object
+    execution: ExecutionEvidence
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.execution, ExecutionEvidence):
+            raise BackendRuntimeError(
+                "BackendRunResult.execution must be post-run ExecutionEvidence"
+            )
+
+
+@dataclass(frozen=True)
 class BackendPreflight:
     """No-inference admission result for a heavy backend request."""
 
@@ -224,7 +244,7 @@ class HeavyBackend(Protocol):
 
     The full residency/VRAM scheduler remains owned by #55. Implementations may use
     sidecars or in-process engines, but must expose actual execution evidence after
-    acquire/run and must not hide provider or dtype fallback.
+    acquire and again after every run; provider/dtype fallback must never be hidden.
     """
 
     @property
@@ -244,6 +264,6 @@ class HeavyBackend(Protocol):
 
     def acquire(self, preflight: BackendPreflight) -> ExecutionEvidence: ...
 
-    def run(self, request: Mapping[str, Any]) -> object: ...
+    def run(self, request: Mapping[str, Any]) -> BackendRunResult: ...
 
     def release(self) -> None: ...
