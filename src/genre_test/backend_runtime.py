@@ -110,9 +110,7 @@ class BackendCapabilities:
 
 
 @dataclass(frozen=True)
-class ExecutionEvidence:
-    """Requested-vs-actual execution truth for one backend operation."""
-
+class _ProviderEvidence:
     requested_provider: ProviderId
     actual_provider: ProviderId
     requested_dtype: str | None = None
@@ -182,6 +180,16 @@ class ExecutionEvidence:
 
 
 @dataclass(frozen=True)
+class AcquisitionEvidence(_ProviderEvidence):
+    """Provider/device truth observed while acquiring backend resources."""
+
+
+@dataclass(frozen=True)
+class ExecutionEvidence(_ProviderEvidence):
+    """Provider/device truth observed after the operation that produced a result."""
+
+
+@dataclass(frozen=True)
 class BackendRunResult:
     """One backend result inseparably paired with post-execution truth.
 
@@ -195,7 +203,7 @@ class BackendRunResult:
     execution: ExecutionEvidence
 
     def __post_init__(self) -> None:
-        if not isinstance(self.execution, ExecutionEvidence):
+        if type(self.execution) is not ExecutionEvidence:
             raise BackendRuntimeError(
                 "BackendRunResult.execution must be post-run ExecutionEvidence"
             )
@@ -243,8 +251,9 @@ class HeavyBackend(Protocol):
     """Minimal lifecycle seam shared by future repair/stem/restoration backends.
 
     The full residency/VRAM scheduler remains owned by #55. Implementations may use
-    sidecars or in-process engines, but must expose actual execution evidence after
-    acquire and again after every run; provider/dtype fallback must never be hidden.
+    sidecars or in-process engines, but must expose acquisition evidence after
+    acquire and fresh execution evidence after every run; provider/dtype fallback
+    must never be hidden.
     """
 
     @property
@@ -262,7 +271,7 @@ class HeavyBackend(Protocol):
         requested_dtype: str | None = None,
     ) -> BackendPreflight: ...
 
-    def acquire(self, preflight: BackendPreflight) -> ExecutionEvidence: ...
+    def acquire(self, preflight: BackendPreflight) -> AcquisitionEvidence: ...
 
     def run(self, request: Mapping[str, Any]) -> BackendRunResult: ...
 
