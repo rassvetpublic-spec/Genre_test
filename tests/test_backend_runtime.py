@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from genre_test.backend_runtime import (
+    AcquisitionEvidence,
     BackendCapabilities,
     BackendHealth,
     BackendIdentity,
@@ -153,7 +154,7 @@ def test_run_result_requires_post_execution_evidence() -> None:
 
 
 def test_acquire_evidence_cannot_substitute_for_post_run_truth() -> None:
-    acquire = ExecutionEvidence(
+    acquire = AcquisitionEvidence(
         requested_provider="cuda",
         actual_provider="cuda",
         requested_dtype="float16",
@@ -170,6 +171,9 @@ def test_acquire_evidence_cannot_substitute_for_post_run_truth() -> None:
     assert acquire.used_fallback is False
     assert result.execution.used_fallback is True
     assert result.execution.to_dict()["fallback_reason"] == "engine retry after CUDA OOM"
+
+    with pytest.raises(BackendRuntimeError, match="post-run ExecutionEvidence"):
+        BackendRunResult(result=b"unsafe", execution=acquire)  # type: ignore[arg-type]
 
 
 def test_preflight_rejects_provider_not_declared_by_backend() -> None:
