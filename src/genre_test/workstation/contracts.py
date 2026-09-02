@@ -67,8 +67,24 @@ def utc_now_iso() -> str:
 
 
 def validate_derived_output_path(source: Path, output: Path) -> Path:
+    """Return a normalized derived path while protecting source-file identity.
+
+    Path equality alone is insufficient: an existing output may be a hard link to
+    the source and therefore share the same inode/file identity.  Existing source
+    and output files are compared with ``samefile`` as a second, fail-closed guard.
+    """
+
     source_path = Path(source).expanduser().resolve(strict=False)
     output_path = Path(output).expanduser().resolve(strict=False)
     if source_path == output_path:
         raise ValueError("derived output must not overwrite the source path")
+
+    if source_path.exists() and output_path.exists():
+        try:
+            same_file = source_path.samefile(output_path)
+        except OSError as exc:
+            raise ValueError("unable to verify derived output file identity") from exc
+        if same_file:
+            raise ValueError("derived output must not alias the source file")
+
     return output_path
