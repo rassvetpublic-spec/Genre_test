@@ -12,12 +12,19 @@ from genre_test.detector_evidence import (
 )
 
 
+VERDICT_SEMANTICS = {
+    "rule": "fixture",
+    "meaning": "fixture verdict semantics",
+}
+
+
 def _payload() -> dict[str, object]:
     return {
         "schema": EVIDENCE_SCHEMA,
         "schema_version": EVIDENCE_SCHEMA_VERSION,
         "source_sha256": "a" * 64,
         "evidence_audio_sha256": "b" * 64,
+        "transformation_class": "controlled_test",
         "ground_truth_origin": "controlled fixture",
         "ground_truth_basis": "project-owned manifest",
         "ground_truth_confidence": "known",
@@ -36,6 +43,7 @@ def _payload() -> dict[str, object]:
                 "detector_version": "1",
                 "tested_at_utc": "2026-09-02T01:05:00Z",
                 "verdict": "not_detected",
+                "verdict_semantics": VERDICT_SEMANTICS,
                 "raw_response": {},
             }
         ],
@@ -100,6 +108,7 @@ def test_boolean_score_is_rejected_as_non_numeric_evidence() -> None:
             detector_version="1",
             tested_at_utc="2026-09-02T01:05:00Z",
             verdict="unknown",
+            verdict_semantics=VERDICT_SEMANTICS,
             raw_response={},
             score=True,
         )
@@ -112,6 +121,7 @@ def test_non_numeric_confidence_is_contract_error() -> None:
             detector_version="1",
             tested_at_utc="2026-09-02T01:05:00Z",
             verdict="unknown",
+            verdict_semantics=VERDICT_SEMANTICS,
             raw_response={},
             confidence="high",  # type: ignore[arg-type]
         )
