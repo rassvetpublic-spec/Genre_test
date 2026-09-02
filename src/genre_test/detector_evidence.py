@@ -16,6 +16,46 @@ _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _GROUND_TRUTH_CONFIDENCE = frozenset({"known", "high", "medium", "low", "unknown"})
 _REPRODUCTION_STATUS = frozenset({"single", "reproduced", "not_reproduced", "pending"})
 
+_PROCESSING_KEYS = frozenset({"operation", "tool_id", "tool_version", "parameters", "note"})
+_DETECTOR_KEYS = frozenset(
+    {
+        "detector_id",
+        "detector_version",
+        "tested_at_utc",
+        "verdict",
+        "verdict_semantics",
+        "raw_response",
+        "score",
+        "confidence",
+        "service_id",
+        "service_version",
+        "model_id",
+        "model_revision",
+    }
+)
+_ATTACHMENT_KEYS = frozenset({"kind", "sha256", "media_type", "label"})
+_SAMPLE_KEYS = frozenset(
+    {
+        "schema",
+        "schema_version",
+        "source_sha256",
+        "evidence_audio_sha256",
+        "transformation_class",
+        "ground_truth_origin",
+        "ground_truth_basis",
+        "ground_truth_confidence",
+        "created_at_utc",
+        "processing_history",
+        "detector_results",
+        "environment",
+        "reproduction_count",
+        "reproduction_status",
+        "attachments",
+        "disclosure_reference",
+        "source_label",
+    }
+)
+
 
 class DetectorEvidenceError(ValueError):
     """Raised when detector evidence cannot satisfy the versioned contract."""
@@ -63,6 +103,19 @@ def _record(value: Any, *, field_name: str) -> Mapping[str, Any]:
     return value
 
 
+def _reject_unknown_keys(
+    record: Mapping[str, Any],
+    *,
+    allowed: frozenset[str],
+    field_name: str,
+) -> None:
+    unknown = sorted(set(record) - allowed)
+    if unknown:
+        raise DetectorEvidenceError(
+            f"{field_name} contains unknown fields: {', '.join(unknown)}"
+        )
+
+
 def _array(value: Any, *, field_name: str) -> Sequence[Any]:
     if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
         raise DetectorEvidenceError(f"{field_name} must be an array")
@@ -98,6 +151,27 @@ def _json_object(value: Any, *, field_name: str) -> dict[str, Any]:
     record = _record(value, field_name=field_name)
     normalized = _json_value(record, field_name=field_name)
     assert isinstance(normalized, dict)
+    return normalized
+
+
+def _bounded_json_object(
+    value: Any,
+    *,
+    field_name: str,
+    max_bytes: int = 8192,
+) -> dict[str, Any]:
+    normalized = _json_object(value, field_name=field_name)
+    if not normalized:
+        raise DetectorEvidenceError(f"{field_name} must be a non-empty JSON object")
+    encoded = json.dumps(
+        normalized,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    if len(encoded) > max_bytes:
+        raise DetectorEvidenceError(f"{field_name} exceeds {max_bytes} UTF-8 bytes")
     return normalized
 
 
@@ -167,6 +241,11 @@ class ProcessingStep:
     @classmethod
     def from_dict(cls, payload: Any) -> ProcessingStep:
         record = _record(payload, field_name="processing_history item")
+        _reject_unknown_keys(
+            record,
+            allowed=_PROCESSING_KEYS,
+            field_name="processing_history item",
+        )
         return cls(
             operation=record.get("operation"),
             tool_id=record.get("tool_id"),
@@ -184,9 +263,14 @@ class DetectorResult:
     detector_version: str
     tested_at_utc: str
     verdict: str
+    verdict_semantics: Mapping[str, Any]
     raw_response: Mapping[str, Any]
     score: float | None = None
     confidence: float | None = None
+    service_id: str | None = None
+    service_version: str | None = None
+    model_id: str | None = None
+    model_revision: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -211,6 +295,14 @@ class DetectorResult:
         )
         object.__setattr__(
             self,
+            "verdict_semantics",
+            _bounded_json_object(
+                self.verdict_semantics,
+                field_name="detector.verdict_semantics",
+            ),
+        )
+        object.__setattr__(
+            self,
             "raw_response",
             _json_object(self.raw_response, field_name="detector.raw_response"),
         )
@@ -226,12 +318,35 @@ class DetectorResult:
                 raise DetectorEvidenceError("detector.confidence must be between 0 and 1")
             object.__setattr__(self, "confidence", confidence)
 
+        service_id = _optional_text(self.service_id, field_name="detector.service_id")
+        service_version = _optional_text(
+            self.service_version,
+            field_name="detector.service_version",
+        )
+        model_id = _optional_text(self.model_id, field_name="detector.model_id")
+        model_revision = _optional_text(
+            self.model_revision,
+            field_name="detector.model_revision",
+        )
+        if service_version is not None and service_id is None:
+            raise DetectorEvidenceError("detector.service_version requires service_id")
+        if model_revision is not None and model_id is None:
+            raise DetectorEvidenceError("detector.model_revision requires model_id")
+        object.__setattr__(self, "service_id", service_id)
+        object.__setattr__(self, "service_version", service_version)
+        object.__setattr__(self, "model_id", model_id)
+        object.__setattr__(self, "model_revision", model_revision)
+
     def to_dict(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "detector_id": self.detector_id,
             "detector_version": self.detector_version,
             "tested_at_utc": self.tested_at_utc,
             "verdict": self.verdict,
+            "verdict_semantics": _bounded_json_object(
+                self.verdict_semantics,
+                field_name="detector.verdict_semantics",
+            ),
             "raw_response": _json_object(
                 self.raw_response,
                 field_name="detector.raw_response",
@@ -241,19 +356,37 @@ class DetectorResult:
             payload["score"] = self.score
         if self.confidence is not None:
             payload["confidence"] = self.confidence
+        if self.service_id is not None:
+            payload["service_id"] = self.service_id
+        if self.service_version is not None:
+            payload["service_version"] = self.service_version
+        if self.model_id is not None:
+            payload["model_id"] = self.model_id
+        if self.model_revision is not None:
+            payload["model_revision"] = self.model_revision
         return payload
 
     @classmethod
     def from_dict(cls, payload: Any) -> DetectorResult:
         record = _record(payload, field_name="detector_results item")
+        _reject_unknown_keys(
+            record,
+            allowed=_DETECTOR_KEYS,
+            field_name="detector_results item",
+        )
         return cls(
             detector_id=record.get("detector_id"),
             detector_version=record.get("detector_version"),
             tested_at_utc=record.get("tested_at_utc"),
             verdict=record.get("verdict"),
+            verdict_semantics=record.get("verdict_semantics", {}),
             raw_response=record.get("raw_response", {}),
             score=record.get("score"),
             confidence=record.get("confidence"),
+            service_id=record.get("service_id"),
+            service_version=record.get("service_version"),
+            model_id=record.get("model_id"),
+            model_revision=record.get("model_revision"),
         )
 
 
@@ -301,6 +434,11 @@ class EvidenceAttachment:
     @classmethod
     def from_dict(cls, payload: Any) -> EvidenceAttachment:
         record = _record(payload, field_name="attachments item")
+        _reject_unknown_keys(
+            record,
+            allowed=_ATTACHMENT_KEYS,
+            field_name="attachments item",
+        )
         return cls(
             kind=record.get("kind"),
             sha256=record.get("sha256"),
@@ -311,10 +449,11 @@ class EvidenceAttachment:
 
 @dataclass(frozen=True)
 class DetectorEvidenceSample:
-    """Versioned evidence that binds ground truth, processing history, and detector outputs."""
+    """Versioned evidence that binds ground truth, transformation class, lineage, and detector outputs."""
 
     source_sha256: str
     evidence_audio_sha256: str
+    transformation_class: str
     ground_truth_origin: str
     ground_truth_basis: str
     ground_truth_confidence: str
@@ -338,6 +477,11 @@ class DetectorEvidenceSample:
             self,
             "evidence_audio_sha256",
             _sha256(self.evidence_audio_sha256, field_name="evidence_audio_sha256"),
+        )
+        object.__setattr__(
+            self,
+            "transformation_class",
+            _required_text(self.transformation_class, field_name="transformation_class"),
         )
         object.__setattr__(
             self,
@@ -370,7 +514,12 @@ class DetectorEvidenceSample:
             raise DetectorEvidenceError(
                 "processing_history must contain ProcessingStep values"
             )
-        object.__setattr__(self, "processing_history", tuple(history))
+        history_tuple = tuple(history)
+        if self.source_sha256 != self.evidence_audio_sha256 and not history_tuple:
+            raise DetectorEvidenceError(
+                "changed evidence audio requires at least one processing_history step"
+            )
+        object.__setattr__(self, "processing_history", history_tuple)
 
         results = _array(self.detector_results, field_name="detector_results")
         if not results or not all(isinstance(item, DetectorResult) for item in results):
@@ -429,6 +578,7 @@ class DetectorEvidenceSample:
             "schema_version": EVIDENCE_SCHEMA_VERSION,
             "source_sha256": self.source_sha256,
             "evidence_audio_sha256": self.evidence_audio_sha256,
+            "transformation_class": self.transformation_class,
             "ground_truth_origin": self.ground_truth_origin,
             "ground_truth_basis": self.ground_truth_basis,
             "ground_truth_confidence": self.ground_truth_confidence,
@@ -462,6 +612,7 @@ class DetectorEvidenceSample:
     @classmethod
     def from_dict(cls, payload: Any) -> DetectorEvidenceSample:
         record = _record(payload, field_name="evidence sample")
+        _reject_unknown_keys(record, allowed=_SAMPLE_KEYS, field_name="evidence sample")
         if record.get("schema") != EVIDENCE_SCHEMA:
             raise DetectorEvidenceError(f"schema must be {EVIDENCE_SCHEMA!r}")
         if record.get("schema_version") != EVIDENCE_SCHEMA_VERSION:
@@ -484,6 +635,7 @@ class DetectorEvidenceSample:
         return cls(
             source_sha256=record.get("source_sha256"),
             evidence_audio_sha256=record.get("evidence_audio_sha256"),
+            transformation_class=record.get("transformation_class"),
             ground_truth_origin=record.get("ground_truth_origin"),
             ground_truth_basis=record.get("ground_truth_basis"),
             ground_truth_confidence=record.get("ground_truth_confidence"),
