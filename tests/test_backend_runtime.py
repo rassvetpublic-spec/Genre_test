@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -10,6 +12,7 @@ from genre_test.backend_runtime import (
     BackendHealth,
     BackendIdentity,
     BackendPreflight,
+    BackendRunResult,
     BackendRuntimeError,
     ExecutionEvidence,
 )
@@ -133,6 +136,42 @@ def test_fallback_reason_is_rejected_when_nothing_changed() -> None:
         )
 
 
+def test_run_result_requires_post_execution_evidence() -> None:
+    execution = ExecutionEvidence(
+        requested_provider="cuda",
+        actual_provider="cpu",
+        requested_dtype="float16",
+        actual_dtype="float32",
+        fallback_reason="CUDA OOM during inference; explicit retry policy selected CPU",
+    )
+    envelope = BackendRunResult(result={"artifact": "derived.wav"}, execution=execution)
+    assert envelope.execution.used_fallback is True
+    assert envelope.execution.actual_provider == "cpu"
+
+    with pytest.raises(BackendRuntimeError, match="post-run ExecutionEvidence"):
+        BackendRunResult(result="unsafe-result", execution=None)  # type: ignore[arg-type]
+
+
+def test_acquire_evidence_cannot_substitute_for_post_run_truth() -> None:
+    acquire = ExecutionEvidence(
+        requested_provider="cuda",
+        actual_provider="cuda",
+        requested_dtype="float16",
+        actual_dtype="float16",
+    )
+    post_run = ExecutionEvidence(
+        requested_provider="cuda",
+        actual_provider="cpu",
+        requested_dtype="float16",
+        actual_dtype="float32",
+        fallback_reason="engine retry after CUDA OOM",
+    )
+    result = BackendRunResult(result=b"fixture", execution=post_run)
+    assert acquire.used_fallback is False
+    assert result.execution.used_fallback is True
+    assert result.execution.to_dict()["fallback_reason"] == "engine retry after CUDA OOM"
+
+
 def test_preflight_rejects_provider_not_declared_by_backend() -> None:
     identity = BackendIdentity("repair", "1")
     capabilities = BackendCapabilities(providers=("cpu",), dtypes=("float32",))
@@ -190,11 +229,18 @@ loaded = sorted(
 if loaded:
     raise SystemExit("unexpected heavy imports: " + ", ".join(loaded))
 '''
+    repo_root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    existing = env.get("PYTHONPATH")
+    src = str(repo_root / "src")
+    env["PYTHONPATH"] = src if not existing else os.pathsep.join((src, existing))
     completed = subprocess.run(
         [sys.executable, "-c", code],
         capture_output=True,
         text=True,
         timeout=10,
         check=False,
+        env=env,
+        cwd=repo_root,
     )
     assert completed.returncode == 0, completed.stdout + completed.stderr
