@@ -25,9 +25,11 @@ STATIC_MAP = {
 
 
 def is_loopback_host(host: str) -> bool:
+    """Resolve a bind host and require every returned address to be loopback."""
+
     value = host.strip().lower()
-    if value == "localhost":
-        return True
+    if not value:
+        return False
     try:
         addresses = {
             item[4][0]
@@ -40,6 +42,29 @@ def is_loopback_host(host: str) -> bool:
         return False
     try:
         return all(ipaddress.ip_address(address).is_loopback for address in addresses)
+    except ValueError:
+        return False
+
+
+def _request_authority_is_allowed(authority: str | None) -> bool:
+    """Reject DNS-rebinding Host values; allow only localhost or loopback literals."""
+
+    if authority is None or not authority.strip():
+        return False
+    raw = authority.strip()
+    try:
+        parsed = urlsplit(f"//{raw}")
+        host = parsed.hostname
+        _ = parsed.port
+    except ValueError:
+        return False
+    if parsed.username is not None or parsed.password is not None or host is None:
+        return False
+    normalized = host.rstrip(".").lower()
+    if normalized == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(normalized).is_loopback
     except ValueError:
         return False
 
@@ -87,6 +112,16 @@ def _handler(service: WorkstationService) -> type[BaseHTTPRequestHandler]:
                 ApiError(code=code, message=message, status=status).to_dict(),
                 status,
             )
+
+        def _validate_authority(self) -> bool:
+            if _request_authority_is_allowed(self.headers.get("Host")):
+                return True
+            self._error(
+                "invalid_host",
+                "Host must be localhost or a loopback IP literal",
+                HTTPStatus.MISDIRECTED_REQUEST,
+            )
+            return False
 
         def _read_json(self) -> dict[str, Any] | None:
             raw_length = self.headers.get("Content-Length")
@@ -147,7 +182,22 @@ def _handler(service: WorkstationService) -> type[BaseHTTPRequestHandler]:
             self.wfile.write(body)
             return True
 
-        def do_GET(self) -> None:
+        def _unsupported_method(self) -> None:
+            if not self._validate_authority():
+                return
+            path = urlsplit(self.path).path
+            if path.startswith("/api/v1/"):
+                self._error(
+                    "method_not_allowed",
+                    "HTTP method is not supported for this API endpoint",
+                    HTTPStatus.METHOD_NOT_ALLOWED,
+                )
+                return
+            self._error("not_found", "Endpoint not found", HTTPStatus.NOT_FOUND)
+
+        def do_GET(self) -> None:  # noqa: N802
+            if not self._validate_authority():
+                return
             parsed = urlsplit(self.path)
             path = parsed.path
             if self._serve_static(path):
@@ -194,7 +244,9 @@ def _handler(service: WorkstationService) -> type[BaseHTTPRequestHandler]:
                 return
             self._error("not_found", "Endpoint not found", 404)
 
-        def do_POST(self) -> None:
+        def do_POST(self) -> None:  # noqa: N802
+            if not self._validate_authority():
+                return
             parsed = urlsplit(self.path)
             if parsed.path == "/api/v1/jobs":
                 payload = self._read_json()
@@ -226,7 +278,9 @@ def _handler(service: WorkstationService) -> type[BaseHTTPRequestHandler]:
                 return
             self._error("not_found", "Endpoint not found", 404)
 
-        def do_PUT(self) -> None:
+        def do_PUT(self) -> None:  # noqa: N802
+            if not self._validate_authority():
+                return
             if urlsplit(self.path).path != "/api/v1/settings/language":
                 self._error("not_found", "Endpoint not found", 404)
                 return
@@ -245,6 +299,15 @@ def _handler(service: WorkstationService) -> type[BaseHTTPRequestHandler]:
                 self._error(code, str(exc), status)
                 return
             self._json(settings)
+
+        def do_PATCH(self) -> None:  # noqa: N802
+            self._unsupported_method()
+
+        def do_DELETE(self) -> None:  # noqa: N802
+            self._unsupported_method()
+
+        def do_OPTIONS(self) -> None:  # noqa: N802
+            self._unsupported_method()
 
     return WorkstationHandler
 
@@ -268,6 +331,18 @@ class WorkstationHTTPServer(ThreadingHTTPServer):
         super().__init__(server_address, _handler(self.service))
 
 
+class WorkstationHTTPServerV6(WorkstationHTTPServer):
+    address_family = socket.AF_INET6
+
+
+def _server_class_for_host(host: str) -> type[WorkstationHTTPServer]:
+    try:
+        literal = ipaddress.ip_address(host.strip())
+    except ValueError:
+        return WorkstationHTTPServer
+    return WorkstationHTTPServerV6 if literal.version == 6 else WorkstationHTTPServer
+
+
 def create_server(
     host: str = "127.0.0.1",
     port: int = 8765,
@@ -277,7 +352,8 @@ def create_server(
 ) -> WorkstationHTTPServer:
     if port < 0 or port > 65535:
         raise ValueError("port must be between 0 and 65535")
-    return WorkstationHTTPServer((host, port), service=service, quiet=quiet)
+    server_class = _server_class_for_host(host)
+    return server_class((host, port), service=service, quiet=quiet)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -294,7 +370,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[FAIL] {exc}", file=sys.stderr)
         return 2
     host, port = server.server_address[:2]
-    print(f"Genre_test Workstation {API_VERSION}: http://{host}:{port}")
+    url_host = f"[{host}]" if ":" in str(host) else host
+    print(f"Genre_test Workstation {API_VERSION}: http://{url_host}:{port}")
     try:
         server.serve_forever(poll_interval=0.25)
     except KeyboardInterrupt:
