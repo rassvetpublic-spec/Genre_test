@@ -1,3 +1,15 @@
+---
+title: Free-only QA failover policy
+doc_type: protocol
+area: agents
+status: proposal
+summary: Defines a free-only, exact-head, fail-closed QA failover contract for autonomous MTD without paid subscriptions, billing accounts, mandatory prepaid balances, or paid overage.
+tags:
+  - область/agents
+  - тип/protocol
+  - статус/proposal
+---
+
 # Free-only QA failover policy
 
 Status: proposed governance baseline  
