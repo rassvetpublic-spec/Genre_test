@@ -4,6 +4,7 @@ param(
     [switch]$SkipFFmpeg
 )
 
+. (Join-Path $PSScriptRoot 'Initialize-Utf8.ps1')
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Set-Location $repoRoot

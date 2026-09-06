@@ -10,6 +10,7 @@ param(
     [int]$Repeat = 2
 )
 
+. (Join-Path $PSScriptRoot 'Initialize-Utf8.ps1')
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 

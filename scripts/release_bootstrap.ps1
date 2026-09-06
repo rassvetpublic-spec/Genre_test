@@ -2,6 +2,7 @@
 [CmdletBinding()]
 param()
 
+. (Join-Path $PSScriptRoot 'Initialize-Utf8.ps1')
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 

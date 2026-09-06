@@ -1,0 +1,17 @@
+# Canonical text/EOL policy
+* text=auto
+*.py text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+*.csv text eol=lf
+*.ps1 text eol=crlf
+*.psm1 text eol=crlf
+*.psd1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
