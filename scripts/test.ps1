@@ -1,4 +1,5 @@
 #requires -Version 7.0
+. (Join-Path $PSScriptRoot 'Initialize-Utf8.ps1')
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path -Parent $PSScriptRoot)
 $python = Join-Path $PWD '.venv\Scripts\python.exe'
